@@ -15,12 +15,18 @@ public class AudioCue {
     private final int mStopSound;
     private final int mErrorSound;
 
+    public AudioCue(Context context) {
+        mContext = context;
+        mStartSound = R.raw.explore_begin;
+        mStopSound = R.raw.explore_end;
+        mErrorSound = R.raw.error;
+    }
+
     public AudioCue(Context context, int startSound, int stopSound, int errorSound) {
         mContext = context;
         mStartSound = startSound;
         mStopSound = stopSound;
         mErrorSound = errorSound;
-
     }
 
     public void playStartSoundAndSleep() {

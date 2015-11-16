@@ -22,7 +22,7 @@ public class RecognitionServiceManager {
     private Set<String> mInitiallySelectedCombos = new HashSet<>();
     private Set<String> mCombosExcluded = new HashSet<>();
 
-    interface Listener {
+    public interface Listener {
         void onComplete(List<String> combos, Set<String> selectedCombos);
     }
 
