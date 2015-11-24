@@ -17,11 +17,10 @@
 package ee.ioc.phon.android.speechutils;
 
 import android.media.AudioFormat;
-import android.media.AudioRecord;
 import android.media.MediaRecorder;
 
 /**
- * <p>Records raw audio using AudioRecord and stores it into a byte array as</p>
+ * <p>Records raw audio using SpeechRecord and stores it into a byte array as</p>
  * <ul>
  * <li>signed</li>
  * <li>16-bit</li>
@@ -41,8 +40,6 @@ import android.media.MediaRecorder;
  * @author Kaarel Kaljurand
  */
 public class RawAudioRecorder {
-
-	private static final String LOG_TAG = RawAudioRecorder.class.getName();
 
 	private static final int DEFAULT_AUDIO_SOURCE = MediaRecorder.AudioSource.VOICE_RECOGNITION;
 	private static final int DEFAULT_SAMPLE_RATE = 16000;
@@ -67,7 +64,7 @@ public class RawAudioRecorder {
 		STOPPED
 	}
 
-	private AudioRecord mRecorder = null;
+	private SpeechRecord mRecorder = null;
 
 	private double mAvgEnergy = 0;
 
@@ -114,13 +111,13 @@ public class RawAudioRecorder {
 		mSampleRate = sampleRate;
 		// E.g. 1 second of 16kHz 16-bit mono audio takes 32000 bytes.
 		mOneSec = RESOLUTION_IN_BYTES * CHANNELS * mSampleRate;
-		// TODO: replace 35 with the max length of the recording (as specified in the settings)
+		// TODO: replace 35 with the max length of the recording
 		mRecording = new byte[mOneSec * 35];
 		try {
 			setBufferSizeAndFramePeriod();
-			mRecorder = new AudioRecord(audioSource, mSampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, mBufferSize);
-			if (getAudioRecordState() != AudioRecord.STATE_INITIALIZED) {
-				throw new IllegalStateException("AudioRecord initialization failed");
+			mRecorder = new SpeechRecord(audioSource, mSampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, mBufferSize, false, false, false);
+			if (getSpeechRecordState() != SpeechRecord.STATE_INITIALIZED) {
+				throw new IllegalStateException("SpeechRecord initialization failed");
 			}
 			mBuffer = new byte[mFramePeriod * RESOLUTION_IN_BYTES * CHANNELS];
 			setState(State.READY);
@@ -144,22 +141,22 @@ public class RawAudioRecorder {
 	}
 
 
-	private int read(AudioRecord recorder) {
+	private int read(SpeechRecord recorder) {
 		// public int read (byte[] audioData, int offsetInBytes, int sizeInBytes)
 		int numberOfBytes = recorder.read(mBuffer, 0, mBuffer.length); // Fill buffer
 
 		// Some error checking
-		if (numberOfBytes == AudioRecord.ERROR_INVALID_OPERATION) {
-			Log.e(LOG_TAG, "The AudioRecord object was not properly initialized");
+		if (numberOfBytes == SpeechRecord.ERROR_INVALID_OPERATION) {
+			Log.e("The SpeechRecord object was not properly initialized");
 			return -1;
-		} else if (numberOfBytes == AudioRecord.ERROR_BAD_VALUE) {
-			Log.e(LOG_TAG, "The parameters do not resolve to valid data and indexes.");
+		} else if (numberOfBytes == SpeechRecord.ERROR_BAD_VALUE) {
+			Log.e("The parameters do not resolve to valid data and indexes.");
 			return -2;
 		} else if (numberOfBytes > mBuffer.length) {
-			Log.e(LOG_TAG, "Read more bytes than is buffer length:" + numberOfBytes + ": " + mBuffer.length);
+			Log.e("Read more bytes than is buffer length:" + numberOfBytes + ": " + mBuffer.length);
 			return -3;
 		} else if (numberOfBytes == 0) {
-			Log.e(LOG_TAG, "Read zero bytes");
+			Log.e("Read zero bytes");
 			return -4;
 		}
 		// Everything seems to be OK, adding the buffer to the recording.
@@ -169,16 +166,16 @@ public class RawAudioRecorder {
 
 
 	private void setBufferSizeAndFramePeriod() {
-		int minBufferSizeInBytes = AudioRecord.getMinBufferSize(mSampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION);
-		if (minBufferSizeInBytes == AudioRecord.ERROR_BAD_VALUE) {
-			throw new IllegalArgumentException("AudioRecord.getMinBufferSize: parameters not supported by hardware");
-		} else if (minBufferSizeInBytes == AudioRecord.ERROR) {
-			Log.e(LOG_TAG, "AudioRecord.getMinBufferSize: unable to query hardware for output properties");
+		int minBufferSizeInBytes = SpeechRecord.getMinBufferSize(mSampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION);
+		if (minBufferSizeInBytes == SpeechRecord.ERROR_BAD_VALUE) {
+			throw new IllegalArgumentException("SpeechRecord.getMinBufferSize: parameters not supported by hardware");
+		} else if (minBufferSizeInBytes == SpeechRecord.ERROR) {
+			Log.e("SpeechRecord.getMinBufferSize: unable to query hardware for output properties");
 			minBufferSizeInBytes = mSampleRate * (120 / 1000) * RESOLUTION_IN_BYTES * CHANNELS;
 		}
 		mBufferSize = 2 * minBufferSizeInBytes;
 		mFramePeriod = mBufferSize / ( 2 * RESOLUTION_IN_BYTES * CHANNELS );
-		Log.i(LOG_TAG, "AudioRecord buffer size: " + mBufferSize + ", min size = " + minBufferSizeInBytes);
+		Log.i("SpeechRecord buffer size: " + mBufferSize + ", min size = " + minBufferSizeInBytes);
 	}
 
 
@@ -274,7 +271,7 @@ public class RawAudioRecorder {
 	 */
 	public synchronized byte[] consumeRecording() {
 		byte[] bytes = getCurrentRecording(mConsumedLength);
-		Log.i(LOG_TAG, "Copied from: " + mConsumedLength + ": " + bytes.length + " bytes");
+		Log.i("Copied from: " + mConsumedLength + ": " + bytes.length + " bytes");
 		mConsumedLength = mRecordedLength;
 		return bytes;
 	}
@@ -285,7 +282,7 @@ public class RawAudioRecorder {
      */
     public synchronized byte[] consumeRecordingAndTruncate() {
         byte[] bytes = getCurrentRecording(mConsumedLength);
-        Log.i(LOG_TAG, "Copied from position: " + mConsumedLength + ": " + bytes.length + " bytes");
+        Log.i("Copied from position: " + mConsumedLength + ": " + bytes.length + " bytes");
         mRecordedLength = 0;
         mConsumedLength = mRecordedLength;
         return bytes;
@@ -309,7 +306,7 @@ public class RawAudioRecorder {
 	 */
 	public boolean isPausing() {
 		double pauseScore = getPauseScore();
-		Log.i(LOG_TAG, "Pause score: " + pauseScore);
+		Log.i("Pause score: " + pauseScore);
 		return pauseScore > 7;
 	}
 
@@ -357,7 +354,7 @@ public class RawAudioRecorder {
 	 */
 	public synchronized void release() {
 		if (mRecorder != null) {
-			if (mRecorder.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
+			if (mRecorder.getRecordingState() == SpeechRecord.RECORDSTATE_RECORDING) {
 				stop();
 			}
 			mRecorder.release();
@@ -370,13 +367,13 @@ public class RawAudioRecorder {
 	 * <p>Starts the recording, and sets the state to RECORDING.</p>
 	 */
 	public void start() {
-		if (getAudioRecordState() == AudioRecord.STATE_INITIALIZED) {
+		if (getSpeechRecordState() == SpeechRecord.STATE_INITIALIZED) {
 			mRecorder.startRecording();
-			if (mRecorder.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
+			if (mRecorder.getRecordingState() == SpeechRecord.RECORDSTATE_RECORDING) {
 				setState(State.RECORDING);
 				new Thread() {
 					public void run() {
-						while (mRecorder != null && mRecorder.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
+						while (mRecorder != null && mRecorder.getRecordingState() == SpeechRecord.RECORDSTATE_RECORDING) {
 							int status = read(mRecorder);
 							if (status < 0) {
                                 handleError("status = " + status);
@@ -399,10 +396,10 @@ public class RawAudioRecorder {
 	 * If stopping fails then sets the state to ERROR.</p>
 	 */
 	public void stop() {
-		// We check the underlying AudioRecord state trying to avoid IllegalStateException.
+		// We check the underlying SpeechRecord state trying to avoid IllegalStateException.
 		// If it still occurs then we catch it.
-		if (getAudioRecordState() == AudioRecord.STATE_INITIALIZED &&
-				mRecorder.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
+		if (getSpeechRecordState() == SpeechRecord.STATE_INITIALIZED &&
+				mRecorder.getRecordingState() == SpeechRecord.RECORDSTATE_RECORDING) {
 			try {
 				mRecorder.stop();
 				setState(State.STOPPED);
@@ -474,12 +471,12 @@ public class RawAudioRecorder {
     private void handleError(String msg) {
 		release();
 		setState(State.ERROR);
-		Log.e(LOG_TAG, msg);
+		Log.e(msg);
     }
 
-    private int getAudioRecordState() {
+    private int getSpeechRecordState() {
         if (mRecorder == null) {
-            return AudioRecord.STATE_UNINITIALIZED;
+            return SpeechRecord.STATE_UNINITIALIZED;
         }
         return mRecorder.getState();
     }

@@ -1,6 +1,5 @@
 package ee.ioc.phon.android.speechutils;
 
-import android.annotation.SuppressLint;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -14,7 +13,6 @@ import android.os.Build;
  *
  * @author Kaarel Kaljurand
  */
-@SuppressLint("NewApi")
 public class SpeechRecord extends AudioRecord {
 
     public SpeechRecord(int sampleRateInHz, int bufferSizeInBytes)
@@ -64,38 +62,38 @@ public class SpeechRecord extends AudioRecord {
         super(audioSource, sampleRateInHz, channelConfig, audioFormat, bufferSizeInBytes);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            Log.i("Trying to clean up audio because running on SDK " + Build.VERSION.SDK_INT);
+            Log.i("Trying to enhance audio because running on SDK " + Build.VERSION.SDK_INT);
 
             int audioSessionId = getAudioSessionId();
 
             if (noise) {
                 if (NoiseSuppressor.create(audioSessionId) == null) {
-                    Log.i("NoiseSuppressor failed :(");
+                    Log.i("NoiseSuppressor: failed");
                 } else {
-                    Log.i("NoiseSuppressor ON");
+                    Log.i("NoiseSuppressor: ON");
                 }
             } else {
-                Log.i("NoiseSuppressor OFF");
+                Log.i("NoiseSuppressor: OFF");
             }
 
             if (gain) {
                 if (AutomaticGainControl.create(audioSessionId) == null) {
-                    Log.i("AutomaticGainControl failed :(");
+                    Log.i("AutomaticGainControl: failed");
                 } else {
-                    Log.i("AutomaticGainControl ON");
+                    Log.i("AutomaticGainControl: ON");
                 }
             } else {
-                Log.i("AutomaticGainControl OFF");
+                Log.i("AutomaticGainControl: OFF");
             }
 
             if (echo) {
                 if (AcousticEchoCanceler.create(audioSessionId) == null) {
-                    Log.i("AcousticEchoCanceler failed :(");
+                    Log.i("AcousticEchoCanceler: failed");
                 } else {
-                    Log.i("AcousticEchoCanceler ON");
+                    Log.i("AcousticEchoCanceler: ON");
                 }
             } else {
-                Log.i("AcousticEchoCanceler OFF");
+                Log.i("AcousticEchoCanceler: OFF");
             }
         }
     }
