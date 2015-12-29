@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="white">#ffffffff</color>
     <color name="buttonStroke">#808080</color>
     <!-- 1 = top,lighter; 2 = bottom,darker -->
     <!-- <color name="transparent">#00000000</color> -->
