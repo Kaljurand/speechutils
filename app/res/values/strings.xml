@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-
-    <string name="keyNoiseSuppressor" translatable="false">keyNoiseSuppressor</string>
-    <string name="titleNoiseSuppressor">Suppress noise</string>
-    <string name="summaryNoiseSuppressor">Suppress noise</string>
-
-</resources>
