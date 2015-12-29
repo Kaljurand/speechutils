@@ -1,5 +1,6 @@
 package ee.ioc.phon.android.speechutils;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -8,22 +9,109 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
+import android.os.Build;
 import android.os.Bundle;
 import android.speech.RecognitionService;
 import android.speech.RecognizerIntent;
+import android.text.TextUtils;
+import android.util.Pair;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class RecognitionServiceManager {
+    private static String SEPARATOR = ";";
     private List<String> mServices = new ArrayList<>();
     private Set<String> mInitiallySelectedCombos = new HashSet<>();
     private Set<String> mCombosExcluded = new HashSet<>();
 
     public interface Listener {
         void onComplete(List<String> combos, Set<String> selectedCombos);
+    }
+
+    public static boolean isRecognitionServiceInstalled(PackageManager pm, ComponentName componentName) {
+        List<ResolveInfo> services = pm.queryIntentServices(
+                new Intent(RecognitionService.SERVICE_INTERFACE), 0);
+        for (ResolveInfo ri : services) {
+            ServiceInfo si = ri.serviceInfo;
+            if (si == null) {
+                Log.i("serviceInfo == null");
+                continue;
+            }
+            if (componentName.equals(new ComponentName(si.packageName, si.name))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * On LOLLIPOP we use a builtin to parse the locale string, and return
+     * the name of the locale in the language of the current locale. In pre-LOLLIPOP we just return
+     * the formal name (e.g. "et-ee"), because the Locale-constructor is not able to parse it.
+     *
+     * @param localeAsStr Formal name of the locale, e.g. "et-ee"
+     * @return The name of the locale in the language of the current locale
+     */
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    public static String makeLangLabel(String localeAsStr) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            return Locale.forLanguageTag(localeAsStr).getDisplayName();
+        }
+        return localeAsStr;
+    }
+
+    public static String[] getServiceAndLang(String str) {
+        return TextUtils.split(str, SEPARATOR);
+    }
+
+    /**
+     * @param str string like {@code ee.ioc.phon.android.speak/.HttpRecognitionService;et-ee}
+     * @return ComponentName in the input string
+     */
+    public static ComponentName getComponentName(String str) {
+        String[] splits = getServiceAndLang(str);
+        return ComponentName.unflattenFromString(splits[0]);
+    }
+
+    public static String getServiceLabel(Context context, String service) {
+        String recognizer = "[?]";
+        PackageManager pm = context.getPackageManager();
+        ComponentName recognizerComponentName = ComponentName.unflattenFromString(service);
+        if (recognizerComponentName != null) {
+            try {
+                ServiceInfo si = pm.getServiceInfo(recognizerComponentName, 0);
+                recognizer = si.loadLabel(pm).toString();
+            } catch (PackageManager.NameNotFoundException e) {
+                // ignored
+            }
+        }
+        return recognizer;
+    }
+
+    public static Pair<String, String> getLabel(Context context, String comboAsString) {
+        String recognizer = "[?]";
+        String language = "[?]";
+        String[] splits = TextUtils.split(comboAsString, SEPARATOR);
+        if (splits.length > 0) {
+            PackageManager pm = context.getPackageManager();
+            ComponentName recognizerComponentName = ComponentName.unflattenFromString(splits[0]);
+            if (recognizerComponentName != null) {
+                try {
+                    ServiceInfo si = pm.getServiceInfo(recognizerComponentName, 0);
+                    recognizer = si.loadLabel(pm).toString();
+                } catch (PackageManager.NameNotFoundException e) {
+                    // ignored
+                }
+            }
+        }
+        if (splits.length > 1) {
+            language = makeLangLabel(splits[1]);
+        }
+        return new Pair<>(recognizer, language);
     }
 
 
@@ -97,7 +185,7 @@ public class RecognitionServiceManager {
                 }
 
                 for (CharSequence lang : allLangs) {
-                    String combo = service + ";" + lang;
+                    String combo = service + SEPARATOR + lang;
                     if (!mCombosExcluded.contains(combo)) {
                         Log.i(combos.size() + ") " + combo);
                         combos.add(combo);
