@@ -24,7 +24,6 @@ import java.util.Set;
 
 public class RecognitionServiceManager {
     private static String SEPARATOR = ";";
-    private List<String> mServices = new ArrayList<>();
     private Set<String> mInitiallySelectedCombos = new HashSet<>();
     private Set<String> mCombosExcluded = new HashSet<>();
 
@@ -32,6 +31,9 @@ public class RecognitionServiceManager {
         void onComplete(List<String> combos, Set<String> selectedCombos);
     }
 
+    /**
+     * @return true iff a RecognitionService with the given component name is installed
+     */
     public static boolean isRecognitionServiceInstalled(PackageManager pm, ComponentName componentName) {
         List<ResolveInfo> services = pm.queryIntentServices(
                 new Intent(RecognitionService.SERVICE_INTERFACE), 0);
@@ -124,17 +126,55 @@ public class RecognitionServiceManager {
     }
 
     /**
+     * @return list of currently installed RecognitionService component names flattened to short strings
+     */
+    public List<String> getServices(PackageManager pm) {
+        List<String> services = new ArrayList<>();
+        int flags = 0;
+        //int flags = PackageManager.GET_META_DATA;
+        List<ResolveInfo> infos = pm.queryIntentServices(
+                new Intent(RecognitionService.SERVICE_INTERFACE), flags);
+
+        for (ResolveInfo ri : infos) {
+            ServiceInfo si = ri.serviceInfo;
+            if (si == null) {
+                Log.i("serviceInfo == null");
+                continue;
+            }
+            String pkg = si.packageName;
+            String cls = si.name;
+            // TODO: process si.metaData
+            String component = (new ComponentName(pkg, cls)).flattenToShortString();
+            if (!mCombosExcluded.contains(component)) {
+                services.add(component);
+            }
+        }
+        return services;
+    }
+
+    /**
      * Collect together the languages supported by the given services and call back once done.
      */
     public void populateCombos(Activity activity, final Listener listener) {
-        populateServices(activity.getPackageManager());
-        populateCombos(activity, 0, listener, new ArrayList<String>(), new HashSet<String>());
+        List<String> services = getServices(activity.getPackageManager());
+        populateCombos(activity, services, listener);
     }
 
-    private void populateCombos(final Activity activity, final int counter, final Listener listener,
+    public void populateCombos(Activity activity, List<String> services, final Listener listener) {
+        populateCombos(activity, services, 0, listener, new ArrayList<String>(), new HashSet<String>());
+    }
+
+    public void populateCombos(Activity activity, String service, final Listener listener) {
+        final List<String> services = new ArrayList<>();
+        services.add(service);
+        populateCombos(activity, services, listener);
+    }
+
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR1)
+    private void populateCombos(final Activity activity, final List<String> services, final int counter, final Listener listener,
                                 final List<String> combos, final Set<String> selectedCombos) {
 
-        if (mServices.size() == counter) {
+        if (services.size() == counter) {
             listener.onComplete(combos, selectedCombos);
             return;
         }
@@ -143,7 +183,7 @@ public class RecognitionServiceManager {
         // TODO: this seems to be only for activities that implement ACTION_WEB_SEARCH
         //Intent intent = RecognizerIntent.getVoiceDetailsIntent(this);
 
-        final String service = mServices.get(counter);
+        final String service = services.get(counter);
         ComponentName serviceComponent = ComponentName.unflattenFromString(service);
         if (serviceComponent != null) {
             intent.setPackage(serviceComponent.getPackageName());
@@ -152,9 +192,11 @@ public class RecognitionServiceManager {
             //intent.setComponent(serviceComponent);
         }
 
-        // This is needed to include newly installed apps or stopped apps
-        // as receivers of the broadcast.
-        intent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR1) {
+            // This is needed to include newly installed apps or stopped apps
+            // as receivers of the broadcast.
+            intent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
+        }
 
         activity.sendOrderedBroadcast(intent, null, new BroadcastReceiver() {
 
@@ -165,7 +207,7 @@ public class RecognitionServiceManager {
                 if (getResultCode() != Activity.RESULT_OK) {
                     Log.i(combos.size() + ") NO LANG: " + service);
                     combos.add(service);
-                    populateCombos(activity, counter + 1, listener, combos, selectedCombos);
+                    populateCombos(activity, services, counter + 1, listener, combos, selectedCombos);
                     return;
                 }
 
@@ -195,32 +237,8 @@ public class RecognitionServiceManager {
                     }
                 }
 
-                populateCombos(activity, counter + 1, listener, combos, selectedCombos);
+                populateCombos(activity, services, counter + 1, listener, combos, selectedCombos);
             }
         }, null, Activity.RESULT_OK, null, null);
-    }
-
-    private void populateServices(PackageManager pm) {
-        int flags = 0;
-        //int flags = PackageManager.GET_META_DATA;
-        List<ResolveInfo> services = pm.queryIntentServices(
-                new Intent(RecognitionService.SERVICE_INTERFACE), flags);
-
-        int index = 0;
-        for (ResolveInfo ri : services) {
-            ServiceInfo si = ri.serviceInfo;
-            if (si == null) {
-                Log.i("serviceInfo == null");
-                continue;
-            }
-            String pkg = si.packageName;
-            String cls = si.name;
-            // TODO: process si.metaData
-            String component = (new ComponentName(pkg, cls)).flattenToShortString();
-            if (!mCombosExcluded.contains(component)) {
-                mServices.add(component);
-                index++;
-            }
-        }
     }
 }
