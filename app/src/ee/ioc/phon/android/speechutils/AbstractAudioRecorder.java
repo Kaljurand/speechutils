@@ -24,7 +24,7 @@ import android.media.MediaRecorder;
  * <ul>
  * <li>signed</li>
  * <li>16-bit</li>
- * <li>little endian</li>
+ * <li>native endian</li>
  * <li>mono</li>
  * <li>16kHz (recommended, but a different sample rate can be specified in the constructor)</li>
  * </ul>
@@ -33,6 +33,7 @@ import android.media.MediaRecorder;
  * <p/>
  * <pre>
  * arecord --file-type raw --format=S16_LE --channels 1 --rate 16000
+ * arecord --file-type raw --format=S16_BE --channels 1 --rate 16000 (possibly)
  * </pre>
  * <p/>
  * TODO: maybe use: ByteArrayOutputStream
@@ -49,6 +50,8 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
 
     // Number of channels (MONO = 1, STEREO = 2)
     static final short CHANNELS = 1;
+
+    //static final ByteOrder NATIVE_ORDER = ByteOrder.nativeOrder();
 
     private SpeechRecord mRecorder = null;
 
@@ -410,9 +413,6 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
 
         long sum = 0;
         for (int i = begin; i < end; i += 2) {
-            // TODO: We don't need the whole short, just take the 2nd byte (the more significant one)
-            // byte curSample = mCurrentRecording[i+1];
-
             short curSample = getShort(mRecording[i], mRecording[i + 1]);
             sum += curSample * curSample;
         }
@@ -421,15 +421,14 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
 
 
     /*
-     * <p>Converts two bytes to a short, assuming that the 2nd byte is
-     * more significant (LITTLE_ENDIAN format).</p>
-     *
-     * <pre>
-     * 255 | (255 << 8)
-     * 65535
-     * </pre>
+     * Converts two bytes to a short (assuming little endian).
+     * TODO: We don't need the whole short, just take the 2nd byte (the more significant one)
+     * TODO: Most Android devices are little endian?
      */
     private static short getShort(byte argB1, byte argB2) {
+        //if (NATIVE_ORDER.equals(ByteOrder.BIG_ENDIAN)) {
+        //    return (short) ((argB1 << 8) | argB2);
+        //}
         return (short) (argB1 | (argB2 << 8));
     }
 

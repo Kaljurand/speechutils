@@ -18,6 +18,7 @@
 // Android v4.1 / API 16 / JELLY_BEAN
 package ee.ioc.phon.android.speechutils;
 
+import android.annotation.TargetApi;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
@@ -39,7 +40,7 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
 
     private List<byte[]> mBufferList = new ArrayList<>();
 
-    // TODO: ???
+    // Time period to dequeue a buffer
     private static final long kTimeoutUs = 10000;
 
     public EncodedAudioRecorder(int audioSource, int sampleRate) {
@@ -56,9 +57,14 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
         this(DEFAULT_AUDIO_SOURCE, DEFAULT_SAMPLE_RATE);
     }
 
+    /**
+     * TODO: the MIME should be configurable as the server might not support all formats
+     * (returning "Your GStreamer installation is missing a plug-in.")
+     */
     public String getWsArgs() {
         // TODO: for encoded data we do not need to specify the content type such as "audio/amr-wb"
         //return "?foo=bar";
+        //return "?content-type=audio/flac";
         return "?content-type=audio/x-raw,+layout=(string)interleaved,+rate=(int)" + getSampleRate() + ",+format=(string)S16LE,+channels=(int)1";
     }
 
@@ -83,12 +89,14 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
         return AudioUtils.concatenateBuffers(mBufferList);
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public List<String> getAvailableEncoders() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            List<String> encoders = new ArrayList<>();
-            MediaFormat format = getFormatFlac(getSampleRate());
+            MediaFormat format = MediaFormatFactory.createMediaFormat(MediaFormatFactory.Type.FLAC, getSampleRate());
             MediaCodecList mcl = new MediaCodecList(MediaCodecList.REGULAR_CODECS);
             String encoderAsStr = mcl.findEncoderForFormat(format);
+            List<String> encoders = new ArrayList<>();
+            encoders.add(encoderAsStr == null ? "<null>" : encoderAsStr);
             for (MediaCodecInfo info : mcl.getCodecInfos()) {
                 if (info.isEncoder()) {
                     if (info.getName().equals(encoderAsStr)) {
@@ -103,90 +111,17 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
         return Collections.emptyList();
     }
 
-    // TODO: find out why this currently crashes
-    public void testFlacEncoder() {
-        testEncoderWithFormat("audio/flac", getFormatFlac(getSampleRate()));
-    }
-
-    public void testAMRWBEncoder() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            MediaFormat format = new MediaFormat();
-            format.setString(MediaFormat.KEY_MIME, "audio/amr-wb");
-            format.setInteger(MediaFormat.KEY_SAMPLE_RATE, getSampleRate());
-            format.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
-            format.setInteger(MediaFormat.KEY_BIT_RATE, 6600);
-            testEncoderWithFormat("audio/amr-wb", format);
-        }
-    }
-
-    public void testAMRWBEncoders() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            LinkedList<MediaFormat> formats = new LinkedList<>();
-            final int kBitRates[] =
-                    {6600, 8850, 12650, 14250, 15850, 18250, 19850, 23050, 23850};
-            for (int j = 0; j < kBitRates.length; ++j) {
-                MediaFormat format = new MediaFormat();
-                format.setString(MediaFormat.KEY_MIME, "audio/amr-wb");
-                format.setInteger(MediaFormat.KEY_SAMPLE_RATE, getSampleRate());
-                format.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
-                format.setInteger(MediaFormat.KEY_BIT_RATE, kBitRates[j]);
-                formats.push(format);
-            }
-            testEncoderWithFormats("audio/amr-wb", formats);
-        }
-    }
-
-    void recorderLoop(SpeechRecord speechRecord) {
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    protected void recorderLoop(SpeechRecord speechRecord) {
         mBufferList = new ArrayList<>();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            MediaFormat format = new MediaFormat();
-            format.setString(MediaFormat.KEY_MIME, "audio/amr-wb");
-            format.setInteger(MediaFormat.KEY_SAMPLE_RATE, getSampleRate());
-            format.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
-            format.setInteger(MediaFormat.KEY_BIT_RATE, 23050);
-            List<String> componentNames = getEncoderNamesForType("audio/amr-wb");
+            MediaFormat format = MediaFormatFactory.createMediaFormat(MediaFormatFactory.Type.FLAC, getSampleRate());
+            List<String> componentNames = getEncoderNamesForType(format.getString(MediaFormat.KEY_MIME));
             for (String componentName : componentNames) {
-                Log.i("testing component '" + componentName + "'");
-                Log.i("  testing format '" + format + "'");
+                Log.i("component/format: " + componentName + "/" + format);
                 Pair<Integer, Integer> pair = recorderEncoderLoop(createCodec(componentName, format), speechRecord);
                 showMetrics(format, pair.first, pair.second);
                 break; // TODO: we use the first one that is suitable
-            }
-        }
-    }
-
-    private static MediaFormat getFormatFlac(int sampleRate) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            MediaFormat format = new MediaFormat();
-            format.setString(MediaFormat.KEY_MIME, "audio/flac");
-            format.setString(MediaFormat.KEY_FRAME_RATE, null);
-            format.setInteger(MediaFormat.KEY_BIT_RATE, 64000);
-            format.setInteger(MediaFormat.KEY_SAMPLE_RATE, sampleRate);
-            format.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
-            return format;
-        }
-        return null;
-    }
-
-    private void testEncoderWithFormat(String mime, MediaFormat format) {
-        List<String> componentNames = getEncoderNamesForType(mime);
-        for (String componentName : componentNames) {
-            Log.i("testing component '" + componentName + "'");
-            Log.i("  testing format '" + format + "'");
-            Pair<Integer, Integer> pair = recorderEncoderLoop(createCodec(componentName, format), null);
-            showMetrics(format, pair.first, pair.second);
-            break; // TODO: we use the first one that is suitable
-        }
-    }
-
-    private void testEncoderWithFormats(String mime, List<MediaFormat> formats) {
-        List<String> componentNames = getEncoderNamesForType(mime);
-        for (String componentName : componentNames) {
-            Log.i("testing component '" + componentName + "'");
-            for (MediaFormat format : formats) {
-                Log.i("  testing format '" + format + "'");
-                Pair<Integer, Integer> pair = recorderEncoderLoop(createCodec(componentName, format), null);
-                showMetrics(format, pair.first, pair.second);
             }
         }
     }
@@ -195,6 +130,7 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
      * Maps the given mime type to a list of names of suitable codecs.
      * Only OMX-codecs are considered.
      */
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     private static List<String> getEncoderNamesForType(String mime) {
         LinkedList<String> names = new LinkedList<>();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
@@ -228,12 +164,8 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
 
     /**
      * TODO:
-     * The buffer size in RawAudioRecorder is new byte[mFramePeriod * RESOLUTION_IN_BYTES * CHANNELS],
+     * The buffer size in RawAudioRecorder is byte[mFramePeriod * RESOLUTION_IN_BYTES * CHANNELS],
      * but here we use the buffer given by the encoder.
-     *
-     * @param size
-     * @param speechRecord
-     * @return
      */
     private byte[] getBytes(int size, SpeechRecord speechRecord) {
         byte[] buffer = new byte[size];
@@ -267,7 +199,7 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
         return buffer;
     }
 
-
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     private int queueInputBuffer(MediaCodec codec, ByteBuffer[] inputBuffers, int index, SpeechRecord speechRecord) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             ByteBuffer buffer = inputBuffers[index];
@@ -279,15 +211,15 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
                 return -1;
             }
             buffer.put(bytes);
-            codec.queueInputBuffer(index, 0 /* offset */, size, 0 /* timeUs */, 0);
+            codec.queueInputBuffer(index, 0, size, 0, 0);
             return size;
         }
         return -1;
     }
 
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     private void dequeueOutputBuffer(MediaCodec codec, ByteBuffer[] outputBuffers, int index, MediaCodec.BufferInfo info) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-
             ByteBuffer buffer = outputBuffers[index];
             final byte[] bufferCopied = new byte[info.size];
             buffer.get(bufferCopied);
@@ -296,20 +228,16 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
             // TODO: store the encoded data
             //add(bufferCopied);
             mBufferList.add(bufferCopied);
-
-            codec.releaseOutputBuffer(index, false /* render */);
+            codec.releaseOutputBuffer(index, false);
         }
     }
 
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     private static MediaCodec createCodec(String componentName, MediaFormat format) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             try {
                 MediaCodec codec = MediaCodec.createByCodecName(componentName);
-                codec.configure(
-                        format,
-                        null /* surface */,
-                        null /* crypto */,
-                        MediaCodec.CONFIGURE_FLAG_ENCODE);
+                codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
                 return codec;
             } catch (IllegalStateException e) {
                 Log.e("codec '" + componentName + "' failed configuration.");
@@ -321,8 +249,13 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
     }
 
     /**
-     * Synchronous Processing using Buffer Arrays (deprecated)
+     * Synchronous Processing using Buffer Arrays (deprecated).
+     * <p/>
+     * Encoders (or codecs that generate compressed data) will create and return the codec specific
+     * data before any valid output buffer in output buffers marked with the codec-config flag.
+     * Buffers containing codec-specific-data have no meaningful timestamps.
      */
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     private Pair<Integer, Integer> recorderEncoderLoop(MediaCodec codec, SpeechRecord speechRecord) {
         if (codec == null) {
             return new Pair(-1, -1);
@@ -336,22 +269,21 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
             int numBytesSubmitted = 0;
             boolean doneSubmittingInput = false;
             int numBytesDequeued = 0;
-            // TODO: the first disjunct is a temporary hack to allow this method to be called
-            // without SpeechRecord
-            while (speechRecord == null || speechRecord.getRecordingState() == SpeechRecord.RECORDSTATE_RECORDING) {
+            int numRetries = 0;
+
+            while (true) {
                 int index;
+                if (speechRecord.getRecordingState() != SpeechRecord.RECORDSTATE_RECORDING) {
+                    doneSubmittingInput = true;
+                }
                 if (!doneSubmittingInput) {
-                    index = codec.dequeueInputBuffer(kTimeoutUs /* timeoutUs */);
+                    index = codec.dequeueInputBuffer(kTimeoutUs);
                     if (index != MediaCodec.INFO_TRY_AGAIN_LATER) {
                         int size = queueInputBuffer(codec, codecInputBuffers, index, speechRecord);
                         if (size == -1) {
                             Log.i("Error while reading audio");
                             codec.queueInputBuffer(
-                                    index,
-                                    0 /* offset */,
-                                    0 /* size */,
-                                    0 /* timeUs */,
-                                    MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                                    index, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                             Log.i("queued input EOS.");
                             doneSubmittingInput = true;
                         } else {
@@ -361,13 +293,21 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
                     }
                 }
                 MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-                index = codec.dequeueOutputBuffer(info, kTimeoutUs /* timeoutUs */);
+                Log.i("flags: " + info.flags);
+                index = codec.dequeueOutputBuffer(info, kTimeoutUs);
                 if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                    // TODO
+                    Log.i("INFO_TRY_AGAIN_LATER");
+                    // TODO: not sure why it occurs but sometimes we never reach END_OF_STREAM
+                    // so we temporarily break here.
+                    if (++numRetries > 10) {
+                        break;
+                    }
                 } else if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                     // TODO
+                    Log.i("INFO_OUTPUT_FORMAT_CHANGED");
                 } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                     codecOutputBuffers = codec.getOutputBuffers();
+                    Log.i("INFO_OUTPUT_BUFFERS_CHANGED");
                 } else {
                     dequeueOutputBuffer(codec, codecOutputBuffers, index, info);
                     numBytesDequeued += info.size;
@@ -384,7 +324,7 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
         return new Pair(-1, -1);
     }
 
-
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     private static void showMetrics(MediaFormat format, int numBytesSubmitted, int numBytesDequeued) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             Log.i("queued a total of " + numBytesSubmitted + " bytes, " + "dequeued " + numBytesDequeued + " bytes.");
