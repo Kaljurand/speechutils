@@ -47,6 +47,13 @@ public class Extras {
     // will not be transcriptions of the same audio anymore.
     public static final String EXTRA_SEMI_FINAL = "ee.ioc.phon.android.extra.SEMI_FINAL";
 
+    // Boolean. Iff true then the recognizer should play audio cues to indicate start and end of
+    // recording, as well as error conditions.
+    public static final String EXTRA_AUDIO_CUES = "ee.ioc.phon.android.extra.AUDIO_CUES";
+
+    // Boolean. Use another app to view/evaluate/execute the recognition result. (Arvutaja-specific)
+    public static final String EXTRA_USE_EXTERNAL_EVALUATOR = "ee.ioc.phon.android.extra.USE_EXTERNAL_EVALUATOR";
+
     // Caller is interested in the recorded audio data (boolean)
     public static final String EXTRA_GET_AUDIO = "android.speech.extra.GET_AUDIO";
 
