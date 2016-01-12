@@ -6,6 +6,7 @@ import android.os.Build;
 
 public class MediaFormatFactory {
 
+    // TODO: add mimes
     enum Type {
         AAC, AMR, FLAC
     }

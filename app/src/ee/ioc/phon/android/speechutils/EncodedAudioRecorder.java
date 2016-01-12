@@ -16,6 +16,7 @@
 
 // Based on https://android.googlesource.com/platform/cts/+/jb-mr2-release/tests/tests/media/src/android/media/cts/EncoderTest.java
 // Android v4.1 / API 16 / JELLY_BEAN
+// TODO: provide both the raw and the encoded bytes
 package ee.ioc.phon.android.speechutils;
 
 import android.annotation.TargetApi;
@@ -60,12 +61,12 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
     /**
      * TODO: the MIME should be configurable as the server might not support all formats
      * (returning "Your GStreamer installation is missing a plug-in.")
+     * TODO: according to the server docs, for encoded data we do not need to specify the content type
+     * such as "audio/x-flac", but it did not work without (nor with "audio/flac").
      */
     public String getWsArgs() {
-        // TODO: for encoded data we do not need to specify the content type such as "audio/amr-wb"
         //return "?foo=bar";
-        //return "?content-type=audio/flac";
-        return "?content-type=audio/x-raw,+layout=(string)interleaved,+rate=(int)" + getSampleRate() + ",+format=(string)S16LE,+channels=(int)1";
+        return "?content-type=audio/x-flac";
     }
 
     /**
@@ -168,33 +169,37 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
      * but here we use the buffer given by the encoder.
      */
     private byte[] getBytes(int size, SpeechRecord speechRecord) {
+        if (speechRecord == null) {
+            return null;
+        }
+
+        if (speechRecord.getRecordingState() != SpeechRecord.RECORDSTATE_RECORDING) {
+            return null;
+        }
+
         byte[] buffer = new byte[size];
-        if (speechRecord != null) {
-            // public int read (byte[] audioData, int offsetInBytes, int sizeInBytes)
-            int numberOfBytes = speechRecord.read(buffer, 0, buffer.length); // Fill buffer
-            int status = 0;
+        // public int read (byte[] audioData, int offsetInBytes, int sizeInBytes)
+        int numberOfBytes = speechRecord.read(buffer, 0, buffer.length); // Fill buffer
+        int status = 0;
 
-            // Some error checking
-            if (numberOfBytes == SpeechRecord.ERROR_INVALID_OPERATION) {
-                Log.e("The SpeechRecord object was not properly initialized");
-                status = -1;
-            } else if (numberOfBytes == SpeechRecord.ERROR_BAD_VALUE) {
-                Log.e("The parameters do not resolve to valid data and indexes.");
-                status = -2;
-            } else if (numberOfBytes > buffer.length) {
-                Log.e("Read more bytes than is buffer length:" + numberOfBytes + ": " + buffer.length);
-                status = -3;
-            } else if (numberOfBytes == 0) {
-                Log.e("Read zero bytes");
-                status = -4;
-            }
+        // Some error checking
+        if (numberOfBytes == SpeechRecord.ERROR_INVALID_OPERATION) {
+            Log.e("The SpeechRecord object was not properly initialized");
+            status = -1;
+        } else if (numberOfBytes == SpeechRecord.ERROR_BAD_VALUE) {
+            Log.e("The parameters do not resolve to valid data and indexes.");
+            status = -2;
+        } else if (numberOfBytes > buffer.length) {
+            Log.e("Read more bytes than is buffer length:" + numberOfBytes + ": " + buffer.length);
+            status = -3;
+        } else if (numberOfBytes == 0) {
+            Log.e("Read zero bytes");
+            status = -4;
+        }
 
-            if (status < 0) {
-                handleError("status = " + status);
-                return null;
-            }
-            // Everything seems to be OK, adding the buffer to the recording.
-            add(buffer);
+        if (status < 0) {
+            handleError("status = " + status);
+            return null;
         }
         return buffer;
     }
@@ -211,6 +216,7 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
                 return -1;
             }
             buffer.put(bytes);
+            //add(bytes); // TODO: ADD
             codec.queueInputBuffer(index, 0, size, 0, 0);
             return size;
         }
@@ -225,8 +231,8 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
             buffer.get(bufferCopied);
             // TODO: do we need to clear?
             //buf.clear();
-            // TODO: store the encoded data
-            //add(bufferCopied);
+            add(bufferCopied); // TODO: ADD (store the encoded data)
+            showSomeBytes("out", bufferCopied);
             mBufferList.add(bufferCopied);
             codec.releaseOutputBuffer(index, false);
         }
@@ -270,54 +276,50 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
             boolean doneSubmittingInput = false;
             int numBytesDequeued = 0;
             int numRetries = 0;
-
+            int index;
             while (true) {
-                int index;
-                if (speechRecord.getRecordingState() != SpeechRecord.RECORDSTATE_RECORDING) {
-                    doneSubmittingInput = true;
-                }
                 if (!doneSubmittingInput) {
                     index = codec.dequeueInputBuffer(kTimeoutUs);
-                    if (index != MediaCodec.INFO_TRY_AGAIN_LATER) {
+                    if (index >= 0) {
                         int size = queueInputBuffer(codec, codecInputBuffers, index, speechRecord);
                         if (size == -1) {
-                            Log.i("Error while reading audio");
-                            codec.queueInputBuffer(
-                                    index, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                            Log.i("queued input EOS.");
+                            codec.queueInputBuffer(index, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                            Log.i("enc: in: EOS");
                             doneSubmittingInput = true;
                         } else {
+                            Log.i("enc: in: " + size);
                             numBytesSubmitted += size;
-                            //Log.i("queued " + size + " bytes of input data.");
                         }
+                    } else {
+                        Log.i("enc: in: timeout, will try again");
                     }
                 }
                 MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-                Log.i("flags: " + info.flags);
                 index = codec.dequeueOutputBuffer(info, kTimeoutUs);
+                Log.i("enc: out: flags/index: " + info.flags + "/" + index);
                 if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                    Log.i("INFO_TRY_AGAIN_LATER");
+                    Log.i("enc: out: INFO_TRY_AGAIN_LATER: " + numRetries);
                     // TODO: not sure why it occurs but sometimes we never reach END_OF_STREAM
                     // so we temporarily break here.
-                    if (++numRetries > 10) {
+                    if (++numRetries > 500) {
                         break;
                     }
                 } else if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                    // TODO
-                    Log.i("INFO_OUTPUT_FORMAT_CHANGED");
+                    MediaFormat format = codec.getOutputFormat();
+                    Log.i("enc: out: INFO_OUTPUT_FORMAT_CHANGED: " + format.toString());
                 } else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
                     codecOutputBuffers = codec.getOutputBuffers();
-                    Log.i("INFO_OUTPUT_BUFFERS_CHANGED");
+                    Log.i("enc: out: INFO_OUTPUT_BUFFERS_CHANGED");
                 } else {
                     dequeueOutputBuffer(codec, codecOutputBuffers, index, info);
                     numBytesDequeued += info.size;
                     if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
-                        Log.i("dequeued output EOS.");
+                        Log.i("enc: out: EOS");
                         break;
                     }
-                    //Log.i("dequeued " + info.size + " bytes of output data.");
                 }
             }
+            codec.stop();
             codec.release();
             return new Pair(numBytesSubmitted, numBytesDequeued);
         }
@@ -336,5 +338,16 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
             float actualRatio = (float) numBytesDequeued / (float) numBytesSubmitted;
             Log.i("desiredRatio = " + desiredRatio + ", actualRatio = " + actualRatio);
         }
+    }
+
+
+    private void showSomeBytes(String tag, byte[] bytes) {
+        Log.i("enc: " + tag + ": length: " + bytes.length);
+        String str = "";
+        int len = bytes.length;
+        for (int i = 0; i < len && i < 5; i++) {
+            str += Integer.toHexString(bytes[i]) + " ";
+        }
+        Log.i("enc: " + tag + ": hex: " + str);
     }
 }

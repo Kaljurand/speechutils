@@ -363,6 +363,8 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
     /**
      * <p>Stops the recording, and sets the state to STOPPED.
      * If stopping fails then sets the state to ERROR.</p>
+     *
+     * TODO: only used by the deprecated RecognizerIntentService
      */
     public void stop() {
         // We check the underlying SpeechRecord state trying to avoid IllegalStateException.
