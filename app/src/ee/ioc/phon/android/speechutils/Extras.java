@@ -83,6 +83,7 @@ public class Extras {
     public static final String RESULTS_RECOGNITION_LINEARIZATIONS = "ee.ioc.phon.android.extra.RESULTS_RECOGNITION_LINEARIZATIONS";
     public static final String RESULTS_RECOGNITION_LINEARIZATION_COUNTS = "ee.ioc.phon.android.extra.RESULTS_RECOGNITION_LINEARIZATION_COUNTS";
 
+    // Byte array. Currently not used.
     public static final String RESULTS_AUDIO_ENCODED = "ee.ioc.phon.android.extra.RESULTS_AUDIO_ENCODED";
 
     // TODO: experimental

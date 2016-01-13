@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015, Institute of Cybernetics at Tallinn University of Technology
+ * Copyright 2011-2016, Institute of Cybernetics at Tallinn University of Technology
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package ee.ioc.phon.android.speechutils;
 
 import android.media.AudioFormat;
 import android.media.MediaRecorder;
+
+import ee.ioc.phon.android.speechutils.utils.AudioUtils;
 
 /**
  * <p>Records raw audio using SpeechRecord and stores it into a byte array as</p>
@@ -63,12 +65,6 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
     // Recorder state
     private State mState;
 
-    // Buffer size
-    private int mBufferSize;
-
-    // Number of frames written to byte array on each output
-    private int mFramePeriod;
-
     // The complete space into which the recording in written.
     // Its maximum length is about:
     // 2 (bytes) * 1 (channels) * 30 (max rec time in seconds) * 44100 (times per second) = 2 646 000 bytes
@@ -94,12 +90,21 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         // TODO: replace 35 with the max length of the recording
         mRecording = new byte[mOneSec * 35];
         try {
-            setBufferSizeAndFramePeriod();
-            mRecorder = new SpeechRecord(audioSource, mSampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, mBufferSize, false, false, false);
+            int minBufferSizeInBytes = SpeechRecord.getMinBufferSize(mSampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION);
+            if (minBufferSizeInBytes == SpeechRecord.ERROR_BAD_VALUE) {
+                throw new IllegalArgumentException("SpeechRecord.getMinBufferSize: parameters not supported by hardware");
+            } else if (minBufferSizeInBytes == SpeechRecord.ERROR) {
+                Log.e("SpeechRecord.getMinBufferSize: unable to query hardware for output properties");
+                minBufferSizeInBytes = mSampleRate * (120 / 1000) * RESOLUTION_IN_BYTES * CHANNELS;
+            }
+            int bufferSize = 2 * minBufferSizeInBytes;
+            int framePeriod = bufferSize / (2 * RESOLUTION_IN_BYTES * CHANNELS);
+            Log.i("SpeechRecord buffer size: " + bufferSize + ", min size = " + minBufferSizeInBytes);
+            mRecorder = new SpeechRecord(audioSource, mSampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, bufferSize, false, false, false);
             if (getSpeechRecordState() != SpeechRecord.STATE_INITIALIZED) {
                 throw new IllegalStateException("SpeechRecord initialization failed");
             }
-            mBuffer = new byte[mFramePeriod * RESOLUTION_IN_BYTES * CHANNELS];
+            mBuffer = new byte[framePeriod * RESOLUTION_IN_BYTES * CHANNELS];
             setState(State.READY);
         } catch (Exception e) {
             if (e.getMessage() == null) {
@@ -108,10 +113,6 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
                 handleError(e.getMessage());
             }
         }
-    }
-
-    public byte[] getEncodedRecording() {
-        return null;
     }
 
     int getSampleRate() {
@@ -139,20 +140,6 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         // Everything seems to be OK, adding the buffer to the recording.
         add(mBuffer);
         return 0;
-    }
-
-
-    void setBufferSizeAndFramePeriod() {
-        int minBufferSizeInBytes = SpeechRecord.getMinBufferSize(mSampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION);
-        if (minBufferSizeInBytes == SpeechRecord.ERROR_BAD_VALUE) {
-            throw new IllegalArgumentException("SpeechRecord.getMinBufferSize: parameters not supported by hardware");
-        } else if (minBufferSizeInBytes == SpeechRecord.ERROR) {
-            Log.e("SpeechRecord.getMinBufferSize: unable to query hardware for output properties");
-            minBufferSizeInBytes = mSampleRate * (120 / 1000) * RESOLUTION_IN_BYTES * CHANNELS;
-        }
-        mBufferSize = 2 * minBufferSizeInBytes;
-        mFramePeriod = mBufferSize / (2 * RESOLUTION_IN_BYTES * CHANNELS);
-        Log.i("SpeechRecord buffer size: " + mBufferSize + ", min size = " + minBufferSizeInBytes);
     }
 
 
@@ -185,62 +172,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
 
 
     public static byte[] getRecordingAsWav(byte[] pcm, int sampleRate) {
-        int headerLen = 44;
-        int byteRate = sampleRate * RESOLUTION_IN_BYTES; // mSampleRate*(16/8)*1 ???
-        int totalAudioLen = pcm.length;
-        int totalDataLen = totalAudioLen + headerLen;
-
-        byte[] header = new byte[headerLen];
-
-        header[0] = 'R';  // RIFF/WAVE header
-        header[1] = 'I';
-        header[2] = 'F';
-        header[3] = 'F';
-        header[4] = (byte) (totalDataLen & 0xff);
-        header[5] = (byte) ((totalDataLen >> 8) & 0xff);
-        header[6] = (byte) ((totalDataLen >> 16) & 0xff);
-        header[7] = (byte) ((totalDataLen >> 24) & 0xff);
-        header[8] = 'W';
-        header[9] = 'A';
-        header[10] = 'V';
-        header[11] = 'E';
-        header[12] = 'f';  // 'fmt ' chunk
-        header[13] = 'm';
-        header[14] = 't';
-        header[15] = ' ';
-        header[16] = 16;  // 4 bytes: size of 'fmt ' chunk
-        header[17] = 0;
-        header[18] = 0;
-        header[19] = 0;
-        header[20] = 1;  // format = 1
-        header[21] = 0;
-        header[22] = (byte) CHANNELS;
-        header[23] = 0;
-        header[24] = (byte) (sampleRate & 0xff);
-        header[25] = (byte) ((sampleRate >> 8) & 0xff);
-        header[26] = (byte) ((sampleRate >> 16) & 0xff);
-        header[27] = (byte) ((sampleRate >> 24) & 0xff);
-        header[28] = (byte) (byteRate & 0xff);
-        header[29] = (byte) ((byteRate >> 8) & 0xff);
-        header[30] = (byte) ((byteRate >> 16) & 0xff);
-        header[31] = (byte) ((byteRate >> 24) & 0xff);
-        header[32] = (byte) (2 * 16 / 8);  // block align
-        header[33] = 0;
-        header[34] = (byte) 8 * RESOLUTION_IN_BYTES;  // bits per sample
-        header[35] = 0;
-        header[36] = 'd';
-        header[37] = 'a';
-        header[38] = 't';
-        header[39] = 'a';
-        header[40] = (byte) (totalAudioLen & 0xff);
-        header[41] = (byte) ((totalAudioLen >> 8) & 0xff);
-        header[42] = (byte) ((totalAudioLen >> 16) & 0xff);
-        header[43] = (byte) ((totalAudioLen >> 24) & 0xff);
-
-        byte[] wav = new byte[header.length + pcm.length];
-        System.arraycopy(header, 0, wav, 0, header.length);
-        System.arraycopy(pcm, 0, wav, header.length, pcm.length);
-        return wav;
+        return AudioUtils.getRecordingAsWav(pcm, sampleRate, RESOLUTION_IN_BYTES, CHANNELS);
     }
 
     /**
@@ -363,7 +295,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
     /**
      * <p>Stops the recording, and sets the state to STOPPED.
      * If stopping fails then sets the state to ERROR.</p>
-     *
+     * <p/>
      * TODO: only used by the deprecated RecognizerIntentService
      */
     public void stop() {

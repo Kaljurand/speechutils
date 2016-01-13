@@ -17,8 +17,6 @@ public interface AudioRecorder {
 
     boolean isPausing();
 
-    byte[] getEncodedRecording();
-
     enum State {
         // recorder is ready, but not yet recording
         READY,
