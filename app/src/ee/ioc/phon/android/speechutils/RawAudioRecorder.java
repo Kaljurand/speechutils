@@ -21,7 +21,7 @@ package ee.ioc.phon.android.speechutils;
  * <ul>
  * <li>signed</li>
  * <li>16-bit</li>
- * <li>little endian</li>
+ * <li>native endian</li>
  * <li>mono</li>
  * <li>16kHz (recommended, but a different sample rate can be specified in the constructor)</li>
  * </ul>
@@ -30,6 +30,7 @@ package ee.ioc.phon.android.speechutils;
  * <p/>
  * <pre>
  * arecord --file-type raw --format=S16_LE --channels 1 --rate 16000
+ * arecord --file-type raw --format=S16_BE --channels 1 --rate 16000 (possibly)
  * </pre>
  * <p/>
  * TODO: maybe use: ByteArrayOutputStream
@@ -64,28 +65,5 @@ public class RawAudioRecorder extends AbstractAudioRecorder {
 
     public String getWsArgs() {
         return "?content-type=audio/x-raw,+layout=(string)interleaved,+rate=(int)" + getSampleRate() + ",+format=(string)S16LE,+channels=(int)1";
-    }
-
-    /**
-     * Returns the recorded bytes since the last call, and resets the recording.
-     *
-     * @return bytes that have been recorded since this method was last called
-     */
-    public synchronized byte[] consumeRecordingAndTruncate() {
-        int len = getConsumedLength();
-        byte[] bytes = getCurrentRecording(len);
-        setRecordedLength(0);
-        setConsumedLength(0);
-        return bytes;
-    }
-
-    void recorderLoop(SpeechRecord recorder) {
-        while (recorder.getRecordingState() == SpeechRecord.RECORDSTATE_RECORDING) {
-            int status = read(recorder);
-            if (status < 0) {
-                handleError("status = " + status);
-                break;
-            }
-        }
     }
 }

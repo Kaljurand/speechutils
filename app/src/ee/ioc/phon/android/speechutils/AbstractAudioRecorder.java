@@ -21,27 +21,6 @@ import android.media.MediaRecorder;
 
 import ee.ioc.phon.android.speechutils.utils.AudioUtils;
 
-/**
- * <p>Records raw audio using SpeechRecord and stores it into a byte array as</p>
- * <ul>
- * <li>signed</li>
- * <li>16-bit</li>
- * <li>native endian</li>
- * <li>mono</li>
- * <li>16kHz (recommended, but a different sample rate can be specified in the constructor)</li>
- * </ul>
- * <p/>
- * <p>For example, the corresponding <code>arecord</code> settings are</p>
- * <p/>
- * <pre>
- * arecord --file-type raw --format=S16_LE --channels 1 --rate 16000
- * arecord --file-type raw --format=S16_BE --channels 1 --rate 16000 (possibly)
- * </pre>
- * <p/>
- * TODO: maybe use: ByteArrayOutputStream
- *
- * @author Kaarel Kaljurand
- */
 public abstract class AbstractAudioRecorder implements AudioRecorder {
 
     static final int DEFAULT_AUDIO_SOURCE = MediaRecorder.AudioSource.VOICE_RECOGNITION;
@@ -81,8 +60,6 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
     // Buffer for output
     private byte[] mBuffer;
 
-    abstract void recorderLoop(SpeechRecord speechRecord);
-
     protected AbstractAudioRecorder(int audioSource, int sampleRate) {
         mSampleRate = sampleRate;
         // E.g. 1 second of 16kHz 16-bit mono audio takes 32000 bytes.
@@ -115,31 +92,63 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         }
     }
 
-    int getSampleRate() {
+    /**
+     * Returns the recorded bytes since the last call, and resets the recording.
+     *
+     * @return bytes that have been recorded since this method was last called
+     */
+    public synchronized byte[] consumeRecordingAndTruncate() {
+        int len = getConsumedLength();
+        byte[] bytes = getCurrentRecording(len);
+        setRecordedLength(0);
+        setConsumedLength(0);
+        return bytes;
+    }
+
+    protected int getSampleRate() {
         return mSampleRate;
     }
 
-    int read(SpeechRecord recorder) {
-        // public int read (byte[] audioData, int offsetInBytes, int sizeInBytes)
-        int numberOfBytes = recorder.read(mBuffer, 0, mBuffer.length); // Fill buffer
 
-        // Some error checking
-        if (numberOfBytes == SpeechRecord.ERROR_INVALID_OPERATION) {
+    /**
+     * Checking of the read status.
+     * The total recording array has been pre-allocated (e.g. for 35 seconds of audio).
+     * If it gets full (status == -5) then the recording is stopped.
+     */
+    protected int getStatus(int numOfBytes, int len) {
+        if (numOfBytes == SpeechRecord.ERROR_INVALID_OPERATION) {
             Log.e("The SpeechRecord object was not properly initialized");
             return -1;
-        } else if (numberOfBytes == SpeechRecord.ERROR_BAD_VALUE) {
+        } else if (numOfBytes == SpeechRecord.ERROR_BAD_VALUE) {
             Log.e("The parameters do not resolve to valid data and indexes.");
             return -2;
-        } else if (numberOfBytes > mBuffer.length) {
-            Log.e("Read more bytes than is buffer length:" + numberOfBytes + ": " + mBuffer.length);
+        } else if (numOfBytes > len) {
+            Log.e("Read more bytes than is buffer length:" + numOfBytes + ": " + len);
             return -3;
-        } else if (numberOfBytes == 0) {
+        } else if (numOfBytes == 0) {
             Log.e("Read zero bytes");
             return -4;
+        } else if (mRecording.length < mRecordedLength + len) {
+            Log.e("Recorder buffer overflow: " + mRecordedLength);
+            return -5;
         }
-        // Everything seems to be OK, adding the buffer to the recording.
-        add(mBuffer);
         return 0;
+    }
+
+    /**
+     * Copy data from the given recorder into the given buffer, and append to the complete recording.
+     * public int read (byte[] audioData, int offsetInBytes, int sizeInBytes)
+     */
+    protected int read(SpeechRecord recorder, byte[] buffer) {
+        int len = buffer.length;
+        int numOfBytes = recorder.read(buffer, 0, len);
+        int status = getStatus(numOfBytes, len);
+        if (status == 0) {
+            // arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
+            System.arraycopy(buffer, 0, mRecording, mRecordedLength, len);
+            mRecordedLength += len;
+        }
+        return status;
     }
 
 
@@ -150,7 +159,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         return mState;
     }
 
-    void setState(State state) {
+    private void setState(State state) {
         mState = state;
     }
 
@@ -184,7 +193,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         return bytes;
     }
 
-    byte[] getCurrentRecording(int startPos) {
+    protected byte[] getCurrentRecording(int startPos) {
         int len = getLength() - startPos;
         byte[] bytes = new byte[len];
         System.arraycopy(mRecording, startPos, bytes, 0, len);
@@ -192,15 +201,15 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         return bytes;
     }
 
-    int getConsumedLength() {
+    protected int getConsumedLength() {
         return mConsumedLength;
     }
 
-    void setConsumedLength(int len) {
+    protected void setConsumedLength(int len) {
         mConsumedLength = len;
     }
 
-    void setRecordedLength(int len) {
+    protected void setRecordedLength(int len) {
         mRecordedLength = len;
     }
 
@@ -295,8 +304,6 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
     /**
      * <p>Stops the recording, and sets the state to STOPPED.
      * If stopping fails then sets the state to ERROR.</p>
-     * <p/>
-     * TODO: only used by the deprecated RecognizerIntentService
      */
     public void stop() {
         // We check the underlying SpeechRecord state trying to avoid IllegalStateException.
@@ -314,23 +321,13 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         }
     }
 
-
-    /**
-     * <p>Copy the given byte array into the total recording array.</p>
-     * <p/>
-     * <p>The total recording array has been pre-allocated (e.g. for 35 seconds of audio).
-     * If it gets full then the recording is stopped.</p>
-     *
-     * @param buffer audio buffer
-     */
-    void add(byte[] buffer) {
-        if (mRecording.length >= mRecordedLength + buffer.length) {
-            // arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
-            System.arraycopy(buffer, 0, mRecording, mRecordedLength, buffer.length);
-            mRecordedLength += buffer.length;
-        } else {
-            // This also happens on the emulator for some reason
-            handleError("Recorder buffer overflow: " + mRecordedLength);
+    protected void recorderLoop(SpeechRecord recorder) {
+        while (recorder.getRecordingState() == SpeechRecord.RECORDSTATE_RECORDING) {
+            int status = read(recorder, mBuffer);
+            if (status < 0) {
+                handleError("status = " + status);
+                break;
+            }
         }
     }
 
@@ -367,13 +364,13 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
     }
 
 
-    void handleError(String msg) {
+    protected void handleError(String msg) {
         release();
         setState(State.ERROR);
         Log.e(msg);
     }
 
-    int getSpeechRecordState() {
+    private int getSpeechRecordState() {
         if (mRecorder == null) {
             return SpeechRecord.STATE_UNINITIALIZED;
         }

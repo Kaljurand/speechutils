@@ -1,12 +1,21 @@
 package ee.ioc.phon.android.speechutils.utils;
 
 import android.annotation.TargetApi;
+import android.media.MediaCodec;
+import android.media.MediaCodecInfo;
+import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.os.Build;
+import android.text.TextUtils;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 
 import ee.ioc.phon.android.speechutils.Log;
+import ee.ioc.phon.android.speechutils.MediaFormatFactory;
 
 public class AudioUtils {
 
@@ -69,6 +78,79 @@ public class AudioUtils {
         return wav;
     }
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    public static List<String> getAvailableEncoders(int sampleRate) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            MediaFormat format = MediaFormatFactory.createMediaFormat(MediaFormatFactory.Type.FLAC, sampleRate);
+            MediaCodecList mcl = new MediaCodecList(MediaCodecList.REGULAR_CODECS);
+            String encoderAsStr = mcl.findEncoderForFormat(format);
+            List<String> encoders = new ArrayList<>();
+            for (MediaCodecInfo info : mcl.getCodecInfos()) {
+                if (info.isEncoder()) {
+                    if (info.getName().equals(encoderAsStr)) {
+                        encoders.add("*** " + info.getName() + ": " + TextUtils.join(", ", info.getSupportedTypes()));
+                    } else {
+                        encoders.add(info.getName() + ": " + TextUtils.join(", ", info.getSupportedTypes()));
+                    }
+                }
+            }
+            return encoders;
+        }
+        return Collections.emptyList();
+    }
+
+    /**
+     * Maps the given mime type to a list of names of suitable codecs.
+     * Only OMX-codecs are considered.
+     */
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    public static List<String> getEncoderNamesForType(String mime) {
+        LinkedList<String> names = new LinkedList<>();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            int n = MediaCodecList.getCodecCount();
+            for (int i = 0; i < n; ++i) {
+                MediaCodecInfo info = MediaCodecList.getCodecInfoAt(i);
+                if (!info.isEncoder()) {
+                    continue;
+                }
+                if (!info.getName().startsWith("OMX.")) {
+                    // Unfortunately for legacy reasons, "AACEncoder", a
+                    // non OMX component had to be in this list for the video
+                    // editor code to work... but it cannot actually be instantiated
+                    // using MediaCodec.
+                    Log.i("skipping '" + info.getName() + "'.");
+                    continue;
+                }
+                String[] supportedTypes = info.getSupportedTypes();
+                for (int j = 0; j < supportedTypes.length; ++j) {
+                    if (supportedTypes[j].equalsIgnoreCase(mime)) {
+                        names.push(info.getName());
+                        break;
+                    }
+                }
+            }
+        }
+        // Return an empty list if API is too old
+        // TODO: maybe return null or throw exception
+        return names;
+    }
+
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    public static MediaCodec createCodec(String componentName, MediaFormat format) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+            try {
+                MediaCodec codec = MediaCodec.createByCodecName(componentName);
+                codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+                return codec;
+            } catch (IllegalStateException e) {
+                Log.e("codec '" + componentName + "' failed configuration.");
+            } catch (IOException e) {
+                Log.e("codec '" + componentName + "' failed configuration.");
+            }
+        }
+        return null;
+    }
+
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     public static void showMetrics(MediaFormat format, int numBytesSubmitted, int numBytesDequeued) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
@@ -105,9 +187,11 @@ public class AudioUtils {
         Log.i("enc: " + tag + ": length: " + bytes.length);
         String str = "";
         int len = bytes.length;
-        for (int i = 0; i < len && i < 5; i++) {
-            str += Integer.toHexString(bytes[i]) + " ";
+        if (len > 0) {
+            for (int i = 0; i < len && i < 5; i++) {
+                str += Integer.toHexString(bytes[i]) + " ";
+            }
+            Log.i("enc: " + tag + ": hex: " + str);
         }
-        Log.i("enc: " + tag + ": hex: " + str);
     }
 }

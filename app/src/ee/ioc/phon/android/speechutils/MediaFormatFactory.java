@@ -7,7 +7,7 @@ import android.os.Build;
 public class MediaFormatFactory {
 
     // TODO: add mimes
-    enum Type {
+    public enum Type {
         AAC, AMR, FLAC
     }
 
@@ -27,6 +27,8 @@ public class MediaFormatFactory {
                 //format.setString(MediaFormat.KEY_MIME, MediaFormat.MIMETYPE_AUDIO_FLAC); // API=21
                 format.setString(MediaFormat.KEY_MIME, "audio/flac");
                 format.setInteger(MediaFormat.KEY_BIT_RATE, 64000);
+                //TODO: use another bit rate, does not seem to have effect always
+                //format.setInteger(MediaFormat.KEY_BIT_RATE, 128000);
             } else {
                 format.setString(MediaFormat.KEY_MIME, "audio/amr-wb");
                 format.setInteger(MediaFormat.KEY_BIT_RATE, 23050);
