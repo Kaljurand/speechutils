@@ -1,0 +1,379 @@
+/*
+ * Copyright 2011-2016, Institute of Cybernetics at Tallinn University of Technology
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package ee.ioc.phon.android.speechutils;
+
+import android.media.AudioFormat;
+import android.media.MediaRecorder;
+
+import ee.ioc.phon.android.speechutils.utils.AudioUtils;
+
+public abstract class AbstractAudioRecorder implements AudioRecorder {
+
+    static final int DEFAULT_AUDIO_SOURCE = MediaRecorder.AudioSource.VOICE_RECOGNITION;
+    static final int DEFAULT_SAMPLE_RATE = 16000;
+
+    static final int RESOLUTION = AudioFormat.ENCODING_PCM_16BIT;
+    static final short RESOLUTION_IN_BYTES = 2;
+
+    // Number of channels (MONO = 1, STEREO = 2)
+    static final short CHANNELS = 1;
+
+    //static final ByteOrder NATIVE_ORDER = ByteOrder.nativeOrder();
+
+    private SpeechRecord mRecorder = null;
+
+    private double mAvgEnergy = 0;
+
+    private final int mSampleRate;
+    private final int mOneSec;
+
+    // Recorder state
+    private State mState;
+
+    // The complete space into which the recording in written.
+    // Its maximum length is about:
+    // 2 (bytes) * 1 (channels) * 30 (max rec time in seconds) * 44100 (times per second) = 2 646 000 bytes
+    // but typically is:
+    // 2 (bytes) * 1 (channels) * 20 (max rec time in seconds) * 16000 (times per second) = 640 000 bytes
+    private final byte[] mRecording;
+
+    // TODO: use: mRecording.length instead
+    private int mRecordedLength = 0;
+
+    // The number of bytes the client has already consumed
+    private int mConsumedLength = 0;
+
+    // Buffer for output
+    private byte[] mBuffer;
+
+    protected AbstractAudioRecorder(int audioSource, int sampleRate) {
+        mSampleRate = sampleRate;
+        // E.g. 1 second of 16kHz 16-bit mono audio takes 32000 bytes.
+        mOneSec = RESOLUTION_IN_BYTES * CHANNELS * mSampleRate;
+        // TODO: replace 35 with the max length of the recording
+        mRecording = new byte[mOneSec * 35];
+        try {
+            int minBufferSizeInBytes = SpeechRecord.getMinBufferSize(mSampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION);
+            if (minBufferSizeInBytes == SpeechRecord.ERROR_BAD_VALUE) {
+                throw new IllegalArgumentException("SpeechRecord.getMinBufferSize: parameters not supported by hardware");
+            } else if (minBufferSizeInBytes == SpeechRecord.ERROR) {
+                Log.e("SpeechRecord.getMinBufferSize: unable to query hardware for output properties");
+                minBufferSizeInBytes = mSampleRate * (120 / 1000) * RESOLUTION_IN_BYTES * CHANNELS;
+            }
+            int bufferSize = 2 * minBufferSizeInBytes;
+            int framePeriod = bufferSize / (2 * RESOLUTION_IN_BYTES * CHANNELS);
+            Log.i("SpeechRecord buffer size: " + bufferSize + ", min size = " + minBufferSizeInBytes);
+            mRecorder = new SpeechRecord(audioSource, mSampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, bufferSize, false, false, false);
+            if (getSpeechRecordState() != SpeechRecord.STATE_INITIALIZED) {
+                throw new IllegalStateException("SpeechRecord initialization failed");
+            }
+            mBuffer = new byte[framePeriod * RESOLUTION_IN_BYTES * CHANNELS];
+            setState(State.READY);
+        } catch (Exception e) {
+            if (e.getMessage() == null) {
+                handleError("Unknown error occurred while initializing recording");
+            } else {
+                handleError(e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Returns the recorded bytes since the last call, and resets the recording.
+     *
+     * @return bytes that have been recorded since this method was last called
+     */
+    public synchronized byte[] consumeRecordingAndTruncate() {
+        int len = getConsumedLength();
+        byte[] bytes = getCurrentRecording(len);
+        setRecordedLength(0);
+        setConsumedLength(0);
+        return bytes;
+    }
+
+    protected int getSampleRate() {
+        return mSampleRate;
+    }
+
+
+    /**
+     * Checking of the read status.
+     * The total recording array has been pre-allocated (e.g. for 35 seconds of audio).
+     * If it gets full (status == -5) then the recording is stopped.
+     */
+    protected int getStatus(int numOfBytes, int len) {
+        if (numOfBytes == SpeechRecord.ERROR_INVALID_OPERATION) {
+            Log.e("The SpeechRecord object was not properly initialized");
+            return -1;
+        } else if (numOfBytes == SpeechRecord.ERROR_BAD_VALUE) {
+            Log.e("The parameters do not resolve to valid data and indexes.");
+            return -2;
+        } else if (numOfBytes > len) {
+            Log.e("Read more bytes than is buffer length:" + numOfBytes + ": " + len);
+            return -3;
+        } else if (numOfBytes == 0) {
+            Log.e("Read zero bytes");
+            return -4;
+        } else if (mRecording.length < mRecordedLength + len) {
+            Log.e("Recorder buffer overflow: " + mRecordedLength);
+            return -5;
+        }
+        return 0;
+    }
+
+    /**
+     * Copy data from the given recorder into the given buffer, and append to the complete recording.
+     * public int read (byte[] audioData, int offsetInBytes, int sizeInBytes)
+     */
+    protected int read(SpeechRecord recorder, byte[] buffer) {
+        int len = buffer.length;
+        int numOfBytes = recorder.read(buffer, 0, len);
+        int status = getStatus(numOfBytes, len);
+        if (status == 0) {
+            // arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
+            System.arraycopy(buffer, 0, mRecording, mRecordedLength, len);
+            mRecordedLength += len;
+        }
+        return status;
+    }
+
+
+    /**
+     * @return recorder state
+     */
+    public State getState() {
+        return mState;
+    }
+
+    private void setState(State state) {
+        mState = state;
+    }
+
+
+    /**
+     * @return bytes that have been recorded since the beginning
+     */
+    public byte[] getCompleteRecording() {
+        return getCurrentRecording(0);
+    }
+
+
+    /**
+     * @return bytes that have been recorded since the beginning, with wav-header
+     */
+    public byte[] getCompleteRecordingAsWav() {
+        return getRecordingAsWav(getCompleteRecording(), mSampleRate);
+    }
+
+
+    public static byte[] getRecordingAsWav(byte[] pcm, int sampleRate) {
+        return AudioUtils.getRecordingAsWav(pcm, sampleRate, RESOLUTION_IN_BYTES, CHANNELS);
+    }
+
+    /**
+     * @return bytes that have been recorded since this method was last called
+     */
+    public synchronized byte[] consumeRecording() {
+        byte[] bytes = getCurrentRecording(mConsumedLength);
+        mConsumedLength = mRecordedLength;
+        return bytes;
+    }
+
+    protected byte[] getCurrentRecording(int startPos) {
+        int len = getLength() - startPos;
+        byte[] bytes = new byte[len];
+        System.arraycopy(mRecording, startPos, bytes, 0, len);
+        Log.i("Copied from: " + startPos + ": " + bytes.length + " bytes");
+        return bytes;
+    }
+
+    protected int getConsumedLength() {
+        return mConsumedLength;
+    }
+
+    protected void setConsumedLength(int len) {
+        mConsumedLength = len;
+    }
+
+    protected void setRecordedLength(int len) {
+        mRecordedLength = len;
+    }
+
+    public int getLength() {
+        return mRecordedLength;
+    }
+
+
+    /**
+     * @return <code>true</code> iff a speech-ending pause has occurred at the end of the recorded data
+     */
+    public boolean isPausing() {
+        double pauseScore = getPauseScore();
+        Log.i("Pause score: " + pauseScore);
+        return pauseScore > 7;
+    }
+
+
+    /**
+     * @return volume indicator that shows the average volume of the last read buffer
+     */
+    public float getRmsdb() {
+        long sumOfSquares = getRms(mRecordedLength, mBuffer.length);
+        double rootMeanSquare = Math.sqrt(sumOfSquares / (mBuffer.length / 2));
+        if (rootMeanSquare > 1) {
+            // TODO: why 10?
+            return (float) (10 * Math.log10(rootMeanSquare));
+        }
+        return 0;
+    }
+
+
+    /**
+     * <p>In order to calculate if the user has stopped speaking we take the
+     * data from the last second of the recording, map it to a number
+     * and compare this number to the numbers obtained previously. We
+     * return a confidence score (0-INF) of a longer pause having occurred in the
+     * speech input.</p>
+     * <p/>
+     * <p>TODO: base the implementation on some well-known technique.</p>
+     *
+     * @return positive value which the caller can use to determine if there is a pause
+     */
+    private double getPauseScore() {
+        long t2 = getRms(mRecordedLength, mOneSec);
+        if (t2 == 0) {
+            return 0;
+        }
+        double t = mAvgEnergy / t2;
+        mAvgEnergy = (2 * mAvgEnergy + t2) / 3;
+        return t;
+    }
+
+
+    /**
+     * <p>Stops the recording (if needed) and releases the resources.
+     * The object can no longer be used and the reference should be
+     * set to null after a call to release().</p>
+     */
+    public synchronized void release() {
+        if (mRecorder != null) {
+            if (mRecorder.getRecordingState() == SpeechRecord.RECORDSTATE_RECORDING) {
+                stop();
+            }
+            mRecorder.release();
+            mRecorder = null;
+        }
+    }
+
+    /**
+     * <p>Starts the recording, and sets the state to RECORDING.</p>
+     */
+    public void start() {
+        if (getSpeechRecordState() == SpeechRecord.STATE_INITIALIZED) {
+            mRecorder.startRecording();
+            if (mRecorder.getRecordingState() == SpeechRecord.RECORDSTATE_RECORDING) {
+                setState(State.RECORDING);
+                new Thread() {
+                    public void run() {
+                        recorderLoop(mRecorder);
+                    }
+                }.start();
+            } else {
+                handleError("startRecording() failed");
+            }
+        } else {
+            handleError("start() called on illegal state");
+        }
+    }
+
+
+    /**
+     * <p>Stops the recording, and sets the state to STOPPED.
+     * If stopping fails then sets the state to ERROR.</p>
+     */
+    public void stop() {
+        // We check the underlying SpeechRecord state trying to avoid IllegalStateException.
+        // If it still occurs then we catch it.
+        if (getSpeechRecordState() == SpeechRecord.STATE_INITIALIZED &&
+                mRecorder.getRecordingState() == SpeechRecord.RECORDSTATE_RECORDING) {
+            try {
+                mRecorder.stop();
+                setState(State.STOPPED);
+            } catch (IllegalStateException e) {
+                handleError("native stop() called in illegal state: " + e.getMessage());
+            }
+        } else {
+            handleError("stop() called in illegal state");
+        }
+    }
+
+    protected void recorderLoop(SpeechRecord recorder) {
+        while (recorder.getRecordingState() == SpeechRecord.RECORDSTATE_RECORDING) {
+            int status = read(recorder, mBuffer);
+            if (status < 0) {
+                handleError("status = " + status);
+                break;
+            }
+        }
+    }
+
+
+    private long getRms(int end, int span) {
+        int begin = end - span;
+        if (begin < 0) {
+            begin = 0;
+        }
+        // make sure begin is even
+        if (0 != (begin % 2)) {
+            begin++;
+        }
+
+        long sum = 0;
+        for (int i = begin; i < end; i += 2) {
+            short curSample = getShort(mRecording[i], mRecording[i + 1]);
+            sum += curSample * curSample;
+        }
+        return sum;
+    }
+
+
+    /*
+     * Converts two bytes to a short (assuming little endian).
+     * TODO: We don't need the whole short, just take the 2nd byte (the more significant one)
+     * TODO: Most Android devices are little endian?
+     */
+    private static short getShort(byte argB1, byte argB2) {
+        //if (NATIVE_ORDER.equals(ByteOrder.BIG_ENDIAN)) {
+        //    return (short) ((argB1 << 8) | argB2);
+        //}
+        return (short) (argB1 | (argB2 << 8));
+    }
+
+
+    protected void handleError(String msg) {
+        release();
+        setState(State.ERROR);
+        Log.e(msg);
+    }
+
+    private int getSpeechRecordState() {
+        if (mRecorder == null) {
+            return SpeechRecord.STATE_UNINITIALIZED;
+        }
+        return mRecorder.getState();
+    }
+}
