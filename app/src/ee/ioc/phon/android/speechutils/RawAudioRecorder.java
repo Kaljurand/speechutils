@@ -51,6 +51,19 @@ public class RawAudioRecorder extends AbstractAudioRecorder {
      */
     public RawAudioRecorder(int audioSource, int sampleRate) {
         super(audioSource, sampleRate);
+        try {
+            int bufferSize = getBufferSize();
+            int framePeriod = bufferSize / (2 * RESOLUTION_IN_BYTES * CHANNELS);
+            createRecorder(audioSource, sampleRate, bufferSize);
+            createBuffer(framePeriod);
+            setState(State.READY);
+        } catch (Exception e) {
+            if (e.getMessage() == null) {
+                handleError("Unknown error occurred while initializing recorder");
+            } else {
+                handleError(e.getMessage());
+            }
+        }
     }
 
 

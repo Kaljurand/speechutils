@@ -49,6 +49,19 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
 
     public EncodedAudioRecorder(int audioSource, int sampleRate) {
         super(audioSource, sampleRate);
+        try {
+            int bufferSize = getBufferSize();
+            createRecorder(audioSource, sampleRate, bufferSize);
+            int framePeriod = bufferSize / (2 * RESOLUTION_IN_BYTES * CHANNELS);
+            createBuffer(framePeriod);
+            setState(State.READY);
+        } catch (Exception e) {
+            if (e.getMessage() == null) {
+                handleError("Unknown error occurred while initializing recording");
+            } else {
+                handleError(e.getMessage());
+            }
+        }
         // TODO: replace 35 with the max length of the recording
         mRecordingEnc = new byte[RESOLUTION_IN_BYTES * CHANNELS * sampleRate * 35]; // 35 sec raw
     }
@@ -179,14 +192,23 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
     private void dequeueOutputBuffer(MediaCodec codec, ByteBuffer[] outputBuffers, int index, MediaCodec.BufferInfo info) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             ByteBuffer buffer = outputBuffers[index];
-            final byte[] bufferCopied = new byte[info.size];
-            buffer.get(bufferCopied);
-            // TODO: do we need to clear?
-            //buf.clear();
-            codec.releaseOutputBuffer(index, false);
-            addEncoded(bufferCopied);
-            if (Log.DEBUG) {
-                AudioUtils.showSomeBytes("out", bufferCopied);
+            Log.i("size/remaining: " + info.size + "/" + buffer.remaining());
+            if (info.size <= buffer.remaining()) {
+                final byte[] bufferCopied = new byte[info.size];
+                buffer.get(bufferCopied); // TODO: catch BufferUnderflow
+                // TODO: do we need to clear?
+                // on N5: always size == remaining(), clearing is not needed
+                // on SGS2: remaining decreases until it becomes less than size, which results in BufferUnderflow
+                // (but SGS2 records only zeros anyway)
+                //buffer.clear();
+                codec.releaseOutputBuffer(index, false);
+                addEncoded(bufferCopied);
+                if (Log.DEBUG) {
+                    AudioUtils.showSomeBytes("out", bufferCopied);
+                }
+            } else {
+                Log.e("size > remaining");
+                codec.releaseOutputBuffer(index, false);
             }
         }
     }

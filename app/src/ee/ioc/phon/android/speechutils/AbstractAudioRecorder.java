@@ -17,22 +17,13 @@
 package ee.ioc.phon.android.speechutils;
 
 import android.media.AudioFormat;
-import android.media.MediaRecorder;
 
 import ee.ioc.phon.android.speechutils.utils.AudioUtils;
 
 public abstract class AbstractAudioRecorder implements AudioRecorder {
 
-    static final int DEFAULT_AUDIO_SOURCE = MediaRecorder.AudioSource.VOICE_RECOGNITION;
-    static final int DEFAULT_SAMPLE_RATE = 16000;
-
-    static final int RESOLUTION = AudioFormat.ENCODING_PCM_16BIT;
-    static final short RESOLUTION_IN_BYTES = 2;
-
-    // Number of channels (MONO = 1, STEREO = 2)
-    static final short CHANNELS = 1;
-
-    //static final ByteOrder NATIVE_ORDER = ByteOrder.nativeOrder();
+    private static final int RESOLUTION = AudioFormat.ENCODING_PCM_16BIT;
+    private static final int BUFFER_SIZE_MUTLIPLIER = 4; // was: 2
 
     private SpeechRecord mRecorder = null;
 
@@ -66,30 +57,32 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         mOneSec = RESOLUTION_IN_BYTES * CHANNELS * mSampleRate;
         // TODO: replace 35 with the max length of the recording
         mRecording = new byte[mOneSec * 35];
-        try {
-            int minBufferSizeInBytes = SpeechRecord.getMinBufferSize(mSampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION);
-            if (minBufferSizeInBytes == SpeechRecord.ERROR_BAD_VALUE) {
-                throw new IllegalArgumentException("SpeechRecord.getMinBufferSize: parameters not supported by hardware");
-            } else if (minBufferSizeInBytes == SpeechRecord.ERROR) {
-                Log.e("SpeechRecord.getMinBufferSize: unable to query hardware for output properties");
-                minBufferSizeInBytes = mSampleRate * (120 / 1000) * RESOLUTION_IN_BYTES * CHANNELS;
-            }
-            int bufferSize = 2 * minBufferSizeInBytes;
-            int framePeriod = bufferSize / (2 * RESOLUTION_IN_BYTES * CHANNELS);
-            Log.i("SpeechRecord buffer size: " + bufferSize + ", min size = " + minBufferSizeInBytes);
-            mRecorder = new SpeechRecord(audioSource, mSampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, bufferSize, false, false, false);
-            if (getSpeechRecordState() != SpeechRecord.STATE_INITIALIZED) {
-                throw new IllegalStateException("SpeechRecord initialization failed");
-            }
-            mBuffer = new byte[framePeriod * RESOLUTION_IN_BYTES * CHANNELS];
-            setState(State.READY);
-        } catch (Exception e) {
-            if (e.getMessage() == null) {
-                handleError("Unknown error occurred while initializing recording");
-            } else {
-                handleError(e.getMessage());
-            }
+    }
+
+
+    protected void createRecorder(int audioSource, int sampleRate, int bufferSize) {
+        mRecorder = new SpeechRecord(audioSource, sampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, bufferSize, false, false, false);
+        if (getSpeechRecordState() != SpeechRecord.STATE_INITIALIZED) {
+            throw new IllegalStateException("SpeechRecord initialization failed");
         }
+    }
+
+    // TODO: remove
+    protected void createBuffer(int framePeriod) {
+        mBuffer = new byte[framePeriod * RESOLUTION_IN_BYTES * CHANNELS];
+    }
+
+    protected int getBufferSize() {
+        int minBufferSizeInBytes = SpeechRecord.getMinBufferSize(mSampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION);
+        if (minBufferSizeInBytes == SpeechRecord.ERROR_BAD_VALUE) {
+            throw new IllegalArgumentException("SpeechRecord.getMinBufferSize: parameters not supported by hardware");
+        } else if (minBufferSizeInBytes == SpeechRecord.ERROR) {
+            Log.e("SpeechRecord.getMinBufferSize: unable to query hardware for output properties");
+            minBufferSizeInBytes = mSampleRate * (120 / 1000) * RESOLUTION_IN_BYTES * CHANNELS;
+        }
+        int bufferSize = BUFFER_SIZE_MUTLIPLIER * minBufferSizeInBytes;
+        Log.i("SpeechRecord buffer size: " + bufferSize + ", min size = " + minBufferSizeInBytes);
+        return bufferSize;
     }
 
     /**
@@ -116,6 +109,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
      * If it gets full (status == -5) then the recording is stopped.
      */
     protected int getStatus(int numOfBytes, int len) {
+        Log.i("Read bytes: request/actual: " + len + "/" + numOfBytes);
         if (numOfBytes == SpeechRecord.ERROR_INVALID_OPERATION) {
             Log.e("The SpeechRecord object was not properly initialized");
             return -1;
@@ -128,7 +122,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         } else if (numOfBytes == 0) {
             Log.e("Read zero bytes");
             return -4;
-        } else if (mRecording.length < mRecordedLength + len) {
+        } else if (mRecording.length < mRecordedLength + numOfBytes) {
             Log.e("Recorder buffer overflow: " + mRecordedLength);
             return -5;
         }
@@ -145,7 +139,8 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         int status = getStatus(numOfBytes, len);
         if (status == 0) {
             // arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
-            System.arraycopy(buffer, 0, mRecording, mRecordedLength, len);
+            // numOfBytes <= len, typically == len, but at the end of the recording can be < len.
+            System.arraycopy(buffer, 0, mRecording, mRecordedLength, numOfBytes);
             mRecordedLength += len;
         }
         return status;
@@ -159,7 +154,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         return mState;
     }
 
-    private void setState(State state) {
+    protected void setState(State state) {
         mState = state;
     }
 
@@ -357,7 +352,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
      * TODO: Most Android devices are little endian?
      */
     private static short getShort(byte argB1, byte argB2) {
-        //if (NATIVE_ORDER.equals(ByteOrder.BIG_ENDIAN)) {
+        //if (ByteOrder.nativeOrder().equals(ByteOrder.BIG_ENDIAN)) {
         //    return (short) ((argB1 << 8) | argB2);
         //}
         return (short) (argB1 | (argB2 << 8));
