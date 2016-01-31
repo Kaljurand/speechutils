@@ -54,6 +54,22 @@ public class Extras {
     // Boolean. Use another app to view/evaluate/execute the recognition result. (Arvutaja-specific)
     public static final String EXTRA_USE_EXTERNAL_EVALUATOR = "ee.ioc.phon.android.extra.USE_EXTERNAL_EVALUATOR";
 
+    /**
+     * Boolean.
+     * Start the recognition session immediately without the user having to press a button.
+     */
+    public static final String EXTRA_AUTO_START = "ee.ioc.phon.android.extra.AUTO_START";
+
+    /**
+     * Boolean.
+     * In case of an audio/network/etc. error, finish the RecognizerIntent activity with the error code,
+     * allowing the caller to handle the error.
+     * Normally errors are handled by the activity so that the activity only returns with success.
+     * However, in certain situations it is useful to let the caller handle the errors. If this
+     * is desired then the caller can request the returning of the errors using this EXTRA.
+     */
+    public static final String EXTRA_RETURN_ERRORS = "ee.ioc.phon.android.extra.RETURN_ERRORS";
+
     // Caller is interested in the recorded audio data (boolean)
     public static final String EXTRA_GET_AUDIO = "android.speech.extra.GET_AUDIO";
 
@@ -64,7 +80,6 @@ public class Extras {
     // Same as EXTRA_UNLIMITED_DURATION
     // Used on Chrome to talk to Google's recognizer?
     // (http://src.chromium.org/svn/trunk/src/content/public/android/java/src/org/chromium/content/browser/SpeechRecognition.java)
-    // Currently not used, because behaves in an incompatible way.
     public static final String EXTRA_DICTATION_MODE = "android.speech.extra.DICTATION_MODE";
 
     /**
