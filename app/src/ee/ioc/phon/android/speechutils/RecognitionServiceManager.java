@@ -80,9 +80,13 @@ public class RecognitionServiceManager {
     }
 
     public static String getServiceLabel(Context context, String service) {
+        ComponentName recognizerComponentName = ComponentName.unflattenFromString(service);
+        return getServiceLabel(context, recognizerComponentName);
+    }
+
+    public static String getServiceLabel(Context context, ComponentName recognizerComponentName) {
         String recognizer = "[?]";
         PackageManager pm = context.getPackageManager();
-        ComponentName recognizerComponentName = ComponentName.unflattenFromString(service);
         if (recognizerComponentName != null) {
             try {
                 ServiceInfo si = pm.getServiceInfo(recognizerComponentName, 0);

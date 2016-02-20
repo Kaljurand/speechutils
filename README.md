@@ -6,7 +6,7 @@ Speechutils
 Speechutils is an Android library that helps to implement apps that need to include speech-to-text and text-to-speech functionality.
 For example, it provides methods for
 
-- audio recording
+- audio recording and encoding
 - aggregating speech-to-text and text-to-speech services
 - playing audio cues before/after speech-to-text
 - pausing the background audio during speech-to-text
