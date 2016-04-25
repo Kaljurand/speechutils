@@ -31,42 +31,22 @@ public class CommandEditorManager {
         return mEditorCommands.get(id);
     }
 
-    public boolean execute(String id, String... args) {
-        EditorCommand command = get(id);
-        Log.i("editor: executing: " + id + "( " + args + " ): " + command);
-        if (command == null) {
-            return false;
-        }
-        return command.execute(args);
-    }
-
-    public boolean execute(Command command) {
-        EditorCommand editorCommand = get(command.getId());
-        Log.i("editor: executing: " + command);
+    public boolean execute(String commandId, String[] args) {
+        EditorCommand editorCommand = get(commandId);
+        Log.i("editor: executing: " + commandId);
         if (editorCommand == null) {
             return false;
         }
-        // TODO: add the arguments
+        int len = args.length;
+        if (len == 3) {
+            return editorCommand.execute(args[0], args[1], args[2]);
+        } else if (len == 2) {
+            return editorCommand.execute(args[0], args[1]);
+        } else if (len == 1) {
+            return editorCommand.execute(args[0]);
+        }
         return editorCommand.execute();
     }
-
-    /*
-    public boolean executeUtterance(Command command, String utterance) {
-        Log.i("editor: matching utterance: " + utterance);
-        Matcher m = command.matcher(utterance);
-        if (m.matches()) {
-            int groupCount = m.groupCount();
-            Log.i("editor: match found: " + command.getPattern() + ": groups = " + groupCount);
-            if (groupCount == 1) {
-                return execute(command.getId(), m.group(1));
-            } else if (groupCount == 2) {
-                return execute(command.getId(), m.group(1), m.group(2));
-            }
-            return execute(command.getId());
-        }
-        return false;
-    }
-    */
 
     private void init() {
 

@@ -2,6 +2,7 @@ package ee.ioc.phon.android.speechutils.editor;
 
 import android.content.ContentResolver;
 import android.net.Uri;
+import android.text.TextUtils;
 import android.util.Pair;
 
 import java.io.BufferedReader;
@@ -10,20 +11,31 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.PatternSyntaxException;
 
 import ee.ioc.phon.android.speechutils.Log;
 
 public class UtteranceRewriter {
 
-    private final Commands mCommands;
+    static class Triple {
+        final String mId;
+        final String mStr;
+        final String[] mArgs;
 
-    public UtteranceRewriter() {
-        mCommands = new Commands();
+        public Triple(String id, String str, String[] args) {
+            mId = id;
+            mStr = str;
+            mArgs = args;
+        }
     }
 
-    public UtteranceRewriter(Commands commands) {
+    private List<Command> mCommands;
+
+    public UtteranceRewriter() {
+        mCommands = new ArrayList<>();
+    }
+
+    public UtteranceRewriter(List<Command> commands) {
         assert commands != null;
         mCommands = commands;
     }
@@ -45,33 +57,37 @@ public class UtteranceRewriter {
      * and the last matching command.
      * TODO: improve this
      */
-    public Pair<Command, String> rewrite(String str) {
-        Command c = null;
-        for (Command command : mCommands.asList()) {
-            Matcher m = command.mPattern.matcher(str);
-            if (m.matches()) {
-                str = m.replaceAll(command.mReplacement);
-                c = command;
-                // TODO: resolve the arguments
+    public Triple rewrite(String str) {
+        String commandId = null;
+        String[] args = null;
+        for (Command command : mCommands) {
+            Log.i("editor: rewrite with command: " + str + ": " + command);
+            Pair<String, String[]> pair = command.match(str);
+            if (pair != null) {
+                str = pair.first;
+                commandId = command.getId();
+                args = pair.second;
+                Log.i("editor: rewrite: success: " + str + ": " + commandId + "(" + TextUtils.join(", ", args) + ")");
             }
         }
-        return new Pair(c, str);
+        return new Triple(commandId, str, args);
     }
 
     /**
      * Rewrites and returns the given results.
      * TODO: improve this
      */
-    public Pair<Command, List<String>> rewrite(List<String> results) {
-        Command command = null;
+    public Pair<Pair<String, String[]>, List<String>> rewrite(List<String> results) {
+        String commandId = null;
+        String[] args = null;
         List<String> rewrittenResults = new ArrayList<>();
         for (String result : results) {
-            Pair<Command, String> pair = rewrite(result);
-            rewrittenResults.add(pair.second);
-            command = pair.first;
+            Triple triple = rewrite(result);
+            rewrittenResults.add(triple.mStr);
+            commandId = triple.mId;
+            args = triple.mArgs;
         }
-        Log.i("editor: " + command);
-        return new Pair(command, rewrittenResults);
+        return new Pair<>(new Pair<>(commandId, args), rewrittenResults);
     }
 
     /**
@@ -79,7 +95,7 @@ public class UtteranceRewriter {
      */
     public String toTsv() {
         StringBuilder stringBuilder = new StringBuilder();
-        for (Command command : mCommands.asList()) {
+        for (Command command : mCommands) {
             stringBuilder.append(escape(command.mPattern.toString()));
             stringBuilder.append('\t');
             stringBuilder.append(escape(command.mReplacement));
@@ -101,7 +117,7 @@ public class UtteranceRewriter {
     public String[] toStringArray() {
         String[] array = new String[mCommands.size()];
         int i = 0;
-        for (Command command : mCommands.asList()) {
+        for (Command command : mCommands) {
             array[i] = pp(command.mPattern.toString())
                     + '\n'
                     + pp(command.mReplacement);
@@ -122,9 +138,9 @@ public class UtteranceRewriter {
     /**
      * Loads the rewrites from tab-separated values.
      */
-    private static Commands loadRewrites(String str) {
+    private static List<Command> loadRewrites(String str) {
         assert str != null;
-        Commands commands = new Commands();
+        List<Command> commands = new ArrayList<>();
         for (String line : str.split("\n")) {
             addLine(commands, line);
         }
@@ -135,9 +151,9 @@ public class UtteranceRewriter {
     /**
      * Loads the rewrites from an URI using a ContentResolver.
      */
-    private static Commands loadRewrites(ContentResolver contentResolver, Uri uri) throws IOException {
+    private static List<Command> loadRewrites(ContentResolver contentResolver, Uri uri) throws IOException {
         InputStream inputStream = contentResolver.openInputStream(uri);
-        Commands commands = new Commands();
+        List<Command> commands = new ArrayList<>();
         if (inputStream != null) {
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
             String line;
@@ -149,18 +165,29 @@ public class UtteranceRewriter {
         return commands;
     }
 
-    private static void addLine(Commands commands, String line) {
+    private static boolean addLine(List<Command> commands, String line) {
         String[] splits = line.split("\t");
-        try {
-            // TODO: add support for arguments
-            if (splits.length >= 3) {
-                commands.add(splits[0], "", splits[2]);
-            } else if (splits.length >= 2) {
-                commands.add(splits[0], splits[1], null);
+        if (splits.length > 1) {
+            try {
+                commands.add(getCommand(splits));
+                return true;
+            } catch (PatternSyntaxException e) {
+                // TODO: collect and expose buggy entries
             }
-        } catch (PatternSyntaxException e) {
-            // TODO: collect and expose buggy entries
         }
+        return false;
+    }
+
+    private static Command getCommand(String[] splits) {
+        List<String> args = new ArrayList<>();
+        for (int i = 3; i < splits.length; i++) {
+            args.add(unescape(splits[i]));
+        }
+        String commandId = null;
+        if (splits.length > 2) {
+            commandId = unescape(splits[2]);
+        }
+        return new Command(unescape(splits[0]), unescape(splits[1]), commandId, args);
     }
 
     /**
@@ -170,33 +197,14 @@ public class UtteranceRewriter {
         return str.replace("\n", "\\n").replace("\t", "\\t");
     }
 
-    private static String pp(String str) {
-        return escape(str).replace(" ", "·");
+    /**
+     * Maps literals of the form "\n" and "\t" to newlines and tabs.
+     */
+    private static String unescape(String str) {
+        return str.replace("\\n", "\n").replace("\\t", "\t");
     }
 
-
-    static class Commands {
-
-        private final List<Command> mCommands;
-
-        public Commands() {
-            mCommands = new ArrayList<>();
-        }
-
-        public void add(String pattern, String replacement, String commandId) {
-            mCommands.add(new Command(pattern, replacement, commandId, null));
-        }
-
-        public void add(String pattern, String replacement, String commandId, List<String> args) {
-            mCommands.add(new Command(pattern, replacement, commandId, args));
-        }
-
-        public int size() {
-            return mCommands.size();
-        }
-
-        public List<Command> asList() {
-            return mCommands;
-        }
+    private static String pp(String str) {
+        return escape(str).replace(" ", "·");
     }
 }

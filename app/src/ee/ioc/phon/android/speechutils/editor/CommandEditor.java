@@ -5,6 +5,10 @@ package ee.ioc.phon.android.speechutils.editor;
  */
 public interface CommandEditor {
 
+    boolean commitFinalResult(String str);
+
+    boolean commitPartialResult(String str);
+
     // Moving around
 
     // Go to the previous field
@@ -27,4 +31,14 @@ public interface CommandEditor {
 
     // Paste the content of the clipboard
     boolean paste();
+
+    boolean capitalize(String str);
+
+    boolean addSpace();
+
+    boolean addNewline();
+
+    boolean reset();
+
+    boolean deleteLeftWord();
 }
