@@ -16,7 +16,6 @@ import java.util.regex.PatternSyntaxException;
 import ee.ioc.phon.android.speechutils.Log;
 
 public class UtteranceRewriter {
-
     static class Triple {
         final String mId;
         final String mStr;
@@ -54,23 +53,23 @@ public class UtteranceRewriter {
 
     /**
      * Rewrites and returns the given string,
-     * and the last matching command.
-     * TODO: improve this
+     * and the first matching command.
      */
     public Triple rewrite(String str) {
-        String commandId = null;
-        String[] args = null;
         for (Command command : mCommands) {
             Log.i("editor: rewrite with command: " + str + ": " + command);
             Pair<String, String[]> pair = command.match(str);
             if (pair != null) {
                 str = pair.first;
-                commandId = command.getId();
-                args = pair.second;
-                Log.i("editor: rewrite: success: " + str + ": " + commandId + "(" + TextUtils.join(", ", args) + ")");
+                String commandId = command.getId();
+                if (commandId != null) {
+                    String[] args = pair.second;
+                    Log.i("editor: rewrite: success: " + str + ": " + commandId + "(" + TextUtils.join(",", args) + ")");
+                    return new Triple(commandId, str, args);
+                }
             }
         }
-        return new Triple(commandId, str, args);
+        return new Triple(null, str, null);
     }
 
     /**

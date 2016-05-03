@@ -14,6 +14,12 @@ public class Command {
     List<String> mArgs;
     String mArgsAsStr;
 
+    /**
+     * @param pattern     regular expression with capturing groups
+     * @param replacement replacement string for the matched substrings, typically empty in case of commands
+     * @param id          name of the command to execute, null if missing
+     * @param args        arguments of the command
+     */
     public Command(Pattern pattern, String replacement, String id, List<String> args) {
         mPattern = pattern;
         mReplacement = replacement;
@@ -37,7 +43,6 @@ public class Command {
     public Pair<String, String[]> match(CharSequence str) {
         Matcher m = matcher(str);
         if (m.matches()) {
-            // Typically this deletes the string
             String newStr = m.replaceAll(mReplacement);
             String[] argsEvaluated = TextUtils.split(m.replaceAll(mArgsAsStr), "---");
             return new Pair<>(newStr, argsEvaluated);

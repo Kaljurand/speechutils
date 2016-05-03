@@ -15,7 +15,7 @@ import ee.ioc.phon.android.speechutils.Log;
 public class CommandEditorManager {
 
     public interface EditorCommand {
-        boolean execute(String... args);
+        boolean execute(String[] args);
     }
 
     private final CommandEditor mCommandEditor;
@@ -33,19 +33,10 @@ public class CommandEditorManager {
 
     public boolean execute(String commandId, String[] args) {
         EditorCommand editorCommand = get(commandId);
-        Log.i("editor: executing: " + commandId);
         if (editorCommand == null) {
             return false;
         }
-        int len = args.length;
-        if (len == 3) {
-            return editorCommand.execute(args[0], args[1], args[2]);
-        } else if (len == 2) {
-            return editorCommand.execute(args[0], args[1]);
-        } else if (len == 1) {
-            return editorCommand.execute(args[0]);
-        }
-        return editorCommand.execute();
+        return editorCommand.execute(args);
     }
 
     private void init() {
@@ -69,7 +60,7 @@ public class CommandEditorManager {
         mEditorCommands.put("goToCharacterPosition", new EditorCommand() {
 
             @Override
-            public boolean execute(String... args) {
+            public boolean execute(String[] args) {
                 int pos = 0;
                 if (args.length > 0) {
                     try {
@@ -81,11 +72,46 @@ public class CommandEditorManager {
             }
         });
 
+        mEditorCommands.put("replace", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                if (args.length != 2) {
+                    return false;
+                }
+                return mCommandEditor.replace(args[0], args[1]);
+            }
+        });
+
         mEditorCommands.put("selectAll", new EditorCommand() {
 
             @Override
-            public boolean execute(String... args) {
+            public boolean execute(String[] args) {
                 return mCommandEditor.selectAll();
+            }
+        });
+
+        mEditorCommands.put("addSpace", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.addSpace();
+            }
+        });
+
+        mEditorCommands.put("addNewline", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.addNewline();
+            }
+        });
+
+        mEditorCommands.put("go", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.go();
             }
         });
     }

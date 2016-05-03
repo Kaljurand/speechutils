@@ -9,7 +9,7 @@ public interface CommandEditor {
 
     boolean commitPartialResult(String str);
 
-    // Moving around
+    // Moving between fields
 
     // Go to the previous field
     boolean goToPreviousField();
@@ -17,12 +17,16 @@ public interface CommandEditor {
     // Go to the next field
     boolean goToNextField();
 
+    // Moving around in the string
+
     // Go to the character at the given position
     boolean goToCharacterPosition(int pos);
 
     // Selecting
     boolean selectAll();
 
+    // Reset selection
+    boolean reset();
 
     // Copy, paste
 
@@ -32,13 +36,20 @@ public interface CommandEditor {
     // Paste the content of the clipboard
     boolean paste();
 
+    // Editing
+
     boolean capitalize(String str);
 
     boolean addSpace();
 
     boolean addNewline();
 
-    boolean reset();
-
     boolean deleteLeftWord();
+
+    boolean replace(String str1, String str2);
+
+    /**
+     * Performs the Search-action, e.g. to launch search on a searchbar.
+     */
+    boolean go();
 }

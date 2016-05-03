@@ -16,6 +16,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     private String mPrevText = "";
 
+    private int mGlueCount = 0;
+
     private InputConnection mInputConnection;
 
     public InputConnectionCommandEditor() {
@@ -31,6 +33,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     public boolean commitFinalResult(String text) {
         commitText(text);
         mPrevText = "";
+        mGlueCount = 0;
         return true;
     }
 
@@ -136,72 +139,107 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return true;
     }
 
+    @Override
+    public boolean replace(String str1, String str2) {
+        return false;
+    }
+
+    @Override
+    public boolean go() {
+        // Does not work on Google Searchbar
+        // mInputConnection.performEditorAction(EditorInfo.IME_ACTION_DONE);
+
+        // Works in Google Searchbar, GF Translator, but NOT in the Firefox search widget
+        //mInputConnection.performEditorAction(EditorInfo.IME_ACTION_GO);
+
+        mInputConnection.performEditorAction(EditorInfo.IME_ACTION_SEARCH);
+        return true;
+    }
 
     /**
      * Updates the text field, modifying only the parts that have changed.
      */
     private void commitText(String text) {
-        if (text != null && text.length() > 0) {
-            // Calculate the length of the text that has changed
-            String commonPrefix = greatestCommonPrefix(mPrevText, text);
-            int commonPrefixLength = commonPrefix.length();
-            int prevLength = mPrevText.length();
-            int deletableLength = prevLength - commonPrefixLength;
+        // Calculate the length of the text that has changed
+        String commonPrefix = greatestCommonPrefix(mPrevText, text);
+        int commonPrefixLength = commonPrefix.length();
+        int prevLength = mPrevText.length();
+        int deletableLength = prevLength - commonPrefixLength;
 
-            if (deletableLength > 0) {
-                mInputConnection.deleteSurroundingText(deletableLength, 0);
-            }
-
-            if (commonPrefixLength == text.length()) {
-                return;
-            }
-
-            // We look at the left context of the cursor
-            // to decide which glue symbol to use and whether to capitalize the text.
-            CharSequence leftContext = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
-            // In some error situation, null is returned
-            if (leftContext == null) {
-                leftContext = "";
-            }
-            String glue = "";
-            if (commonPrefixLength == 0) {
-                char firstChar = text.charAt(0);
-
-                if (!(leftContext.length() == 0
-                        || Constants.CHARACTERS_WS.contains(firstChar)
-                        || Constants.CHARACTERS_PUNCT.contains(firstChar)
-                        || Constants.CHARACTERS_WS.contains(leftContext.charAt(leftContext.length() - 1)))) {
-                    glue = " ";
-                }
-            } else {
-                text = text.substring(commonPrefixLength);
-            }
-
-            // Capitalize if required by left context
-            String leftContextTrimmed = leftContext.toString().trim();
-            if (leftContextTrimmed.length() == 0
-                    || Constants.CHARACTERS_EOS.contains(leftContextTrimmed.charAt(leftContextTrimmed.length() - 1))) {
-                // Since the text can start with whitespace (newline),
-                // we capitalize the first non-whitespace character.
-                int firstNonWhitespaceIndex = -1;
-                for (int i = 0; i < text.length(); i++) {
-                    if (!Constants.CHARACTERS_WS.contains(text.charAt(i))) {
-                        firstNonWhitespaceIndex = i;
-                        break;
-                    }
-                }
-                if (firstNonWhitespaceIndex > -1) {
-                    String newText = text.substring(0, firstNonWhitespaceIndex)
-                            + Character.toUpperCase(text.charAt(firstNonWhitespaceIndex));
-                    if (firstNonWhitespaceIndex < text.length() - 1) {
-                        newText += text.substring(firstNonWhitespaceIndex + 1);
-                    }
-                    text = newText;
-                }
-            }
-
-            mInputConnection.commitText(glue + text, 1);
+        // Delete the glue symbol if present
+        if (text.isEmpty()) {
+            deletableLength += mGlueCount;
         }
+
+        if (deletableLength > 0) {
+            mInputConnection.deleteSurroundingText(deletableLength, 0);
+        }
+
+        if (text.isEmpty() || commonPrefixLength == text.length()) {
+            return;
+        }
+
+        // We look at the left context of the cursor
+        // to decide which glue symbol to use and whether to capitalize the text.
+        CharSequence leftContext = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
+        // In some error situation, null is returned
+        if (leftContext == null) {
+            leftContext = "";
+        }
+        String glue = "";
+        if (commonPrefixLength == 0) {
+            glue = getGlue(text, leftContext);
+        } else {
+            text = text.substring(commonPrefixLength);
+        }
+
+        if (" ".equals(glue)) {
+            mGlueCount = 1;
+        }
+
+        text = capitalizeIfNeeded(text, leftContext);
+        mInputConnection.commitText(glue + text, 1);
+    }
+
+    /**
+     * Capitalize if required by left context
+     */
+    private static String capitalizeIfNeeded(String text, CharSequence leftContext) {
+        // Capitalize if required by left context
+        String leftContextTrimmed = leftContext.toString().trim();
+        if (leftContextTrimmed.length() == 0
+                || Constants.CHARACTERS_EOS.contains(leftContextTrimmed.charAt(leftContextTrimmed.length() - 1))) {
+            // Since the text can start with whitespace (newline),
+            // we capitalize the first non-whitespace character.
+            int firstNonWhitespaceIndex = -1;
+            for (int i = 0; i < text.length(); i++) {
+                if (!Constants.CHARACTERS_WS.contains(text.charAt(i))) {
+                    firstNonWhitespaceIndex = i;
+                    break;
+                }
+            }
+            if (firstNonWhitespaceIndex > -1) {
+                String newText = text.substring(0, firstNonWhitespaceIndex)
+                        + Character.toUpperCase(text.charAt(firstNonWhitespaceIndex));
+                if (firstNonWhitespaceIndex < text.length() - 1) {
+                    newText += text.substring(firstNonWhitespaceIndex + 1);
+                }
+                return newText;
+            }
+        }
+        return text;
+    }
+
+    private static String getGlue(String text, CharSequence leftContext) {
+        char firstChar = text.charAt(0);
+
+        if (leftContext.length() == 0
+                || Constants.CHARACTERS_WS.contains(firstChar)
+                || Constants.CHARACTERS_PUNCT.contains(firstChar)
+                || Constants.CHARACTERS_WS.contains(leftContext.charAt(leftContext.length() - 1))) {
+            return "";
+        }
+        return " ";
     }
 
     private static String greatestCommonPrefix(String a, String b) {
