@@ -1,10 +1,14 @@
 package ee.ioc.phon.android.speechutils.editor;
 
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.ExtractedText;
+import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import ee.ioc.phon.android.speechutils.Log;
 
 // TODO: return correct boolean
 public class InputConnectionCommandEditor implements CommandEditor {
@@ -66,18 +70,22 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     @Override
     public boolean selectAll() {
-        mInputConnection.performContextMenuAction(android.R.id.selectAll);
-        return true;
+        return mInputConnection.performContextMenuAction(android.R.id.selectAll);
     }
 
     @Override
-    public boolean copy(String str) {
-        return false;
+    public boolean cut() {
+        return mInputConnection.performContextMenuAction(android.R.id.cut);
+    }
+
+    @Override
+    public boolean copy() {
+        return mInputConnection.performContextMenuAction(android.R.id.copy);
     }
 
     @Override
     public boolean paste() {
-        return false;
+        return mInputConnection.performContextMenuAction(android.R.id.paste);
     }
 
     @Override
@@ -99,13 +107,16 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     @Override
     public boolean reset() {
+        boolean success = false;
+        mInputConnection.beginBatchEdit();
         CharSequence cs = mInputConnection.getSelectedText(0);
         if (cs != null) {
             int len = cs.length();
             mInputConnection.setSelection(len, len);
-            return true;
+            success = true;
         }
-        return false;
+        mInputConnection.endBatchEdit();
+        return success;
     }
 
     /**
@@ -115,6 +126,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
      */
     @Override
     public boolean deleteLeftWord() {
+        mInputConnection.beginBatchEdit();
         // If something is selected then delete the selection and return
         if (mInputConnection.getSelectedText(0) != null) {
             mInputConnection.commitText("", 0);
@@ -136,12 +148,50 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 }
             }
         }
+        mInputConnection.endBatchEdit();
         return true;
     }
 
     @Override
+    public boolean select(String str) {
+        boolean success = false;
+        mInputConnection.beginBatchEdit();
+        ExtractedText extractedText = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
+        CharSequence beforeCursor = extractedText.text;
+        int index = beforeCursor.toString().lastIndexOf(str);
+        if (index > 0) {
+            mInputConnection.setSelection(index, index + str.length());
+            success = true;
+        }
+        mInputConnection.endBatchEdit();
+        return success;
+    }
+
+    @Override
+    public boolean delete(String str) {
+        return replace(str, "");
+    }
+
+    @Override
     public boolean replace(String str1, String str2) {
-        return false;
+        boolean success = false;
+        mInputConnection.beginBatchEdit();
+        ExtractedText extractedText = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
+        CharSequence beforeCursor = extractedText.text;
+        //CharSequence beforeCursor = mInputConnection.getTextBeforeCursor(MAX_SELECTABLE_CONTEXT, 0);
+        Log.i("replace: " + beforeCursor);
+        int index = beforeCursor.toString().lastIndexOf(str1);
+        Log.i("replace: " + index);
+        if (index > 0) {
+            mInputConnection.setSelection(index, index);
+            mInputConnection.deleteSurroundingText(0, str1.length());
+            if (!str2.isEmpty()) {
+                mInputConnection.commitText(str2, 0);
+            }
+            success = true;
+        }
+        mInputConnection.endBatchEdit();
+        return success;
     }
 
     @Override
@@ -160,6 +210,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * Updates the text field, modifying only the parts that have changed.
      */
     private void commitText(String text) {
+        mInputConnection.beginBatchEdit();
         // Calculate the length of the text that has changed
         String commonPrefix = greatestCommonPrefix(mPrevText, text);
         int commonPrefixLength = commonPrefix.length();
@@ -199,6 +250,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
         text = capitalizeIfNeeded(text, leftContext);
         mInputConnection.commitText(glue + text, 1);
+        mInputConnection.endBatchEdit();
     }
 
     /**

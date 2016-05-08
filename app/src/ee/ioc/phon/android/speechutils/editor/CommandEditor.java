@@ -22,18 +22,18 @@ public interface CommandEditor {
     // Go to the character at the given position
     boolean goToCharacterPosition(int pos);
 
-    // Selecting
-    boolean selectAll();
+    boolean select(String str);
 
     // Reset selection
     boolean reset();
 
-    // Copy, paste
+    // Context menu actions
+    boolean selectAll();
 
-    // Copy the 1st arg to the clipboard
-    boolean copy(String str);
+    boolean cut();
 
-    // Paste the content of the clipboard
+    boolean copy();
+
     boolean paste();
 
     // Editing
@@ -45,6 +45,8 @@ public interface CommandEditor {
     boolean addNewline();
 
     boolean deleteLeftWord();
+
+    boolean delete(String str);
 
     boolean replace(String str1, String str2);
 

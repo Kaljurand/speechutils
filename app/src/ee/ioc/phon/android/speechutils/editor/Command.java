@@ -3,16 +3,16 @@ package ee.ioc.phon.android.speechutils.editor;
 import android.text.TextUtils;
 import android.util.Pair;
 
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Command {
-    Pattern mPattern;
-    String mReplacement;
-    String mId;
-    List<String> mArgs;
-    String mArgsAsStr;
+    private final static String SEPARATOR = "___";
+    private final Pattern mPattern;
+    private final String mReplacement;
+    private final String mId;
+    private final String[] mArgs;
+    private final String mArgsAsStr;
 
     /**
      * @param pattern     regular expression with capturing groups
@@ -20,15 +20,19 @@ public class Command {
      * @param id          name of the command to execute, null if missing
      * @param args        arguments of the command
      */
-    public Command(Pattern pattern, String replacement, String id, List<String> args) {
+    public Command(Pattern pattern, String replacement, String id, String[] args) {
         mPattern = pattern;
         mReplacement = replacement;
         mId = id;
-        mArgs = args;
-        mArgsAsStr = TextUtils.join("---", args);
+        if (args == null) {
+            mArgs = new String[0];
+        } else {
+            mArgs = args;
+        }
+        mArgsAsStr = TextUtils.join(SEPARATOR, mArgs);
     }
 
-    public Command(String pattern, String replacement, String id, List<String> args) {
+    public Command(String pattern, String replacement, String id, String[] args) {
         this(Pattern.compile(pattern), replacement, id, args);
     }
 
@@ -36,15 +40,27 @@ public class Command {
         return mId;
     }
 
-    public Matcher matcher(CharSequence input) {
-        return mPattern.matcher(input);
+    public Pattern getPattern() {
+        return mPattern;
+    }
+
+    public String getReplacement() {
+        return mReplacement;
+    }
+
+    public String[] getArgs() {
+        return mArgs;
+    }
+
+    private Matcher matcher(CharSequence str) {
+        return mPattern.matcher(str);
     }
 
     public Pair<String, String[]> match(CharSequence str) {
         Matcher m = matcher(str);
         if (m.matches()) {
             String newStr = m.replaceAll(mReplacement);
-            String[] argsEvaluated = TextUtils.split(m.replaceAll(mArgsAsStr), "---");
+            String[] argsEvaluated = TextUtils.split(m.replaceAll(mArgsAsStr), SEPARATOR);
             return new Pair<>(newStr, argsEvaluated);
         }
         return null;

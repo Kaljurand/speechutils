@@ -72,6 +72,28 @@ public class CommandEditorManager {
             }
         });
 
+        mEditorCommands.put("select", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                if (args.length != 1) {
+                    return false;
+                }
+                return mCommandEditor.select(args[0]);
+            }
+        });
+
+        mEditorCommands.put("delete", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                if (args.length != 1) {
+                    return false;
+                }
+                return mCommandEditor.delete(args[0]);
+            }
+        });
+
         mEditorCommands.put("replace", new EditorCommand() {
 
             @Override
@@ -80,14 +102,6 @@ public class CommandEditorManager {
                     return false;
                 }
                 return mCommandEditor.replace(args[0], args[1]);
-            }
-        });
-
-        mEditorCommands.put("selectAll", new EditorCommand() {
-
-            @Override
-            public boolean execute(String[] args) {
-                return mCommandEditor.selectAll();
             }
         });
 
@@ -104,6 +118,38 @@ public class CommandEditorManager {
             @Override
             public boolean execute(String[] args) {
                 return mCommandEditor.addNewline();
+            }
+        });
+
+        mEditorCommands.put("selectAll", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.selectAll();
+            }
+        });
+
+        mEditorCommands.put("cut", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.cut();
+            }
+        });
+
+        mEditorCommands.put("copy", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.copy();
+            }
+        });
+
+        mEditorCommands.put("paste", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.paste();
             }
         });
 

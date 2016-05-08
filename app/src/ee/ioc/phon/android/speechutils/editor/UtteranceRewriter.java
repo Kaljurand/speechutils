@@ -11,11 +11,15 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import ee.ioc.phon.android.speechutils.Log;
 
 public class UtteranceRewriter {
+
+    private static final Pattern PATTERN_TRAILING_TABS = Pattern.compile("\t*$");
+
     static class Triple {
         final String mId;
         final String mStr;
@@ -95,18 +99,16 @@ public class UtteranceRewriter {
     public String toTsv() {
         StringBuilder stringBuilder = new StringBuilder();
         for (Command command : mCommands) {
-            stringBuilder.append(escape(command.mPattern.toString()));
+            stringBuilder.append(escape(command.getPattern().toString()));
             stringBuilder.append('\t');
-            stringBuilder.append(escape(command.mReplacement));
-            if (command.mId != null) {
+            stringBuilder.append(escape(command.getReplacement()));
+            if (command.getId() != null) {
                 stringBuilder.append('\t');
-                stringBuilder.append(escape(command.mId));
+                stringBuilder.append(escape(command.getId()));
             }
-            if (command.mArgs != null) {
-                for (String arg : command.mArgs) {
-                    stringBuilder.append('\t');
-                    stringBuilder.append(escape(arg));
-                }
+            for (String arg : command.getArgs()) {
+                stringBuilder.append('\t');
+                stringBuilder.append(escape(arg));
             }
             stringBuilder.append('\n');
         }
@@ -117,16 +119,14 @@ public class UtteranceRewriter {
         String[] array = new String[mCommands.size()];
         int i = 0;
         for (Command command : mCommands) {
-            array[i] = pp(command.mPattern.toString())
+            array[i] = pp(command.getPattern().toString())
                     + '\n'
-                    + pp(command.mReplacement);
-            if (command.mId != null) {
-                array[i] += '\n' + command.mId;
+                    + pp(command.getReplacement());
+            if (command.getId() != null) {
+                array[i] += '\n' + command.getId();
             }
-            if (command.mArgs != null) {
-                for (String arg : command.mArgs) {
-                    array[i] += '\n' + arg;
-                }
+            for (String arg : command.getArgs()) {
+                array[i] += '\n' + arg;
             }
             i++;
         }
@@ -165,7 +165,8 @@ public class UtteranceRewriter {
     }
 
     private static boolean addLine(List<Command> commands, String line) {
-        String[] splits = line.split("\t");
+        // TODO: removing trailing tabs means that rewrite cannot delete a string
+        String[] splits = PATTERN_TRAILING_TABS.matcher(line).replaceAll("").split("\t");
         if (splits.length > 1) {
             try {
                 commands.add(getCommand(splits));
@@ -178,14 +179,21 @@ public class UtteranceRewriter {
     }
 
     private static Command getCommand(String[] splits) {
-        List<String> args = new ArrayList<>();
-        for (int i = 3; i < splits.length; i++) {
-            args.add(unescape(splits[i]));
-        }
         String commandId = null;
-        if (splits.length > 2) {
+        String[] args = null;
+        int numOfArgs = splits.length - 3;
+
+        if (numOfArgs >= 0) {
             commandId = unescape(splits[2]);
         }
+
+        if (numOfArgs > 0) {
+            args = new String[numOfArgs];
+            for (int i = 0; i < numOfArgs; i++) {
+                args[i] = unescape(splits[i + 3]);
+            }
+        }
+
         return new Command(unescape(splits[0]), unescape(splits[1]), commandId, args);
     }
 
