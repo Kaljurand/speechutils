@@ -31,6 +31,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
         mInputConnection = inputConnection;
     }
 
+    public InputConnection getInputConnection() {
+        return mInputConnection;
+    }
+
     /**
      * Writes the text into the text field and forgets the previous entry.
      */
@@ -52,20 +56,17 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     @Override
     public boolean goToPreviousField() {
-        mInputConnection.performEditorAction(EditorInfo.IME_ACTION_PREVIOUS);
-        return false;
+        return mInputConnection.performEditorAction(EditorInfo.IME_ACTION_PREVIOUS);
     }
 
     @Override
     public boolean goToNextField() {
-        mInputConnection.performEditorAction(EditorInfo.IME_ACTION_NEXT);
-        return false;
+        return mInputConnection.performEditorAction(EditorInfo.IME_ACTION_NEXT);
     }
 
     @Override
     public boolean goToCharacterPosition(int pos) {
-        mInputConnection.setSelection(pos, pos);
-        return false;
+        return mInputConnection.setSelection(pos, pos);
     }
 
     @Override
@@ -177,20 +178,22 @@ public class InputConnectionCommandEditor implements CommandEditor {
         boolean success = false;
         mInputConnection.beginBatchEdit();
         ExtractedText extractedText = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
-        CharSequence beforeCursor = extractedText.text;
-        //CharSequence beforeCursor = mInputConnection.getTextBeforeCursor(MAX_SELECTABLE_CONTEXT, 0);
-        Log.i("replace: " + beforeCursor);
-        int index = beforeCursor.toString().lastIndexOf(str1);
-        Log.i("replace: " + index);
-        if (index > 0) {
-            mInputConnection.setSelection(index, index);
-            mInputConnection.deleteSurroundingText(0, str1.length());
-            if (!str2.isEmpty()) {
-                mInputConnection.commitText(str2, 0);
+        if (extractedText != null) {
+            CharSequence beforeCursor = extractedText.text;
+            //CharSequence beforeCursor = mInputConnection.getTextBeforeCursor(MAX_SELECTABLE_CONTEXT, 0);
+            Log.i("replace: " + beforeCursor);
+            int index = beforeCursor.toString().lastIndexOf(str1);
+            Log.i("replace: " + index);
+            if (index > 0) {
+                mInputConnection.setSelection(index, index);
+                mInputConnection.deleteSurroundingText(0, str1.length());
+                if (!str2.isEmpty()) {
+                    mInputConnection.commitText(str2, 0);
+                }
+                success = true;
             }
-            success = true;
+            mInputConnection.endBatchEdit();
         }
-        mInputConnection.endBatchEdit();
         return success;
     }
 
