@@ -20,7 +20,7 @@ import static org.junit.Assert.assertNotNull;
 @SmallTest
 public class InputConnectionCommandEditorTest {
 
-    InputConnectionCommandEditor mEditor;
+    private InputConnectionCommandEditor mEditor;
 
     @Before
     public void before() {
@@ -43,23 +43,12 @@ public class InputConnectionCommandEditorTest {
 
     @Test
     public void test02() {
-        boolean success = mEditor.commitFinalResult("start12345 67890");
-        assertThat(success, is(true));
-        InputConnection ic = mEditor.getInputConnection();
-        CharSequence text = ic.getTextBeforeCursor(5, 0);
-        assertThat(text.toString(), is(new String("67890")));
-
-        success = mEditor.deleteLeftWord();
-        assertThat(success, is(true));
-
-        text = ic.getTextBeforeCursor(5, 0);
-        assertThat(text.toString(), is(new String("12345")));
-
-        success = mEditor.delete("12345");
-        assertThat(success, is(true));
-
-        text = ic.getTextBeforeCursor(5, 0);
-        assertThat(text.toString(), is(new String("Start")));
+        assertThat(mEditor.commitFinalResult("start12345 67890"), is(true));
+        assertThat(getTextBeforeCursor(5), is("67890"));
+        assertThat(mEditor.deleteLeftWord(), is(true));
+        assertThat(getTextBeforeCursor(5), is("12345"));
+        assertThat(mEditor.delete("12345"), is(true));
+        assertThat(getTextBeforeCursor(5), is("Start"));
     }
 
 
@@ -77,13 +66,34 @@ public class InputConnectionCommandEditorTest {
         assertThat(mEditor.commitPartialResult("...124"), is(true));
         assertThat(mEditor.commitFinalResult("...1245"), is(true));
         assertThat(mEditor.goToCharacterPosition(4), is(true));
-        String text = mEditor.getInputConnection().getTextBeforeCursor(10, 0).toString();
-        assertThat(text, is(new String("...1")));
+        assertThat(getTextBeforeCursor(10), is("...1"));
+    }
+
+    @Test
+    public void test05() {
+        assertThat(mEditor.commitFinalResult("a12345 67890_12345"), is(true));
+        assertThat(mEditor.select("12345"), is(true));
+        assertThat(getTextBeforeCursor(2), is("0_"));
+        assertThat(mEditor.deleteLeftWord(), is(true));
+        assertThat(getTextBeforeCursor(2), is("0_"));
+        assertThat(mEditor.deleteLeftWord(), is(true));
+        assertThat(getTextBeforeCursor(2), is("45"));
     }
 
     @Test
     public void test06() {
-        boolean success = mEditor.go();
-        assertThat(success, is(true));
+        assertThat(mEditor.commitFinalResult("a12345 67890_12345"), is(true));
+        assertThat(mEditor.replace("12345", "abcdef"), is(true));
+        assertThat(mEditor.addSpace(), is(true));
+        assertThat(mEditor.replace("12345", "ABC"), is(true));
+        assertThat(getTextBeforeCursor(2), is("BC"));
+        assertThat(mEditor.addNewline(), is(true));
+        assertThat(mEditor.addSpace(), is(true));
+        assertThat(mEditor.goToCharacterPosition(9), is(true));
+        assertThat(getTextBeforeCursor(2), is("67"));
+    }
+
+    private String getTextBeforeCursor(int n) {
+        return mEditor.getInputConnection().getTextBeforeCursor(n, 0).toString();
     }
 }
