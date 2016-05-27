@@ -63,34 +63,15 @@ public class UtteranceRewriter {
         for (Command command : mCommands) {
             Log.i("editor: rewrite with command: " + str + ": " + command);
             Pair<String, String[]> pair = command.match(str);
-            if (pair != null) {
-                str = pair.first;
-                String commandId = command.getId();
-                if (commandId != null) {
-                    String[] args = pair.second;
-                    Log.i("editor: rewrite: success: " + str + ": " + commandId + "(" + TextUtils.join(",", args) + ")");
-                    return new Triple(commandId, str, args);
-                }
+            str = pair.first;
+            String commandId = command.getId();
+            // If there is a full match (pair.second != null) and there is a command (commandId != null)
+            // then stop the search and return the command.
+            if (commandId != null && pair.second != null) {
+                return new Triple(commandId, str, pair.second);
             }
         }
         return new Triple(null, str, null);
-    }
-
-    /**
-     * Rewrites and returns the given results.
-     * TODO: improve this
-     */
-    public Pair<Pair<String, String[]>, List<String>> rewrite(List<String> results) {
-        String commandId = null;
-        String[] args = null;
-        List<String> rewrittenResults = new ArrayList<>();
-        for (String result : results) {
-            Triple triple = rewrite(result);
-            rewrittenResults.add(triple.mStr);
-            commandId = triple.mId;
-            args = triple.mArgs;
-        }
-        return new Pair<>(new Pair<>(commandId, args), rewrittenResults);
     }
 
     /**

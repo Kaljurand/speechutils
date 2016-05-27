@@ -36,6 +36,14 @@ public class Command {
         this(Pattern.compile(pattern), replacement, id, args);
     }
 
+    public Command(String pattern, String replacement, String id) {
+        this(Pattern.compile(pattern), replacement, id, null);
+    }
+
+    public Command(String pattern, String replacement) {
+        this(Pattern.compile(pattern), replacement, null, null);
+    }
+
     public String getId() {
         return mId;
     }
@@ -52,18 +60,22 @@ public class Command {
         return mArgs;
     }
 
-    private Matcher matcher(CharSequence str) {
-        return mPattern.matcher(str);
-    }
-
+    /**
+     * Rewrites the given string and extracts the arguments if the string
+     * corresponds to the command (i.e. if the entire string matches the pattern).
+     *
+     * @param str string to be matched
+     * @return pair of replacement and array of arguments
+     */
     public Pair<String, String[]> match(CharSequence str) {
-        Matcher m = matcher(str);
+        Matcher m = mPattern.matcher(str);
+        String newStr = m.replaceAll(mReplacement);
+        String[] argsEvaluated = null;
+        // If the entire region matches then we evaluate the arguments as well
         if (m.matches()) {
-            String newStr = m.replaceAll(mReplacement);
-            String[] argsEvaluated = TextUtils.split(m.replaceAll(mArgsAsStr), SEPARATOR);
-            return new Pair<>(newStr, argsEvaluated);
+            argsEvaluated = TextUtils.split(m.replaceAll(mArgsAsStr), SEPARATOR);
         }
-        return null;
+        return new Pair<>(newStr, argsEvaluated);
     }
 
     public String toString() {

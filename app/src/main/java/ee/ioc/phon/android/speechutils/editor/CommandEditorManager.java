@@ -1,5 +1,7 @@
 package ee.ioc.phon.android.speechutils.editor;
 
+import android.text.TextUtils;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -36,6 +38,11 @@ public class CommandEditorManager {
         if (editorCommand == null) {
             return false;
         }
+        if (args == null) {
+            Log.i(commandId + "(null)");
+        } else {
+            Log.i(commandId + "(" + TextUtils.join(",", args) + ")");
+        }
         return editorCommand.execute(args);
     }
 
@@ -57,12 +64,20 @@ public class CommandEditorManager {
             }
         });
 
+        mEditorCommands.put("goToEnd", new EditorCommand() {
+
+            @Override
+            public boolean execute(String... args) {
+                return mCommandEditor.goToEnd();
+            }
+        });
+
         mEditorCommands.put("goToCharacterPosition", new EditorCommand() {
 
             @Override
             public boolean execute(String[] args) {
                 int pos = 0;
-                if (args.length > 0) {
+                if (args != null && args.length > 0) {
                     try {
                         pos = Integer.parseInt(args[0]);
                     } catch (NumberFormatException e) {
@@ -76,7 +91,7 @@ public class CommandEditorManager {
 
             @Override
             public boolean execute(String[] args) {
-                if (args.length != 1) {
+                if (args == null || args.length != 1) {
                     return false;
                 }
                 return mCommandEditor.select(args[0]);
@@ -87,7 +102,7 @@ public class CommandEditorManager {
 
             @Override
             public boolean execute(String[] args) {
-                if (args.length != 1) {
+                if (args == null || args.length != 1) {
                     return false;
                 }
                 return mCommandEditor.delete(args[0]);
@@ -98,7 +113,7 @@ public class CommandEditorManager {
 
             @Override
             public boolean execute(String[] args) {
-                if (args.length != 2) {
+                if (args == null || args.length != 2) {
                     return false;
                 }
                 return mCommandEditor.replace(args[0], args[1]);
@@ -142,6 +157,14 @@ public class CommandEditorManager {
             @Override
             public boolean execute(String[] args) {
                 return mCommandEditor.copy();
+            }
+        });
+
+        mEditorCommands.put("copyAll", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.copyAll();
             }
         });
 

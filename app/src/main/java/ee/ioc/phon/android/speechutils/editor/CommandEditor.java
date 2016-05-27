@@ -5,6 +5,8 @@ package ee.ioc.phon.android.speechutils.editor;
  */
 public interface CommandEditor {
 
+    void setUtteranceRewriter(UtteranceRewriter ur);
+
     boolean commitFinalResult(String str);
 
     boolean commitPartialResult(String str);
@@ -22,6 +24,9 @@ public interface CommandEditor {
     // Go to the character at the given position
     boolean goToCharacterPosition(int pos);
 
+    // Go to the end of the text
+    boolean goToEnd();
+
     boolean select(String str);
 
     // Reset selection
@@ -35,6 +40,8 @@ public interface CommandEditor {
     boolean copy();
 
     boolean paste();
+
+    boolean copyAll();
 
     // Editing
 

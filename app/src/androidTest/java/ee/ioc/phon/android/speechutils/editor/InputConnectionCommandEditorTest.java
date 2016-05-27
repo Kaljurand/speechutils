@@ -11,14 +11,29 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import static android.support.test.InstrumentationRegistry.getInstrumentation;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 
 @RunWith(AndroidJUnit4.class)
 @SmallTest
 public class InputConnectionCommandEditorTest {
+
+    private static final List<Command> COMMANDS;
+
+    static {
+        List<Command> list = new ArrayList<>();
+        list.add(new Command("old_word", "new_word"));
+        list.add(new Command("r2_old", "r2_new"));
+        list.add(new Command("s/(.*)/(.*)/", "", "replace", new String[]{"$1", "$2"}));
+        list.add(new Command("connect (.*) and (.*)", "", "replace", new String[]{"$1 $2", "$1-$2"}));
+        COMMANDS = Collections.unmodifiableList(list);
+    }
 
     private InputConnectionCommandEditor mEditor;
 
@@ -34,6 +49,7 @@ public class InputConnectionCommandEditorTest {
         //InputConnection connection = new BaseInputConnection(view, true);
         mEditor = new InputConnectionCommandEditor();
         mEditor.setInputConnection(connection);
+        mEditor.setUtteranceRewriter(new UtteranceRewriter(COMMANDS));
     }
 
     @Test
@@ -91,6 +107,66 @@ public class InputConnectionCommandEditorTest {
         assertThat(mEditor.addSpace(), is(true));
         assertThat(mEditor.goToCharacterPosition(9), is(true));
         assertThat(getTextBeforeCursor(2), is("67"));
+    }
+
+    @Test
+    public void test07() {
+        assertThat(mEditor.commitFinalResult("123456789"), is(true));
+        assertThat(mEditor.goToCharacterPosition(2), is(true));
+        assertThat(getTextBeforeCursor(2), is("12"));
+        assertThat(mEditor.goToEnd(), is(true));
+        assertThat(getTextBeforeCursor(2), is("89"));
+    }
+
+    @Test
+    public void test08() {
+        assertThat(mEditor.commitFinalResult("old_word"), is(true));
+        assertThat(getTextBeforeCursor(8), is("New_word"));
+    }
+
+    @Test
+    public void test09() {
+        assertThat(mEditor.commitFinalResult("r2_old"), is(true));
+        assertThat(getTextBeforeCursor(8), is("R2_new"));
+    }
+
+    @Test
+    public void test10() {
+        assertThat(mEditor.commitFinalResult("test old_word test"), is(true));
+        assertThat(getTextBeforeCursor(13), is("new_word test"));
+    }
+
+    @Test
+    public void test11() {
+        assertThat(mEditor.commitFinalResult("test old_word"), is(true));
+        assertThat(mEditor.commitFinalResult("s/old_word/new_word/"), is(true));
+        assertThat(getTextBeforeCursor(8), is("new_word"));
+    }
+
+    @Test
+    public void test12() {
+        assertThat(mEditor.commitFinalResult("test word1 word2"), is(true));
+        assertThat(mEditor.commitFinalResult("connect word1 and word2"), is(true));
+        assertThat(getTextBeforeCursor(11), is("word1-word2"));
+    }
+
+    @Test
+    public void test13() {
+        assertThat(mEditor.commitFinalResult("test word1 word2"), is(true));
+        assertThat(mEditor.commitFinalResult("connect word1"), is(true));
+        assertThat(mEditor.commitFinalResult("and"), is(true));
+        assertThat(mEditor.commitFinalResult("word2"), is(true));
+        assertThat(getTextBeforeCursor(11), is("word1-word2"));
+    }
+
+    @Test
+    public void test14() {
+        assertThat(mEditor.commitFinalResult("test word1"), is(true));
+        assertThat(mEditor.addSpace(), is(true));
+        assertThat(mEditor.commitFinalResult("word2"), is(true));
+        assertThat(getTextBeforeCursor(11), is("word1 word2"));
+        assertThat(mEditor.commitFinalResult("connect word1 and word2"), is(true));
+        assertThat(getTextBeforeCursor(11), is("word1-word2"));
     }
 
     private String getTextBeforeCursor(int n) {

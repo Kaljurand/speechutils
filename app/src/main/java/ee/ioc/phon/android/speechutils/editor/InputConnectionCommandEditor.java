@@ -1,10 +1,13 @@
 package ee.ioc.phon.android.speechutils.editor;
 
+import android.text.TextUtils;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -13,6 +16,9 @@ import ee.ioc.phon.android.speechutils.Log;
 // TODO: return correct boolean
 public class InputConnectionCommandEditor implements CommandEditor {
 
+    // Maximum number of utterances that a command can contain + 1
+    private static final int MAX_UTT_IN_COMMAND = 4;
+
     // Maximum number of characters that left-swipe is willing to delete
     private static final int MAX_DELETABLE_CONTEXT = 100;
     // Token optionally preceded by whitespace
@@ -20,11 +26,18 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     private String mPrevText = "";
 
+    private List<String> mFinalStrings = new ArrayList<>();
+
     private int mGlueCount = 0;
 
     private InputConnection mInputConnection;
 
+    private UtteranceRewriter mUtteranceRewriter;
+
+    private CommandEditorManager mCommandEditorManager;
+
     public InputConnectionCommandEditor() {
+        mCommandEditorManager = new CommandEditorManager(this);
     }
 
     public void setInputConnection(InputConnection inputConnection) {
@@ -35,11 +48,47 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return mInputConnection;
     }
 
+    @Override
+    public void setUtteranceRewriter(UtteranceRewriter ur) {
+        mUtteranceRewriter = ur;
+    }
+
     /**
      * Writes the text into the text field and forgets the previous entry.
      */
     public boolean commitFinalResult(String text) {
-        commitText(text);
+        boolean isCommand = false;
+        String textRewritten = text;
+        if (mUtteranceRewriter != null) {
+            UtteranceRewriter.Triple triple = mUtteranceRewriter.rewrite(text);
+            textRewritten = triple.mStr;
+            String commandId = triple.mId;
+            String[] args = triple.mArgs;
+            if (commandId != null) {
+                isCommand = mCommandEditorManager.execute(commandId, args);
+            }
+            mFinalStrings.add(textRewritten);
+
+            if (!isCommand) {
+                int len = mFinalStrings.size();
+                for (int i = 1; i < Math.min(MAX_UTT_IN_COMMAND, len); i++) {
+                    String possibleCommand = TextUtils.join(" ", mFinalStrings.subList(len - i, len));
+                    triple = mUtteranceRewriter.rewrite(possibleCommand);
+                    textRewritten = triple.mStr;
+                    commandId = triple.mId;
+                    args = triple.mArgs;
+                    if (commandId != null) {
+                        isCommand = mCommandEditorManager.execute(commandId, args);
+                    }
+                }
+            }
+        }
+
+        if (isCommand) {
+            mFinalStrings.clear();
+        } else {
+            commitText(textRewritten);
+        }
         mPrevText = "";
         mGlueCount = 0;
         return true;
@@ -47,10 +96,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     /**
      * Writes the text into the text field and stores it for future reference.
+     * TODO: use a more optimized rewriting since we know that we are not going to execute a command
      */
     public boolean commitPartialResult(String text) {
-        commitText(text);
-        mPrevText = text;
+        String textRewritten = rewrite(text);
+        commitText(textRewritten);
+        mPrevText = textRewritten;
         return true;
     }
 
@@ -70,6 +121,15 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
+    public boolean goToEnd() {
+        mInputConnection.beginBatchEdit();
+        ExtractedText extractedText = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
+        boolean success = goToCharacterPosition(extractedText.text.length());
+        mInputConnection.endBatchEdit();
+        return success;
+    }
+
+    @Override
     public boolean selectAll() {
         return mInputConnection.performContextMenuAction(android.R.id.selectAll);
     }
@@ -82,6 +142,14 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public boolean copy() {
         return mInputConnection.performContextMenuAction(android.R.id.copy);
+    }
+
+    @Override
+    public boolean copyAll() {
+        mInputConnection.beginBatchEdit();
+        boolean success = selectAll() && copy();
+        mInputConnection.endBatchEdit();
+        return success;
     }
 
     @Override
@@ -254,6 +322,14 @@ public class InputConnectionCommandEditor implements CommandEditor {
         text = capitalizeIfNeeded(text, leftContext);
         mInputConnection.commitText(glue + text, 1);
         mInputConnection.endBatchEdit();
+    }
+
+    private String rewrite(String str) {
+        if (mUtteranceRewriter == null) {
+            return str;
+        }
+        UtteranceRewriter.Triple triple = mUtteranceRewriter.rewrite(str);
+        return triple.mStr;
     }
 
     /**
