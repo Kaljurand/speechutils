@@ -75,6 +75,17 @@ public class UtteranceRewriter {
     }
 
     /**
+     * Rewrites and returns the given results.
+     */
+    public List<String> rewrite(List<String> results) {
+        List<String> rewrittenResults = new ArrayList<>();
+        for (String result : results) {
+            rewrittenResults.add(rewrite(result).mStr);
+        }
+        return rewrittenResults;
+    }
+
+    /**
      * Serializes the rewrites as tab-separated-values.
      */
     public String toTsv() {

@@ -57,37 +57,30 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * Writes the text into the text field and forgets the previous entry.
      */
     public boolean commitFinalResult(String text) {
-        boolean isCommand = false;
-        String textRewritten = text;
-        if (mUtteranceRewriter != null) {
+        if (mUtteranceRewriter == null) {
+            commitText(text);
+        } else {
             UtteranceRewriter.Triple triple = mUtteranceRewriter.rewrite(text);
-            textRewritten = triple.mStr;
-            String commandId = triple.mId;
-            String[] args = triple.mArgs;
-            if (commandId != null) {
-                isCommand = mCommandEditorManager.execute(commandId, args);
-            }
+            String textRewritten = triple.mStr;
+            boolean isCommand = mCommandEditorManager.execute(triple.mId, triple.mArgs, textRewritten);
             mFinalStrings.add(textRewritten);
 
+            // TODO: if the command failed then try to make a command by concatenating
+            // the previous utterances
             if (!isCommand) {
                 int len = mFinalStrings.size();
-                for (int i = 1; i < Math.min(MAX_UTT_IN_COMMAND, len); i++) {
+                for (int i = 2; i < Math.min(MAX_UTT_IN_COMMAND, len); i++) {
                     String possibleCommand = TextUtils.join(" ", mFinalStrings.subList(len - i, len));
                     triple = mUtteranceRewriter.rewrite(possibleCommand);
                     textRewritten = triple.mStr;
-                    commandId = triple.mId;
-                    args = triple.mArgs;
-                    if (commandId != null) {
-                        isCommand = mCommandEditorManager.execute(commandId, args);
+                    if (triple.mId != null) {
+                        isCommand = mCommandEditorManager.execute(triple.mId, triple.mArgs);
                     }
                 }
             }
-        }
-
-        if (isCommand) {
-            mFinalStrings.clear();
-        } else {
-            commitText(textRewritten);
+            if (isCommand) {
+                mFinalStrings.clear();
+            }
         }
         mPrevText = "";
         mGlueCount = 0;
@@ -96,7 +89,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     /**
      * Writes the text into the text field and stores it for future reference.
-     * TODO: use a more optimized rewriting since we know that we are not going to execute a command
      */
     public boolean commitPartialResult(String text) {
         String textRewritten = rewrite(text);
@@ -122,9 +114,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     @Override
     public boolean goToEnd() {
+        boolean success = false;
         mInputConnection.beginBatchEdit();
         ExtractedText extractedText = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
-        boolean success = goToCharacterPosition(extractedText.text.length());
+        if (extractedText != null && extractedText.text != null) {
+            success = goToCharacterPosition(extractedText.text.length());
+        }
         mInputConnection.endBatchEdit();
         return success;
     }
@@ -280,7 +275,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
     /**
      * Updates the text field, modifying only the parts that have changed.
      */
-    private void commitText(String text) {
+    @Override
+    public void commitText(String text) {
         mInputConnection.beginBatchEdit();
         // Calculate the length of the text that has changed
         String commonPrefix = greatestCommonPrefix(mPrevText, text);

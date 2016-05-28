@@ -46,6 +46,14 @@ public class CommandEditorManager {
         return editorCommand.execute(args);
     }
 
+    public boolean execute(String commandId, String[] args, String textRewritten) {
+        mCommandEditor.commitText(textRewritten);
+        if (commandId != null) {
+            return execute(commandId, args);
+        }
+        return false;
+    }
+
     private void init() {
 
         mEditorCommands.put("goToPreviousField", new EditorCommand() {

@@ -7,6 +7,9 @@ public interface CommandEditor {
 
     void setUtteranceRewriter(UtteranceRewriter ur);
 
+    void commitText(String str);
+
+    // TODO: merge these, by having a boolean to indicate partial vs final
     boolean commitFinalResult(String str);
 
     boolean commitPartialResult(String str);
