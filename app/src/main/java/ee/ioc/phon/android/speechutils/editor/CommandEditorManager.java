@@ -160,6 +160,22 @@ public class CommandEditorManager {
             }
         });
 
+        mEditorCommands.put("cutAll", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.cutAll();
+            }
+        });
+
+        mEditorCommands.put("deleteAll", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.deleteAll();
+            }
+        });
+
         mEditorCommands.put("copy", new EditorCommand() {
 
             @Override

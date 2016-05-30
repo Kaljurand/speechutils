@@ -63,11 +63,13 @@ public class UtteranceRewriter {
         for (Command command : mCommands) {
             Log.i("editor: rewrite with command: " + str + ": " + command);
             Pair<String, String[]> pair = command.match(str);
-            str = pair.first;
             String commandId = command.getId();
-            // If there is a full match (pair.second != null) and there is a command (commandId != null)
-            // then stop the search and return the command.
-            if (commandId != null && pair.second != null) {
+            if (commandId == null) {
+                str = pair.first;
+            } else if (pair.second != null) {
+                // If there is a full match (pair.second != null) and there is a command (commandId != null)
+                // then stop the search and return the command.
+                str = pair.first;
                 return new Triple(commandId, str, pair.second);
             }
         }

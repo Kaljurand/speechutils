@@ -33,15 +33,15 @@ public class Command {
     }
 
     public Command(String pattern, String replacement, String id, String[] args) {
-        this(Pattern.compile(pattern), replacement, id, args);
+        this(Pattern.compile(pattern, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), replacement, id, args);
     }
 
     public Command(String pattern, String replacement, String id) {
-        this(Pattern.compile(pattern), replacement, id, null);
+        this(Pattern.compile(pattern, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), replacement, id, null);
     }
 
     public Command(String pattern, String replacement) {
-        this(Pattern.compile(pattern), replacement, null, null);
+        this(Pattern.compile(pattern, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), replacement, null, null);
     }
 
     public String getId() {

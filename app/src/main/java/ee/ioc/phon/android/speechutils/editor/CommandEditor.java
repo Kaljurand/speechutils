@@ -44,7 +44,11 @@ public interface CommandEditor {
 
     boolean paste();
 
+    boolean cutAll();
+
     boolean copyAll();
+
+    boolean deleteAll();
 
     // Editing
 

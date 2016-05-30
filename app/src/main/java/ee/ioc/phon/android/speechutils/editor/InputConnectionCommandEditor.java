@@ -135,6 +135,22 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
+    public boolean cutAll() {
+        mInputConnection.beginBatchEdit();
+        boolean success = selectAll() && cut();
+        mInputConnection.endBatchEdit();
+        return success;
+    }
+
+    @Override
+    public boolean deleteAll() {
+        mInputConnection.beginBatchEdit();
+        boolean success = selectAll() && mInputConnection.commitText("", 0);
+        mInputConnection.endBatchEdit();
+        return success;
+    }
+
+    @Override
     public boolean copy() {
         return mInputConnection.performContextMenuAction(android.R.id.copy);
     }
@@ -245,7 +261,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
             CharSequence beforeCursor = extractedText.text;
             //CharSequence beforeCursor = mInputConnection.getTextBeforeCursor(MAX_SELECTABLE_CONTEXT, 0);
             Log.i("replace: " + beforeCursor);
-            int index = beforeCursor.toString().lastIndexOf(str1);
+            // Using case-insensitive matching.
+            // TODO: this might not work with some Unicode characters
+            int index = beforeCursor.toString().toLowerCase().lastIndexOf(str1.toLowerCase());
             Log.i("replace: " + index);
             if (index > 0) {
                 mInputConnection.setSelection(index, index);
