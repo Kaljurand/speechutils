@@ -7,7 +7,7 @@ public interface CommandEditor {
 
     void setUtteranceRewriter(UtteranceRewriter ur);
 
-    void commitText(String str);
+    void commitText(String str, boolean overwriteSelection);
 
     // TODO: merge these, by having a boolean to indicate partial vs final
     boolean commitFinalResult(String str);
@@ -63,6 +63,9 @@ public interface CommandEditor {
     boolean delete(String str);
 
     boolean replace(String str1, String str2);
+
+    // Replace selection
+    boolean replaceSel(String str1);
 
     /**
      * Performs the Search-action, e.g. to launch search on a searchbar.

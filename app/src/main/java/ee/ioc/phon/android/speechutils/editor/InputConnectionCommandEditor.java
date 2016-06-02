@@ -24,6 +24,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
     // Token optionally preceded by whitespace
     private static final Pattern WHITESPACE_AND_TOKEN = Pattern.compile("\\s*\\w+");
 
+    // Reference to the current selection {}, {uc}, {inc}, ...
+    // TODO: uc and inc and commands, but currently not supported
+    private static final Pattern SELREF = Pattern.compile("\\{([a-z]*)\\}");
+    private static final Pattern ALL = Pattern.compile("^(.*)$");
+
     private String mPrevText = "";
 
     private List<String> mFinalStrings = new ArrayList<>();
@@ -58,7 +63,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
      */
     public boolean commitFinalResult(String text) {
         if (mUtteranceRewriter == null) {
-            commitText(text);
+            commitText(text, true);
         } else {
             UtteranceRewriter.Triple triple = mUtteranceRewriter.rewrite(text);
             String textRewritten = triple.mStr;
@@ -92,7 +97,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
      */
     public boolean commitPartialResult(String text) {
         String textRewritten = rewrite(text);
-        commitText(textRewritten);
+        commitText(textRewritten, false);
         mPrevText = textRewritten;
         return true;
     }
@@ -236,12 +241,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
     public boolean select(String str) {
         boolean success = false;
         mInputConnection.beginBatchEdit();
-        ExtractedText extractedText = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
-        CharSequence beforeCursor = extractedText.text;
-        int index = beforeCursor.toString().lastIndexOf(str);
-        if (index > 0) {
-            mInputConnection.setSelection(index, index + str.length());
-            success = true;
+        int index = lastIndexOf(str);
+        if (index > -1) {
+            success = mInputConnection.setSelection(index, index + str.length());
         }
         mInputConnection.endBatchEdit();
         return success;
@@ -279,6 +281,26 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
+    public boolean replaceSel(String str) {
+        boolean success;
+        String currentSelection;
+        // Replace mentions of selection with a back-reference
+        String out = SELREF.matcher(str).replaceAll("\\$1");
+        mInputConnection.beginBatchEdit();
+        CharSequence cs = mInputConnection.getSelectedText(0);
+        if (cs == null || cs.length() == 0) {
+            currentSelection = "";
+        } else {
+            currentSelection = cs.toString();
+        }
+        // Change the current selection with the input argument, possibly embedding the selection.
+        String str2 = ALL.matcher(currentSelection).replaceAll(out);
+        success = mInputConnection.commitText(str2, 0);
+        mInputConnection.endBatchEdit();
+        return success;
+    }
+
+    @Override
     public boolean go() {
         // Does not work on Google Searchbar
         // mInputConnection.performEditorAction(EditorInfo.IME_ACTION_DONE);
@@ -294,8 +316,14 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * Updates the text field, modifying only the parts that have changed.
      */
     @Override
-    public void commitText(String text) {
+    public void commitText(String text, boolean overwriteSelection) {
         mInputConnection.beginBatchEdit();
+        if (!overwriteSelection) {
+            CharSequence cs = mInputConnection.getSelectedText(0);
+            if (cs != null && cs.length() > 0) {
+                return;
+            }
+        }
         // Calculate the length of the text that has changed
         String commonPrefix = greatestCommonPrefix(mPrevText, text);
         int commonPrefixLength = commonPrefix.length();
@@ -344,6 +372,23 @@ public class InputConnectionCommandEditor implements CommandEditor {
         }
         UtteranceRewriter.Triple triple = mUtteranceRewriter.rewrite(str);
         return triple.mStr;
+    }
+
+    /**
+     * Using case-insensitive matching.
+     * TODO: does it search before the cursor, or in the whole text?
+     * TODO: this might not work with some Unicode characters
+     *
+     * @param str search string
+     * @return index of the last occurrence of the given string
+     */
+    private int lastIndexOf(String str) {
+        ExtractedText extractedText = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
+        if (extractedText == null) {
+            return -1;
+        }
+        CharSequence beforeCursor = extractedText.text;
+        return beforeCursor.toString().toLowerCase().lastIndexOf(str.toLowerCase());
     }
 
     /**

@@ -47,7 +47,7 @@ public class CommandEditorManager {
     }
 
     public boolean execute(String commandId, String[] args, String textRewritten) {
-        mCommandEditor.commitText(textRewritten);
+        mCommandEditor.commitText(textRewritten, false);
         if (commandId != null) {
             return execute(commandId, args);
         }
@@ -125,6 +125,17 @@ public class CommandEditorManager {
                     return false;
                 }
                 return mCommandEditor.replace(args[0], args[1]);
+            }
+        });
+
+        mEditorCommands.put("replaceSel", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                if (args == null || args.length != 1) {
+                    return false;
+                }
+                return mCommandEditor.replaceSel(args[0]);
             }
         });
 
