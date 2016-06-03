@@ -95,6 +95,36 @@ public class CommandEditorManager {
             }
         });
 
+        mEditorCommands.put("goForward", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                int pos = 1;
+                if (args != null && args.length > 0) {
+                    try {
+                        pos = Integer.parseInt(args[0]);
+                    } catch (NumberFormatException e) {
+                    }
+                }
+                return mCommandEditor.goForward(pos);
+            }
+        });
+
+        mEditorCommands.put("goBackward", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                int pos = 1;
+                if (args != null && args.length > 0) {
+                    try {
+                        pos = Integer.parseInt(args[0]);
+                    } catch (NumberFormatException e) {
+                    }
+                }
+                return mCommandEditor.goBackward(pos);
+            }
+        });
+
         mEditorCommands.put("select", new EditorCommand() {
 
             @Override
@@ -136,6 +166,30 @@ public class CommandEditorManager {
                     return false;
                 }
                 return mCommandEditor.replaceSel(args[0]);
+            }
+        });
+
+        mEditorCommands.put("ucSel", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.ucSel();
+            }
+        });
+
+        mEditorCommands.put("lcSel", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.lcSel();
+            }
+        });
+
+        mEditorCommands.put("incSel", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.incSel();
             }
         });
 

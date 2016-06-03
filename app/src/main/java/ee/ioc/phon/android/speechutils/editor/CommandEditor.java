@@ -27,6 +27,12 @@ public interface CommandEditor {
     // Go to the character at the given position
     boolean goToCharacterPosition(int pos);
 
+    // Move the cursor forward by the given number of characters
+    boolean goForward(int numOfChars);
+
+    // Move the cursor backward by the given number of characters
+    boolean goBackward(int numOfChars);
+
     // Go to the end of the text
     boolean goToEnd();
 
@@ -52,8 +58,6 @@ public interface CommandEditor {
 
     // Editing
 
-    boolean capitalize(String str);
-
     boolean addSpace();
 
     boolean addNewline();
@@ -66,6 +70,15 @@ public interface CommandEditor {
 
     // Replace selection
     boolean replaceSel(String str1);
+
+    // Uppercase selection
+    boolean ucSel();
+
+    // Lowercase selection
+    boolean lcSel();
+
+    // Increment selection
+    boolean incSel();
 
     /**
      * Performs the Search-action, e.g. to launch search on a searchbar.

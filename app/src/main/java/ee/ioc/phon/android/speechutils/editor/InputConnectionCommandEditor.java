@@ -118,6 +118,30 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
+    public boolean goForward(int numberOfChars) {
+        boolean success = false;
+        mInputConnection.beginBatchEdit();
+        ExtractedText extractedText = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
+        if (extractedText != null) {
+            success = goToCharacterPosition(extractedText.selectionEnd + numberOfChars);
+        }
+        mInputConnection.endBatchEdit();
+        return success;
+    }
+
+    @Override
+    public boolean goBackward(int numberOfChars) {
+        boolean success = false;
+        mInputConnection.beginBatchEdit();
+        ExtractedText extractedText = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
+        if (extractedText != null) {
+            success = goToCharacterPosition(extractedText.selectionStart - numberOfChars);
+        }
+        mInputConnection.endBatchEdit();
+        return success;
+    }
+
+    @Override
     public boolean goToEnd() {
         boolean success = false;
         mInputConnection.beginBatchEdit();
@@ -171,11 +195,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public boolean paste() {
         return mInputConnection.performContextMenuAction(android.R.id.paste);
-    }
-
-    @Override
-    public boolean capitalize(String str) {
-        return false;
     }
 
     @Override
@@ -283,19 +302,44 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public boolean replaceSel(String str) {
         boolean success;
-        String currentSelection;
         // Replace mentions of selection with a back-reference
         String out = SELREF.matcher(str).replaceAll("\\$1");
         mInputConnection.beginBatchEdit();
-        CharSequence cs = mInputConnection.getSelectedText(0);
-        if (cs == null || cs.length() == 0) {
-            currentSelection = "";
-        } else {
-            currentSelection = cs.toString();
-        }
         // Change the current selection with the input argument, possibly embedding the selection.
-        String str2 = ALL.matcher(currentSelection).replaceAll(out);
+        String str2 = ALL.matcher(getSelectedText()).replaceAll(out);
         success = mInputConnection.commitText(str2, 0);
+        mInputConnection.endBatchEdit();
+        return success;
+    }
+
+    @Override
+    public boolean ucSel() {
+        boolean success;
+        mInputConnection.beginBatchEdit();
+        success = mInputConnection.commitText(getSelectedText().toUpperCase(), 0);
+        mInputConnection.endBatchEdit();
+        return success;
+    }
+
+    @Override
+    public boolean lcSel() {
+        boolean success;
+        mInputConnection.beginBatchEdit();
+        success = mInputConnection.commitText(getSelectedText().toLowerCase(), 0);
+        mInputConnection.endBatchEdit();
+        return success;
+    }
+
+    @Override
+    public boolean incSel() {
+        boolean success = false;
+        mInputConnection.beginBatchEdit();
+        try {
+            int number = Integer.parseInt(getSelectedText());
+            success = mInputConnection.commitText(String.valueOf(number + 1), 0);
+        } catch (NumberFormatException e) {
+            // Intentional
+        }
         mInputConnection.endBatchEdit();
         return success;
     }
@@ -376,7 +420,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     /**
      * Using case-insensitive matching.
-     * TODO: does it search before the cursor, or in the whole text?
+     * TODO: search just before the cursor
      * TODO: this might not work with some Unicode characters
      *
      * @param str search string
@@ -387,8 +431,18 @@ public class InputConnectionCommandEditor implements CommandEditor {
         if (extractedText == null) {
             return -1;
         }
-        CharSequence beforeCursor = extractedText.text;
-        return beforeCursor.toString().toLowerCase().lastIndexOf(str.toLowerCase());
+        int start = extractedText.selectionStart;
+        //int end = extractedText.selectionEnd;
+        CharSequence allText = extractedText.text;
+        return allText.subSequence(0, start).toString().toLowerCase().lastIndexOf(str.toLowerCase());
+    }
+
+    private String getSelectedText() {
+        CharSequence cs = mInputConnection.getSelectedText(0);
+        if (cs == null || cs.length() == 0) {
+            return "";
+        }
+        return cs.toString();
     }
 
     /**
