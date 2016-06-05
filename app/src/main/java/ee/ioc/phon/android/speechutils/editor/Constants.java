@@ -11,7 +11,7 @@ public class Constants {
 
     // Symbols that should not be preceded by space in a written text.
     public static final Set<Character> CHARACTERS_PUNCT =
-            new HashSet<>(Arrays.asList(new Character[]{',', ':', ';', '.', '!', '?'}));
+            new HashSet<>(Arrays.asList(new Character[]{',', ':', ';', '.', '!', '?', '-', ')'}));
 
     // Symbols after which the next word should be capitalized.
     // We include ) because ;-) often finishes a sentence.

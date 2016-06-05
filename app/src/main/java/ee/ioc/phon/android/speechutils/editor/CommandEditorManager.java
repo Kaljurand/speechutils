@@ -169,6 +169,14 @@ public class CommandEditorManager {
             }
         });
 
+        mEditorCommands.put("resetSel", new EditorCommand() {
+
+            @Override
+            public boolean execute(String[] args) {
+                return mCommandEditor.ucSel();
+            }
+        });
+
         mEditorCommands.put("ucSel", new EditorCommand() {
 
             @Override

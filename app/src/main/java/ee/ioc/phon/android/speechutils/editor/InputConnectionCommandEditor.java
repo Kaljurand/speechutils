@@ -61,11 +61,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
     /**
      * Writes the text into the text field and forgets the previous entry.
      */
-    public boolean commitFinalResult(String text) {
+    @Override
+    public UtteranceRewriter.Triple commitFinalResult(String text) {
+        UtteranceRewriter.Triple triple = null;
         if (mUtteranceRewriter == null) {
             commitText(text, true);
         } else {
-            UtteranceRewriter.Triple triple = mUtteranceRewriter.rewrite(text);
+            triple = mUtteranceRewriter.rewrite(text);
             String textRewritten = triple.mStr;
             boolean isCommand = mCommandEditorManager.execute(triple.mId, triple.mArgs, textRewritten);
             mFinalStrings.add(textRewritten);
@@ -89,17 +91,29 @@ public class InputConnectionCommandEditor implements CommandEditor {
         }
         mPrevText = "";
         mGlueCount = 0;
-        return true;
+        return triple;
     }
 
     /**
      * Writes the text into the text field and stores it for future reference.
      */
+    @Override
     public boolean commitPartialResult(String text) {
         String textRewritten = rewrite(text);
-        commitText(textRewritten, false);
-        mPrevText = textRewritten;
-        return true;
+        boolean success = commitText(textRewritten, false);
+        if (success) {
+            mPrevText = textRewritten;
+        }
+        return success;
+    }
+
+    @Override
+    public CharSequence getText() {
+        ExtractedText et = getExtractedText();
+        if (et == null) {
+            return null;
+        }
+        return et.text;
     }
 
     @Override
@@ -153,9 +167,19 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return success;
     }
 
+    /**
+     * mInputConnection.performContextMenuAction(android.R.id.selectAll) does not create a selection
+     */
     @Override
     public boolean selectAll() {
-        return mInputConnection.performContextMenuAction(android.R.id.selectAll);
+        boolean success = false;
+        mInputConnection.beginBatchEdit();
+        CharSequence text = getText();
+        if (text != null) {
+            success = mInputConnection.setSelection(0, text.length());
+        }
+        mInputConnection.endBatchEdit();
+        return success;
     }
 
     @Override
@@ -210,14 +234,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public boolean reset() {
+    public boolean resetSel() {
         boolean success = false;
         mInputConnection.beginBatchEdit();
-        CharSequence cs = mInputConnection.getSelectedText(0);
-        if (cs != null) {
-            int len = cs.length();
-            mInputConnection.setSelection(len, len);
-            success = true;
+        ExtractedText et = getExtractedText();
+        if (et != null) {
+            success = mInputConnection.setSelection(et.selectionEnd, et.selectionEnd);
         }
         mInputConnection.endBatchEdit();
         return success;
@@ -230,10 +252,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
      */
     @Override
     public boolean deleteLeftWord() {
+        boolean success = false;
         mInputConnection.beginBatchEdit();
         // If something is selected then delete the selection and return
         if (mInputConnection.getSelectedText(0) != null) {
-            mInputConnection.commitText("", 0);
+            success = mInputConnection.commitText("", 0);
         } else {
             CharSequence beforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
             if (beforeCursor != null) {
@@ -246,14 +269,14 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     lastIndex = beforeCursorLength == m.end() ? m.start() : m.end();
                 }
                 if (lastIndex > 0) {
-                    mInputConnection.deleteSurroundingText(beforeCursorLength - lastIndex, 0);
+                    success = mInputConnection.deleteSurroundingText(beforeCursorLength - lastIndex, 0);
                 } else if (beforeCursorLength < MAX_DELETABLE_CONTEXT) {
-                    mInputConnection.deleteSurroundingText(beforeCursorLength, 0);
+                    success = mInputConnection.deleteSurroundingText(beforeCursorLength, 0);
                 }
             }
         }
         mInputConnection.endBatchEdit();
-        return true;
+        return success;
     }
 
     @Override
@@ -277,25 +300,17 @@ public class InputConnectionCommandEditor implements CommandEditor {
     public boolean replace(String str1, String str2) {
         boolean success = false;
         mInputConnection.beginBatchEdit();
-        ExtractedText extractedText = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
-        if (extractedText != null) {
-            CharSequence beforeCursor = extractedText.text;
-            //CharSequence beforeCursor = mInputConnection.getTextBeforeCursor(MAX_SELECTABLE_CONTEXT, 0);
-            Log.i("replace: " + beforeCursor);
-            // Using case-insensitive matching.
-            // TODO: this might not work with some Unicode characters
-            int index = beforeCursor.toString().toLowerCase().lastIndexOf(str1.toLowerCase());
-            Log.i("replace: " + index);
-            if (index > 0) {
-                mInputConnection.setSelection(index, index);
-                mInputConnection.deleteSurroundingText(0, str1.length());
+        int index = lastIndexOf(str1);
+        if (index >= 0) {
+            success = mInputConnection.setSelection(index, index);
+            if (success) {
+                success = mInputConnection.deleteSurroundingText(0, str1.length());
                 if (!str2.isEmpty()) {
-                    mInputConnection.commitText(str2, 0);
+                    success = mInputConnection.commitText(str2, 0);
                 }
-                success = true;
             }
-            mInputConnection.endBatchEdit();
         }
+        mInputConnection.endBatchEdit();
         return success;
     }
 
@@ -352,20 +367,20 @@ public class InputConnectionCommandEditor implements CommandEditor {
         // Works in Google Searchbar, GF Translator, but NOT in the Firefox search widget
         //mInputConnection.performEditorAction(EditorInfo.IME_ACTION_GO);
 
-        mInputConnection.performEditorAction(EditorInfo.IME_ACTION_SEARCH);
-        return true;
+        return mInputConnection.performEditorAction(EditorInfo.IME_ACTION_SEARCH);
     }
 
     /**
      * Updates the text field, modifying only the parts that have changed.
      */
     @Override
-    public void commitText(String text, boolean overwriteSelection) {
+    public boolean commitText(String text, boolean overwriteSelection) {
         mInputConnection.beginBatchEdit();
         if (!overwriteSelection) {
             CharSequence cs = mInputConnection.getSelectedText(0);
             if (cs != null && cs.length() > 0) {
-                return;
+                mInputConnection.endBatchEdit();
+                return false;
             }
         }
         // Calculate the length of the text that has changed
@@ -384,7 +399,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
         }
 
         if (text.isEmpty() || commonPrefixLength == text.length()) {
-            return;
+            mInputConnection.endBatchEdit();
+            return true;
         }
 
         // We look at the left context of the cursor
@@ -408,6 +424,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
         text = capitalizeIfNeeded(text, leftContext);
         mInputConnection.commitText(glue + text, 1);
         mInputConnection.endBatchEdit();
+        return true;
     }
 
     private String rewrite(String str) {
@@ -420,14 +437,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     /**
      * Using case-insensitive matching.
-     * TODO: search just before the cursor
      * TODO: this might not work with some Unicode characters
      *
      * @param str search string
      * @return index of the last occurrence of the given string
      */
     private int lastIndexOf(String str) {
-        ExtractedText extractedText = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
+        ExtractedText extractedText = getExtractedText();
         if (extractedText == null) {
             return -1;
         }
@@ -443,6 +459,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
             return "";
         }
         return cs.toString();
+    }
+
+    private ExtractedText getExtractedText() {
+        return mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
     }
 
     /**

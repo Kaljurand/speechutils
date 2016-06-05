@@ -35,13 +35,11 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("connect (.*) and (.*)", "", "replace", new String[]{"$1 $2", "$1-$2"}));
         list.add(new Command("delete (.*)", "", "replace", new String[]{"$1", ""}));
         list.add(new Command("underscore (.*)", "", "replace", new String[]{"$1", "_$1_"}));
-        // replaceSel(x)
         list.add(new Command("select (.*)", "", "select", new String[]{"$1"}));
         list.add(new Command("selection_replace (.*)", "", "replaceSel", new String[]{"$1"}));
         list.add(new Command("selection_underscore", "", "replaceSel", new String[]{"_{}_"}));
+        list.add(new Command("selection_quote", "", "replaceSel", new String[]{"\"{}\""}));
         list.add(new Command("selection_double", "", "replaceSel", new String[]{"{}{}"}));
-        // TODO: not supported
-        list.add(new Command("selection_uppercase", "", "replaceSel", new String[]{"\"{uc}\""}));
         list.add(new Command("selection_inc", "", "incSel"));
         list.add(new Command("selection_uc", "", "ucSel"));
         COMMANDS = Collections.unmodifiableList(list);
@@ -71,12 +69,12 @@ public class InputConnectionCommandEditorTest {
 
     @Test
     public void test02() {
-        assertTrue(mEditor.commitFinalResult("start12345 67890"));
-        assertThat(getTextBeforeCursor(5), is("67890"));
+        assertNotNull(mEditor.commitFinalResult("start12345 67890"));
+        assertThatEndsWith("67890");
         assertTrue(mEditor.deleteLeftWord());
-        assertThat(getTextBeforeCursor(5), is("12345"));
+        assertThatEndsWith("12345");
         assertTrue(mEditor.delete("12345"));
-        assertThat(getTextBeforeCursor(5), is("Start"));
+        assertThatEndsWith("Start");
     }
 
 
@@ -92,25 +90,25 @@ public class InputConnectionCommandEditorTest {
     public void test04() {
         assertTrue(mEditor.commitPartialResult("...123"));
         assertTrue(mEditor.commitPartialResult("...124"));
-        assertTrue(mEditor.commitFinalResult("...1245"));
+        assertNotNull(mEditor.commitFinalResult("...1245"));
         assertTrue(mEditor.goToCharacterPosition(4));
         assertThat(getTextBeforeCursor(10), is("...1"));
     }
 
     @Test
     public void test05() {
-        assertTrue(mEditor.commitFinalResult("a12345 67890_12345"));
+        assertNotNull(mEditor.commitFinalResult("a12345 67890_12345"));
         assertTrue(mEditor.select("12345"));
         assertThat(getTextBeforeCursor(2), is("0_"));
         assertTrue(mEditor.deleteLeftWord());
-        assertThat(getTextBeforeCursor(2), is("0_"));
+        assertThatEndsWith("0_");
         assertTrue(mEditor.deleteLeftWord());
-        assertThat(getTextBeforeCursor(2), is("45"));
+        assertThatEndsWith("45");
     }
 
     @Test
     public void test06() {
-        assertTrue(mEditor.commitFinalResult("a12345 67890_12345"));
+        assertNotNull(mEditor.commitFinalResult("a12345 67890_12345"));
         assertTrue(mEditor.replace("12345", "abcdef"));
         assertTrue(mEditor.addSpace());
         assertTrue(mEditor.replace("12345", "ABC"));
@@ -123,69 +121,78 @@ public class InputConnectionCommandEditorTest {
 
     @Test
     public void test07() {
-        assertTrue(mEditor.commitFinalResult("123456789"));
+        assertNotNull(mEditor.commitFinalResult("123456789"));
         assertTrue(mEditor.goToCharacterPosition(2));
         assertThat(getTextBeforeCursor(2), is("12"));
-        assertTrue(mEditor.goToEnd());
-        assertThat(getTextBeforeCursor(2), is("89"));
+        assertThatEndsWith("89");
     }
 
     @Test
     public void test08() {
-        assertTrue(mEditor.commitFinalResult("old_word"));
-        assertThat(getTextBeforeCursor(8), is("New_word"));
+        assertNotNull(mEditor.commitFinalResult("old_word"));
+        assertThatEndsWith("New_word");
     }
 
     @Test
     public void test09() {
-        assertTrue(mEditor.commitFinalResult("r2_old"));
-        assertThat(getTextBeforeCursor(8), is("R2_new"));
+        assertNotNull(mEditor.commitFinalResult("r2_old"));
+        assertThatEndsWith("R2_new");
     }
 
     @Test
     public void test10() {
-        assertTrue(mEditor.commitFinalResult("test old_word test"));
-        assertThat(getTextBeforeCursor(13), is("new_word test"));
+        assertNotNull(mEditor.commitFinalResult("test old_word test"));
+        assertThatEndsWith("new_word test");
     }
 
     @Test
     public void test11() {
-        assertTrue(mEditor.commitFinalResult("test old_word"));
-        assertTrue(mEditor.commitFinalResult("s/old_word/new_word/"));
-        assertThat(getTextBeforeCursor(8), is("new_word"));
+        assertNotNull(mEditor.commitFinalResult("test old_word"));
+        assertNotNull(mEditor.commitFinalResult("s/old_word/new_word/"));
+        assertThatEndsWith("new_word");
     }
 
     @Test
     public void test12() {
-        assertTrue(mEditor.commitFinalResult("test word1 word2"));
-        assertTrue(mEditor.commitFinalResult("connect word1 and word2"));
-        assertThat(getTextBeforeCursor(11), is("word1-word2"));
+        assertNotNull(mEditor.commitFinalResult("test word1 word2"));
+        assertNotNull(mEditor.commitFinalResult("connect word1 and word2"));
+        assertThatEndsWith("word1-word2");
+    }
+
+    @Test
+    public void test12_1() {
+        assertNotNull(mEditor.commitFinalResult("test word1 word2"));
+        assertTrue(mEditor.commitPartialResult("connect word1 and word2"));
+        assertNotNull(mEditor.commitFinalResult("connect word1 and word2"));
+        assertThatEndsWith("word1-word2");
     }
 
     @Test
     public void test13() {
-        assertTrue(mEditor.commitFinalResult("test word1 word2"));
-        assertTrue(mEditor.commitFinalResult("connect word1"));
-        assertTrue(mEditor.commitFinalResult("and"));
-        assertTrue(mEditor.commitFinalResult("word2"));
+        assertNotNull(mEditor.commitFinalResult("test word1 word2"));
+        assertNotNull(mEditor.commitFinalResult("connect word1"));
+        assertNotNull(mEditor.commitFinalResult("and"));
+        assertNotNull(mEditor.commitFinalResult("word2"));
         assertThat(getTextBeforeCursor(11), is("word1-word2"));
+        // TODO:
+        //assertThat(mEditor.getText().toString(), is("test word1-word2"));
     }
 
     @Test
     public void test14() {
-        assertTrue(mEditor.commitFinalResult("test word1"));
+        assertNotNull(mEditor.commitFinalResult("test word1"));
         assertTrue(mEditor.addSpace());
-        assertTrue(mEditor.commitFinalResult("word2"));
-        assertThat(getTextBeforeCursor(11), is("word1 word2"));
-        assertTrue(mEditor.commitFinalResult("connect word1 and word2"));
-        assertThat(getTextBeforeCursor(11), is("word1-word2"));
+        assertNotNull(mEditor.commitFinalResult("word2"));
+        assertThatEndsWith("word1 word2");
+        assertNotNull(mEditor.commitFinalResult("connect word1 and word2"));
+        assertThatEndsWith("word1-word2");
     }
 
     @Test
     public void test15() {
-        assertTrue(mEditor.commitFinalResult("test word1"));
+        assertNotNull(mEditor.commitFinalResult("test word1"));
         assertTrue(mEditor.addSpace());
-        assertTrue(mEditor.commitFinalResult("word2"));
+        assertNotNull(mEditor.commitFinalResult("word2"));
         assertThat(getTextBeforeCursor(11), is("word1 word2"));
         assertTrue(mEditor.deleteAll());
         assertThat(getTextBeforeCursor(1), is(""));
@@ -196,69 +203,87 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test16() {
-        assertTrue(mEditor.commitFinalResult("I will delete something"));
+        assertNotNull(mEditor.commitFinalResult("I will delete something"));
         assertThatEndsWith("something");
     }
 
     @Test
     public void test17() {
-        assertTrue(mEditor.commitFinalResult("there are word1 and word2..."));
-        assertTrue(mEditor.commitFinalResult("select word1 and word2"));
+        assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
+        assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
         assertTrue(mEditor.goToEnd());
         assertThatEndsWith("word2...");
     }
 
     @Test
     public void test18() {
-        assertTrue(mEditor.commitFinalResult("there are word1 and word2..."));
-        assertTrue(mEditor.commitFinalResult("select word1 and word2"));
-        assertTrue(mEditor.commitFinalResult("selection_replace REPL"));
+        assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
+        assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
+        assertNotNull(mEditor.commitFinalResult("selection_replace REPL"));
         assertThatEndsWith("re REPL...");
     }
 
     @Test
     public void test19() {
-        assertTrue(mEditor.commitFinalResult("there are word1 and word2..."));
-        assertTrue(mEditor.commitFinalResult("select word1 and word2"));
-        assertTrue(mEditor.commitFinalResult("selection_underscore"));
+        assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
+        assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
+        assertNotNull(mEditor.commitFinalResult("selection_underscore"));
         assertThatEndsWith("are _word1 and word2_...");
     }
 
     @Test
     public void test20() {
-        assertTrue(mEditor.commitFinalResult("a"));
-        assertTrue(mEditor.commitFinalResult("select a"));
-        assertTrue(mEditor.commitFinalResult("selection_double"));
+        assertNotNull(mEditor.commitFinalResult("a"));
+        assertNotNull(mEditor.commitFinalResult("select a"));
+        assertNotNull(mEditor.commitFinalResult("selection_double"));
         // TODO: maybe keep the selection after the command
-        assertTrue(mEditor.commitFinalResult("selection_double"));
+        assertNotNull(mEditor.commitFinalResult("selection_double"));
         assertTrue(mEditor.goToEnd());
         assertThat(getTextBeforeCursor(5), is("AA"));
     }
 
     @Test
     public void test21() {
-        assertTrue(mEditor.commitFinalResult("123456789"));
-        assertTrue(mEditor.commitFinalResult("select 3"));
-        assertTrue(mEditor.commitFinalResult("selection_inc"));
+        assertNotNull(mEditor.commitFinalResult("123456789"));
+        assertNotNull(mEditor.commitFinalResult("select 3"));
+        assertNotNull(mEditor.commitFinalResult("selection_inc"));
         assertTrue(mEditor.goForward(3));
-        assertTrue(mEditor.commitFinalResult("select 5"));
-        assertTrue(mEditor.commitFinalResult("selection_inc"));
+        assertNotNull(mEditor.commitFinalResult("select 5"));
+        assertNotNull(mEditor.commitFinalResult("selection_inc"));
         assertThatEndsWith("124466789");
     }
 
     @Test
     public void test22() {
-        assertTrue(mEditor.commitFinalResult("this is some word"));
-        assertTrue(mEditor.commitFinalResult("select is some"));
-        assertTrue(mEditor.commitFinalResult("selection_uc"));
+        assertNotNull(mEditor.commitFinalResult("this is some word"));
+        assertNotNull(mEditor.commitFinalResult("select is some"));
+        assertNotNull(mEditor.commitFinalResult("selection_uc"));
         assertThatEndsWith("his IS SOME word");
     }
 
-    //@Test
+    @Test
+    public void test23() {
+        assertNotNull(mEditor.commitFinalResult("this is some word"));
+        assertTrue(mEditor.selectAll());
+        assertNotNull(mEditor.commitFinalResult("selection_replace REPL"));
+        assertThat(mEditor.getText().toString(), is("REPL"));
+    }
+
+    @Test
+    public void test24() {
+        assertNotNull(mEditor.commitFinalResult("test word1 word2"));
+        assertNotNull(mEditor.commitFinalResult("connect word1 and not_exist"));
+        assertThatTextIs("Test word1 word2");
+    }
+
+    @Test
     public void test30() {
-        assertTrue(mEditor.commitFinalResult("there are word1 and word2..."));
-        assertTrue(mEditor.commitFinalResult("select word1 and word2"));
-        assertTrue(mEditor.commitFinalResult("selection_uppercase"));
+        assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
+        assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
+        assertNotNull(mEditor.commitFinalResult("selection_uc"));
+        assertTrue(mEditor.goToEnd());
+        assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
+        assertNotNull(mEditor.commitFinalResult("selection_quote"));
         assertThatEndsWith("are \"WORD1 AND WORD2\"...");
     }
 
@@ -267,9 +292,9 @@ public class InputConnectionCommandEditorTest {
      */
     //@Test
     public void test31() {
-        assertTrue(mEditor.commitFinalResult("this is SOME word"));
-        assertTrue(mEditor.commitFinalResult("underscore some"));
-        assertThat(getTextBeforeCursor(6), is("_SOME_"));
+        assertNotNull(mEditor.commitFinalResult("this is SOME word"));
+        assertNotNull(mEditor.commitFinalResult("underscore some"));
+        assertThatEndsWith("_SOME_ word");
     }
 
     /**
@@ -277,22 +302,25 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test32() {
-        assertTrue(mEditor.commitFinalResult("this is SOME word"));
-        assertTrue(mEditor.commitFinalResult("select some"));
-        assertTrue(mEditor.commitFinalResult("selection_underscore"));
+        assertNotNull(mEditor.commitFinalResult("this is SOME word"));
+        assertNotNull(mEditor.commitFinalResult("select some"));
+        assertNotNull(mEditor.commitFinalResult("selection_underscore"));
         assertThatEndsWith("is _SOME_ word");
     }
 
+    /**
+     * TODO: Can't create handler inside thread that has not called Looper.prepare()
+     */
     //@Test
     public void test33() {
-        assertTrue(mEditor.commitFinalResult("test word1"));
+        assertNotNull(mEditor.commitFinalResult("test word1"));
         assertTrue(mEditor.addSpace());
-        assertTrue(mEditor.commitFinalResult("word2"));
-        assertThat(getTextBeforeCursor(11), is("word1 word2"));
+        assertNotNull(mEditor.commitFinalResult("word2"));
+        assertThatEndsWith("word1 word2");
         assertTrue(mEditor.cutAll());
         assertThat(getTextBeforeCursor(1), is(""));
         assertTrue(mEditor.paste());
-        assertThat(getTextBeforeCursor(11), is("word1 word2"));
+        assertThatEndsWith("word1 word2");
     }
 
     private String getTextBeforeCursor(int n) {
@@ -302,5 +330,9 @@ public class InputConnectionCommandEditorTest {
     private void assertThatEndsWith(String str) {
         assertTrue(mEditor.goToEnd());
         assertThat(getTextBeforeCursor(str.length()), is(str));
+    }
+
+    private void assertThatTextIs(String str) {
+        assertThat(mEditor.getText().toString(), is(str));
     }
 }

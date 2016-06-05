@@ -5,12 +5,15 @@ package ee.ioc.phon.android.speechutils.editor;
  */
 public interface CommandEditor {
 
+    CharSequence getText();
+
     void setUtteranceRewriter(UtteranceRewriter ur);
 
-    void commitText(String str, boolean overwriteSelection);
+    // Adds text at the cursor, possibly overwriting a selection.
+    // Returns true if text was added.
+    boolean commitText(String str, boolean overwriteSelection);
 
-    // TODO: merge these, by having a boolean to indicate partial vs final
-    boolean commitFinalResult(String str);
+    UtteranceRewriter.Triple commitFinalResult(String str);
 
     boolean commitPartialResult(String str);
 
@@ -39,11 +42,11 @@ public interface CommandEditor {
     boolean select(String str);
 
     // Reset selection
-    boolean reset();
+    boolean resetSel();
 
-    // Context menu actions
     boolean selectAll();
 
+    // Context menu actions
     boolean cut();
 
     boolean copy();

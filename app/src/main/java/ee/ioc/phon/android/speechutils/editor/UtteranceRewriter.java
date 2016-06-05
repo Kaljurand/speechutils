@@ -20,15 +20,22 @@ public class UtteranceRewriter {
 
     private static final Pattern PATTERN_TRAILING_TABS = Pattern.compile("\t*$");
 
-    static class Triple {
-        final String mId;
-        final String mStr;
-        final String[] mArgs;
+    public static class Triple {
+        public final String mId;
+        public final String mStr;
+        public final String[] mArgs;
 
         public Triple(String id, String str, String[] args) {
             mId = id;
             mStr = str;
             mArgs = args;
+        }
+
+        public String toString() {
+            if (mArgs == null) {
+                return mId + "()";
+            }
+            return mId + "(" + TextUtils.join(",", mArgs) + ")";
         }
     }
 
