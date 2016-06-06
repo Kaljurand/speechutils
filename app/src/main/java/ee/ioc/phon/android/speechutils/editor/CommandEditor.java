@@ -17,6 +17,16 @@ public interface CommandEditor {
 
     boolean commitPartialResult(String str);
 
+    boolean goUp();
+
+    boolean goDown();
+
+    boolean goLeft();
+
+    boolean goRight();
+
+    boolean undo();
+
     // Moving between fields
 
     // Go to the previous field

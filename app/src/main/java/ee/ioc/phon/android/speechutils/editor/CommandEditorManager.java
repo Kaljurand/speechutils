@@ -56,6 +56,42 @@ public class CommandEditorManager {
 
     private void init() {
 
+        mEditorCommands.put("goUp", new EditorCommand() {
+
+            @Override
+            public boolean execute(String... args) {
+                return mCommandEditor.goUp();
+            }
+        });
+        mEditorCommands.put("goDown", new EditorCommand() {
+
+            @Override
+            public boolean execute(String... args) {
+                return mCommandEditor.goDown();
+            }
+        });
+        mEditorCommands.put("goLeft", new EditorCommand() {
+
+            @Override
+            public boolean execute(String... args) {
+                return mCommandEditor.goLeft();
+            }
+        });
+        mEditorCommands.put("goRight", new EditorCommand() {
+
+            @Override
+            public boolean execute(String... args) {
+                return mCommandEditor.goRight();
+            }
+        });
+        mEditorCommands.put("undo", new EditorCommand() {
+
+            @Override
+            public boolean execute(String... args) {
+                return mCommandEditor.undo();
+            }
+        });
+
         mEditorCommands.put("goToPreviousField", new EditorCommand() {
 
             @Override

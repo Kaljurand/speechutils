@@ -1,6 +1,7 @@
 package ee.ioc.phon.android.speechutils.editor;
 
 import android.text.TextUtils;
+import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
@@ -11,9 +12,9 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import ee.ioc.phon.android.speechutils.Log;
-
-// TODO: return correct boolean
+/**
+ * TODO: keep track of added spaces
+ */
 public class InputConnectionCommandEditor implements CommandEditor {
 
     // Maximum number of utterances that a command can contain + 1
@@ -114,6 +115,39 @@ public class InputConnectionCommandEditor implements CommandEditor {
             return null;
         }
         return et.text;
+    }
+
+    @Override
+    public boolean goUp() {
+        return mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP));
+    }
+
+    @Override
+    public boolean goDown() {
+        return mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN));
+    }
+
+    @Override
+    public boolean goLeft() {
+        return mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT));
+    }
+
+    @Override
+    public boolean goRight() {
+        return mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT));
+    }
+
+    // TODO: do not use mFinalStrings but a proper undo stack
+    @Override
+    public boolean undo() {
+        boolean success = false;
+        mInputConnection.beginBatchEdit();
+        int idx = mFinalStrings.size() - 1;
+        if (idx >= 0) {
+            success = mInputConnection.deleteSurroundingText(mFinalStrings.remove(idx).length(), 0);
+        }
+        mInputConnection.endBatchEdit();
+        return success;
     }
 
     @Override
