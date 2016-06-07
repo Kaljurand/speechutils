@@ -17,6 +17,8 @@ public interface CommandEditor {
 
     boolean commitPartialResult(String str);
 
+    boolean deleteSurroundingText(int i, int j);
+
     boolean goUp();
 
     boolean goDown();

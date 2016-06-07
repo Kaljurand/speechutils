@@ -7,8 +7,11 @@ import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -33,6 +36,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private String mPrevText = "";
 
     private List<String> mFinalStrings = new ArrayList<>();
+
+    private Deque<CommandEditorManager.EditorCommand> mUndoStack = new ArrayDeque<>();
 
     private int mGlueCount = 0;
 
@@ -63,7 +68,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * Writes the text into the text field and forgets the previous entry.
      */
     @Override
-    public UtteranceRewriter.Triple commitFinalResult(String text) {
+    public UtteranceRewriter.Triple commitFinalResult(final String text) {
         UtteranceRewriter.Triple triple = null;
         if (mUtteranceRewriter == null) {
             commitText(text, true);
@@ -82,12 +87,19 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     triple = mUtteranceRewriter.rewrite(possibleCommand);
                     textRewritten = triple.mStr;
                     if (triple.mId != null) {
-                        isCommand = mCommandEditorManager.execute(triple.mId, triple.mArgs);
+                        isCommand = mCommandEditorManager.execute(triple.mId, triple.mArgs, "");
                     }
                 }
             }
             if (isCommand) {
                 mFinalStrings.clear();
+            } else {
+                mUndoStack.add(new CommandEditorManager.EditorCommand() {
+                    @Override
+                    public boolean execute(CommandEditor commandEditor, String[] args) {
+                        return commandEditor.deleteSurroundingText(text.length(), 0);
+                    }
+                });
             }
         }
         mPrevText = "";
@@ -118,7 +130,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
+    public boolean deleteSurroundingText(int i, int j) {
+        return mInputConnection.deleteSurroundingText(i, j);
+    }
+
+    @Override
     public boolean goUp() {
+        mUndoStack.add(CommandEditorManager.EDITOR_COMMANDS.get("goDown"));
         return mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP));
     }
 
@@ -137,14 +155,14 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT));
     }
 
-    // TODO: do not use mFinalStrings but a proper undo stack
     @Override
     public boolean undo() {
         boolean success = false;
         mInputConnection.beginBatchEdit();
-        int idx = mFinalStrings.size() - 1;
-        if (idx >= 0) {
-            success = mInputConnection.deleteSurroundingText(mFinalStrings.remove(idx).length(), 0);
+        try {
+            success = mUndoStack.pop().execute(this, null);
+        } catch (NoSuchElementException ex) {
+            // Intentional
         }
         mInputConnection.endBatchEdit();
         return success;

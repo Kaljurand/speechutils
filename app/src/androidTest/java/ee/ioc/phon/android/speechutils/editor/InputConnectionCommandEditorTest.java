@@ -277,6 +277,13 @@ public class InputConnectionCommandEditorTest {
     }
 
     @Test
+    public void test25() {
+        assertNotNull(mEditor.commitFinalResult("test word1 word2"));
+        assertNotNull(mEditor.undo());
+        assertThatTextIs("");
+    }
+
+    @Test
     public void test30() {
         assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
         assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
