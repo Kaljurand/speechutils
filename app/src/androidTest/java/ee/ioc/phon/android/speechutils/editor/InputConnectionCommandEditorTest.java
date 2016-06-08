@@ -229,6 +229,8 @@ public class InputConnectionCommandEditorTest {
         assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
         assertNotNull(mEditor.commitFinalResult("selection_underscore"));
         assertThatEndsWith("are _word1 and word2_...");
+        //assertNotNull(mEditor.undo());
+        //assertThatEndsWith("are word1 and word2...");
     }
 
     @Test
@@ -281,6 +283,36 @@ public class InputConnectionCommandEditorTest {
         assertNotNull(mEditor.commitFinalResult("test word1 word2"));
         assertNotNull(mEditor.undo());
         assertThatTextIs("");
+    }
+
+    @Test
+    public void test26() {
+        assertNotNull(mEditor.commitFinalResult("1234567890"));
+        assertNotNull(mEditor.goBackward(1));
+        assertNotNull(mEditor.deleteLeftWord());
+        assertThatTextIs("0");
+    }
+
+    //@Test
+    public void test27() {
+        assertNotNull(mEditor.commitFinalResult("1234567890"));
+        assertNotNull(mEditor.goLeft(true));
+        assertNotNull(mEditor.goLeft(true));
+        assertNotNull(mEditor.undo());
+        assertNotNull(mEditor.deleteLeftWord());
+        assertThatTextIs("0");
+    }
+
+    @Test
+    public void test28() {
+        assertNotNull(mEditor.commitFinalResult("1234567890"));
+        assertNotNull(mEditor.move(-5, true));
+        assertNotNull(mEditor.move(2, true));
+        assertNotNull(mEditor.undo());
+        assertNotNull(mEditor.undo());
+        assertNotNull(mEditor.move(-1, true));
+        assertNotNull(mEditor.deleteLeftWord());
+        assertThatTextIs("0");
     }
 
     @Test

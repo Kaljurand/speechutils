@@ -4,7 +4,7 @@ import java.util.List;
 
 public class Log {
 
-    public static final boolean DEBUG = BuildConfig.DEBUG;
+    public static final boolean DEBUG = true; //BuildConfig.DEBUG;
 
     public static final String LOG_TAG = "speechutils";
 

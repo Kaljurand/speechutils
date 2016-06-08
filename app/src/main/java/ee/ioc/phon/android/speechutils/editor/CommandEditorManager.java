@@ -22,41 +22,51 @@ public class CommandEditorManager {
     }
 
     private final CommandEditor mCommandEditor;
+
+    public static final String GO_UP = "goUp";
+    public static final String GO_DOWN = "goDown";
+    public static final String GO_LEFT = "goLeft";
+    public static final String GO_RIGHT = "goRight";
+    public static final String GO_TO_PREVIOUS_FIELD = "goToPreviousField";
+    public static final String GO_TO_NEXT_FIELD = "goToNextField";
+    // TODO ...
+    public static final String UNDO = "undo";
+
     public static final Map<String, EditorCommand> EDITOR_COMMANDS;
 
     static {
 
         Map<String, EditorCommand> aMap = new HashMap<>();
 
-        aMap.put("goUp", new EditorCommand() {
+        aMap.put(GO_UP, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
-                return ce.goUp();
+                return ce.goUp(true);
             }
         });
-        aMap.put("goDown", new EditorCommand() {
+        aMap.put(GO_DOWN, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
-                return ce.goDown();
+                return ce.goDown(true);
             }
         });
-        aMap.put("goLeft", new EditorCommand() {
+        aMap.put(GO_LEFT, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
-                return ce.goLeft();
+                return ce.goLeft(true);
             }
         });
-        aMap.put("goRight", new EditorCommand() {
+        aMap.put(GO_RIGHT, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
-                return ce.goRight();
+                return ce.goRight(true);
             }
         });
-        aMap.put("undo", new EditorCommand() {
+        aMap.put(UNDO, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -64,7 +74,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("goToPreviousField", new EditorCommand() {
+        aMap.put(GO_TO_PREVIOUS_FIELD, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -72,7 +82,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("goToNextField", new EditorCommand() {
+        aMap.put(GO_TO_NEXT_FIELD, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
