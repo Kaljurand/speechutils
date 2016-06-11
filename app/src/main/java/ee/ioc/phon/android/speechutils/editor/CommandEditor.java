@@ -13,21 +13,17 @@ public interface CommandEditor {
     // Returns true if text was added.
     boolean commitText(String str, boolean overwriteSelection);
 
-    boolean addText(CharSequence str);
-
     UtteranceRewriter.Triple commitFinalResult(String str);
 
     boolean commitPartialResult(String str);
 
-    boolean deleteSurroundingText(int i, int j);
+    boolean goUp();
 
-    boolean goUp(boolean undo);
+    boolean goDown();
 
-    boolean goDown(boolean undo);
+    boolean goLeft();
 
-    boolean goLeft(boolean undo);
-
-    boolean goRight(boolean undo);
+    boolean goRight();
 
     boolean undo();
 
@@ -45,7 +41,7 @@ public interface CommandEditor {
     boolean goToCharacterPosition(int pos);
 
     // Move either left (negative number of steps) or right (positive num of steps)
-    boolean move(int numOfChars, boolean undo);
+    boolean move(int numOfChars);
 
     // Move the cursor forward by the given number of characters
     boolean goForward(int numOfChars);
@@ -58,7 +54,7 @@ public interface CommandEditor {
 
     boolean select(String str);
 
-    boolean setSelection(int i, int j, boolean undo);
+    boolean setSelection(int i, int j);
 
     // Reset selection
     boolean resetSel();

@@ -22,6 +22,10 @@ import ee.ioc.phon.android.speechutils.Log;
  */
 public class InputConnectionCommandEditor implements CommandEditor {
 
+    public interface Op {
+        boolean execute();
+    }
+
     // Maximum number of utterances that a command can contain + 1
     private static final int MAX_UTT_IN_COMMAND = 4;
 
@@ -36,9 +40,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     private List<String> mFinalStrings = new ArrayList<>();
 
-    private Deque<CommandEditorManager.EditorCommand> mUndoStack = new ArrayDeque<>();
-
-    private int mGlueCount = 0;
+    private Deque<Op> mUndoStack = new ArrayDeque<>();
 
     private InputConnection mInputConnection;
 
@@ -93,16 +95,19 @@ public class InputConnectionCommandEditor implements CommandEditor {
             if (isCommand) {
                 mFinalStrings.clear();
             } else {
-                mUndoStack.push(new CommandEditorManager.EditorCommand() {
-                    @Override
-                    public boolean execute(CommandEditor commandEditor, String[] args) {
-                        return commandEditor.deleteSurroundingText(text.length(), 0);
-                    }
-                });
+                final int len = text.length();
+                if (len > 0) {
+                    push(new Op() {
+                        @Override
+                        public boolean execute() {
+                            // TODO: account for the glue symbol
+                            return mInputConnection.deleteSurroundingText(len, 0);
+                        }
+                    });
+                }
             }
         }
         mPrevText = "";
-        mGlueCount = 0;
         return triple;
     }
 
@@ -128,67 +133,24 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return et.text;
     }
 
-    // These are commands that cannot be undone
     @Override
-    public boolean deleteSurroundingText(int i, int j) {
-        return mInputConnection.deleteSurroundingText(i, j);
-    }
-
-
-    @Override
-    public boolean goUp(boolean undo) {
-        boolean success = mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP));
-        if (success && undo) {
-            mUndoStack.push(new CommandEditorManager.EditorCommand() {
-                @Override
-                public boolean execute(CommandEditor commandEditor, String[] args) {
-                    return commandEditor.goDown(false);
-                }
-            });
-        }
-        return success;
+    public boolean goUp() {
+        return goUp(true);
     }
 
     @Override
-    public boolean goDown(boolean undo) {
-        boolean success = mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN));
-        if (success && undo) {
-            mUndoStack.push(new CommandEditorManager.EditorCommand() {
-                @Override
-                public boolean execute(CommandEditor commandEditor, String[] args) {
-                    return commandEditor.goUp(false);
-                }
-            });
-        }
-        return success;
+    public boolean goDown() {
+        return goDown(true);
     }
 
     @Override
-    public boolean goLeft(boolean undo) {
-        boolean success = mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT));
-        if (success && undo) {
-            mUndoStack.push(new CommandEditorManager.EditorCommand() {
-                @Override
-                public boolean execute(CommandEditor commandEditor, String[] args) {
-                    return commandEditor.goRight(false);
-                }
-            });
-        }
-        return success;
+    public boolean goLeft() {
+        return goLeft(true);
     }
 
     @Override
-    public boolean goRight(boolean undo) {
-        boolean success = mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT));
-        if (success && undo) {
-            mUndoStack.push(new CommandEditorManager.EditorCommand() {
-                @Override
-                public boolean execute(CommandEditor commandEditor, String[] args) {
-                    return commandEditor.goLeft(false);
-                }
-            });
-        }
-        return success;
+    public boolean goRight() {
+        return goRight(true);
     }
 
     @Override
@@ -197,9 +159,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
         boolean success = false;
         mInputConnection.beginBatchEdit();
         try {
-            CommandEditorManager.EditorCommand command = mUndoStack.pop();
-            Log.i("run command: undo: command: " + command.toString());
-            success = command.execute(this, null);
+            Op op = mUndoStack.pop();
+            success = op.execute();
         } catch (NoSuchElementException ex) {
             // Intentional
             Log.i("run command: undo: no such element");
@@ -224,20 +185,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return mInputConnection.performEditorAction(EditorInfo.IME_ACTION_NEXT);
     }
 
-
-    // TODO: pass ExtractedText
     @Override
-    public boolean setSelection(int i, int j, boolean undo) {
+    public boolean setSelection(int i, int j) {
+        boolean success = false;
         mInputConnection.beginBatchEdit();
-        final ExtractedText et = getExtractedText();
-        boolean success = mInputConnection.setSelection(i, j);
-        if (success && et != null && undo) {
-            mUndoStack.push(new CommandEditorManager.EditorCommand() {
-                @Override
-                public boolean execute(CommandEditor commandEditor, String[] args) {
-                    return commandEditor.setSelection(et.selectionStart, et.selectionEnd, false);
-                }
-            });
+        ExtractedText et = getExtractedText();
+        if (et != null) {
+            success = setSelection(i, j, et.selectionStart, et.selectionEnd);
         }
         mInputConnection.endBatchEdit();
         return success;
@@ -245,12 +199,15 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     @Override
     public boolean goToCharacterPosition(int pos) {
-        return setSelection(pos, pos, true);
+        return setSelection(pos, pos);
     }
 
     @Override
-    public boolean move(final int numberOfChars, boolean undo) {
-        Log.i("run command: move: " + numberOfChars);
+    public boolean move(final int numberOfChars) {
+        return move(numberOfChars, true);
+    }
+
+    private boolean move(final int numberOfChars, boolean undo) {
         boolean success = false;
         mInputConnection.beginBatchEdit();
         ExtractedText extractedText = getExtractedText();
@@ -264,10 +221,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
             int newPos = pos + numberOfChars;
             success = mInputConnection.setSelection(newPos, newPos);
             if (success && undo) {
-                mUndoStack.push(new CommandEditorManager.EditorCommand() {
+                push(new Op() {
                     @Override
-                    public boolean execute(CommandEditor commandEditor, String[] args) {
-                        return commandEditor.move(-1 * numberOfChars, false);
+                    public boolean execute() {
+                        return move(-1 * numberOfChars, false);
                     }
                 });
             }
@@ -290,10 +247,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
     public boolean goToEnd() {
         boolean success = false;
         mInputConnection.beginBatchEdit();
-        ExtractedText extractedText = getExtractedText();
-        if (extractedText != null && extractedText.text != null) {
-            // This also handles undo
-            success = goToCharacterPosition(extractedText.text.length());
+        ExtractedText et = getExtractedText();
+        if (et != null && et.text != null) {
+            int pos = et.text.length();
+            success = setSelection(pos, pos, et.selectionStart, et.selectionEnd);
         }
         mInputConnection.endBatchEdit();
         return success;
@@ -306,10 +263,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
     public boolean selectAll() {
         boolean success = false;
         mInputConnection.beginBatchEdit();
-        // TODO: do not extract text here, as this is node later, just pass -1 to indicate that everything should be selected
         final ExtractedText et = getExtractedText();
         if (et != null) {
-            success = setSelection(0, et.text.length(), true);
+            success = setSelection(0, et.text.length(), et.selectionStart, et.selectionEnd);
         }
         mInputConnection.endBatchEdit();
         return success;
@@ -370,22 +326,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return addText("\n");
     }
 
-    // TODO: simplify: introduce conventions to reset
     @Override
     public boolean resetSel() {
         boolean success = false;
         mInputConnection.beginBatchEdit();
         final ExtractedText et = getExtractedText();
         if (et != null) {
-            success = mInputConnection.setSelection(et.selectionEnd, et.selectionEnd);
-            if (success) {
-                mUndoStack.push(new CommandEditorManager.EditorCommand() {
-                    @Override
-                    public boolean execute(CommandEditor commandEditor, String[] args) {
-                        return commandEditor.setSelection(et.selectionStart, et.selectionEnd, false);
-                    }
-                });
-            }
+            success = setSelection(et.selectionEnd, et.selectionEnd, et.selectionStart, et.selectionEnd);
         }
         mInputConnection.endBatchEdit();
         return success;
@@ -426,7 +373,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return success;
     }
 
-    // TODO: share selection setting code: pass ExtractedText
     @Override
     public boolean select(String str) {
         boolean success = false;
@@ -435,15 +381,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
         if (et != null) {
             int index = lastIndexOf(str, et);
             if (index > -1) {
-                success = mInputConnection.setSelection(index, index + str.length());
-                if (success) {
-                    mUndoStack.push(new CommandEditorManager.EditorCommand() {
-                        @Override
-                        public boolean execute(CommandEditor commandEditor, String[] args) {
-                            return commandEditor.setSelection(et.selectionStart, et.selectionEnd, false);
-                        }
-                    });
-                }
+                success = setSelection(index, index + str.length(), et.selectionStart, et.selectionEnd);
             }
         }
         mInputConnection.endBatchEdit();
@@ -455,9 +393,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return replace(str, "");
     }
 
-    // TODO: support undo
     @Override
-    public boolean replace(String str1, String str2) {
+    public boolean replace(final String str1, final String str2) {
         boolean success = false;
         mInputConnection.beginBatchEdit();
         final ExtractedText et = getExtractedText();
@@ -469,6 +406,27 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     success = mInputConnection.deleteSurroundingText(0, str1.length());
                     if (!str2.isEmpty()) {
                         success = mInputConnection.commitText(str2, 0);
+                        if (success) {
+                            push(new Op() {
+                                @Override
+                                public boolean execute() {
+                                    return mInputConnection.deleteSurroundingText(str2.length(), 0) &&
+                                            mInputConnection.commitText(str1, 0) &&
+                                            mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                                }
+                            });
+                        }
+                    } else {
+                        if (success) {
+                            push(new Op() {
+                                @Override
+                                public boolean execute() {
+                                    return mInputConnection.deleteSurroundingText(str2.length(), 0) &&
+                                            mInputConnection.commitText(str1, 0) &&
+                                            mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                                }
+                            });
+                        }
                     }
                 }
             }
@@ -537,7 +495,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     /**
      * Updates the text field, modifying only the parts that have changed.
-     * TODO: support undo
      */
     @Override
     public boolean commitText(String text, boolean overwriteSelection) {
@@ -554,11 +511,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
         int commonPrefixLength = commonPrefix.length();
         int prevLength = mPrevText.length();
         int deletableLength = prevLength - commonPrefixLength;
-
-        // Delete the glue symbol if present
-        if (text.isEmpty()) {
-            deletableLength += mGlueCount;
-        }
 
         if (deletableLength > 0) {
             mInputConnection.deleteSurroundingText(deletableLength, 0);
@@ -583,37 +535,28 @@ public class InputConnectionCommandEditor implements CommandEditor {
             text = text.substring(commonPrefixLength);
         }
 
-        if (" ".equals(glue)) {
-            mGlueCount = 1;
-        }
-
         text = capitalizeIfNeeded(text, leftContext);
         mInputConnection.commitText(glue + text, 1);
         mInputConnection.endBatchEdit();
         return true;
     }
 
-    public boolean addText(final CharSequence text) {
-        boolean success = mInputConnection.commitText(text, 1);
-        if (success) {
-            mUndoStack.push(new CommandEditorManager.EditorCommand() {
-                @Override
-                public boolean execute(CommandEditor commandEditor, String[] args) {
-                    return commandEditor.deleteSurroundingText(text.length(), 0);
-                }
-            });
-        }
-        return success;
+    private boolean addText(final CharSequence text) {
+        return commitText(null, text);
     }
 
+    // TODO: restore the selection in undo
     private boolean commitText(final CharSequence oldText, final CharSequence newText) {
         boolean success = mInputConnection.commitText(newText, 1);
         if (success) {
-            mUndoStack.push(new CommandEditorManager.EditorCommand() {
+            push(new Op() {
                 @Override
-                public boolean execute(CommandEditor commandEditor, String[] args) {
-                    return commandEditor.deleteSurroundingText(newText.length(), 0)
-                            && commandEditor.addText(oldText);
+                public boolean execute() {
+                    boolean success2 = mInputConnection.deleteSurroundingText(newText.length(), 0);
+                    if (success2 && oldText != null) {
+                        success2 = mInputConnection.commitText(oldText, 1);
+                    }
+                    return success2;
                 }
             });
         }
@@ -626,6 +569,19 @@ public class InputConnectionCommandEditor implements CommandEditor {
         }
         UtteranceRewriter.Triple triple = mUtteranceRewriter.rewrite(str);
         return triple.mStr;
+    }
+
+    private boolean setSelection(int i, int j, final int oldSelectionStart, final int oldSelectionEnd) {
+        boolean success = mInputConnection.setSelection(i, j);
+        if (success) {
+            push(new Op() {
+                @Override
+                public boolean execute() {
+                    return mInputConnection.setSelection(oldSelectionStart, oldSelectionEnd);
+                }
+            });
+        }
+        return success;
     }
 
     /**
@@ -653,6 +609,63 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     private ExtractedText getExtractedText() {
         return mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
+    }
+
+    private boolean goUp(boolean undo) {
+        boolean success = mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP));
+        if (success && undo) {
+            push(new Op() {
+                @Override
+                public boolean execute() {
+                    return goDown(false);
+                }
+            });
+        }
+        return success;
+    }
+
+    private boolean goDown(boolean undo) {
+        boolean success = mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN));
+        if (success && undo) {
+            push(new Op() {
+                @Override
+                public boolean execute() {
+                    return goUp(false);
+                }
+            });
+        }
+        return success;
+    }
+
+    private boolean goLeft(boolean undo) {
+        boolean success = mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT));
+        if (success && undo) {
+            push(new Op() {
+                @Override
+                public boolean execute() {
+                    return goRight(false);
+                }
+            });
+        }
+        return success;
+    }
+
+    private boolean goRight(boolean undo) {
+        boolean success = mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT));
+        if (success && undo) {
+            push(new Op() {
+                @Override
+                public boolean execute() {
+                    return goLeft(false);
+                }
+            });
+        }
+        return success;
+    }
+
+    private void push(Op op) {
+        Log.i("run command: push: " + mUndoStack.size());
+        mUndoStack.push(op);
     }
 
     /**

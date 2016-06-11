@@ -296,8 +296,8 @@ public class InputConnectionCommandEditorTest {
     //@Test
     public void test27() {
         assertNotNull(mEditor.commitFinalResult("1234567890"));
-        assertNotNull(mEditor.goLeft(true));
-        assertNotNull(mEditor.goLeft(true));
+        assertNotNull(mEditor.goLeft());
+        assertNotNull(mEditor.goLeft());
         assertNotNull(mEditor.undo());
         assertNotNull(mEditor.deleteLeftWord());
         assertThatTextIs("0");
@@ -306,17 +306,33 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test28() {
         assertNotNull(mEditor.commitFinalResult("1234567890"));
-        assertNotNull(mEditor.move(-5, true));
-        assertNotNull(mEditor.move(2, true));
+        assertNotNull(mEditor.move(-5));
+        assertNotNull(mEditor.move(2));
         assertNotNull(mEditor.undo());
         assertNotNull(mEditor.undo());
-        assertNotNull(mEditor.move(-1, true));
+        assertNotNull(mEditor.move(-1));
         assertNotNull(mEditor.deleteLeftWord());
         assertThatTextIs("0");
     }
 
     @Test
+    public void test29() {
+        assertNotNull(mEditor.commitFinalResult("test old_word"));
+        assertNotNull(mEditor.commitFinalResult("s/old_word/new_word/"));
+        assertNotNull(mEditor.undo());
+        assertThatTextIs("Test old_word");
+    }
+
+    @Test
     public void test30() {
+        assertNotNull(mEditor.addSpace());
+        assertThatTextIs(" ");
+        assertNotNull(mEditor.undo());
+        assertThatTextIs("");
+    }
+
+    @Test
+    public void test50() {
         assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
         assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
         assertNotNull(mEditor.commitFinalResult("selection_uc"));
@@ -330,7 +346,7 @@ public class InputConnectionCommandEditorTest {
      * TODO: incorrectly replaces with "_some_" instead of "_SOME_"
      */
     //@Test
-    public void test31() {
+    public void test51() {
         assertNotNull(mEditor.commitFinalResult("this is SOME word"));
         assertNotNull(mEditor.commitFinalResult("underscore some"));
         assertThatEndsWith("_SOME_ word");
@@ -340,7 +356,7 @@ public class InputConnectionCommandEditorTest {
      * Same as before but using selection.
      */
     @Test
-    public void test32() {
+    public void test52() {
         assertNotNull(mEditor.commitFinalResult("this is SOME word"));
         assertNotNull(mEditor.commitFinalResult("select some"));
         assertNotNull(mEditor.commitFinalResult("selection_underscore"));
@@ -351,7 +367,7 @@ public class InputConnectionCommandEditorTest {
      * TODO: Can't create handler inside thread that has not called Looper.prepare()
      */
     //@Test
-    public void test33() {
+    public void test53() {
         assertNotNull(mEditor.commitFinalResult("test word1"));
         assertTrue(mEditor.addSpace());
         assertNotNull(mEditor.commitFinalResult("word2"));

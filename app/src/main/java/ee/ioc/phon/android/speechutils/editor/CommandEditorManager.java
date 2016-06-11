@@ -42,28 +42,28 @@ public class CommandEditorManager {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
-                return ce.goUp(true);
+                return ce.goUp();
             }
         });
         aMap.put(GO_DOWN, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
-                return ce.goDown(true);
+                return ce.goDown();
             }
         });
         aMap.put(GO_LEFT, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
-                return ce.goLeft(true);
+                return ce.goLeft();
             }
         });
         aMap.put(GO_RIGHT, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
-                return ce.goRight(true);
+                return ce.goRight();
             }
         });
         aMap.put(UNDO, new EditorCommand() {
