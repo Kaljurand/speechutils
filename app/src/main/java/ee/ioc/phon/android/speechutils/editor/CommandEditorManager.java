@@ -1,19 +1,13 @@
 package ee.ioc.phon.android.speechutils.editor;
 
-import android.text.TextUtils;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import ee.ioc.phon.android.speechutils.Log;
-
 /**
  * utterance = "go to position 1"
- * pattern = ("goTo", "go to position (\d+)")
- * command = goToCharacterPosition(group(1).toInt())
- * <p/>
- * TODO: add a way to specify the order and content of the arguments
+ * pattern = ("go to position (\d+)", "goToCharacterPosition", "$1")
+ * command = goToCharacterPosition($1)
  */
 public class CommandEditorManager {
 
@@ -29,7 +23,29 @@ public class CommandEditorManager {
     public static final String GO_RIGHT = "goRight";
     public static final String GO_TO_PREVIOUS_FIELD = "goToPreviousField";
     public static final String GO_TO_NEXT_FIELD = "goToNextField";
-    // TODO ...
+    public static final String GO_TO_CHARACTER_POSITION = "goToCharacterPosition";
+    public static final String GO_FORWARD = "goForward";
+    public static final String GO_BACKWARD = "goBackward";
+    public static final String GO_TO_END = "goToEnd";
+    public static final String SELECT = "select";
+    public static final String RESET_SEL = "resetSel";
+    public static final String SELECT_ALL = "selectAll";
+    public static final String CUT = "cut";
+    public static final String COPY = "copy";
+    public static final String PASTE = "paste";
+    public static final String CUT_ALL = "cutAll";
+    public static final String DELETE_ALL = "deleteAll";
+    public static final String COPY_ALL = "copyAll";
+    public static final String ADD_SPACE = "addSpace";
+    public static final String ADD_NEWLINE = "addNewline";
+    public static final String DELETE_LEFT_WORD = "deleteLeftWord";
+    public static final String DELETE = "delete";
+    public static final String REPLACE = "replace";
+    public static final String REPLACE_SEL = "replaceSel";
+    public static final String UC_SEL = "ucSel";
+    public static final String LC_SEL = "lcSel";
+    public static final String INC_SEL = "incSel";
+    public static final String GO = "go";
     public static final String UNDO = "undo";
 
     public static final Map<String, EditorCommand> EDITOR_COMMANDS;
@@ -90,7 +106,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("goToEnd", new EditorCommand() {
+        aMap.put(GO_TO_END, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -98,7 +114,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("goToCharacterPosition", new EditorCommand() {
+        aMap.put(GO_TO_CHARACTER_POSITION, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -114,7 +130,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("goForward", new EditorCommand() {
+        aMap.put(GO_FORWARD, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -130,7 +146,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("goBackward", new EditorCommand() {
+        aMap.put(GO_BACKWARD, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -146,7 +162,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("select", new EditorCommand() {
+        aMap.put(SELECT, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -157,7 +173,15 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("delete", new EditorCommand() {
+        aMap.put(DELETE_LEFT_WORD, new EditorCommand() {
+
+            @Override
+            public boolean execute(CommandEditor ce, String[] args) {
+                return ce.deleteLeftWord();
+            }
+        });
+
+        aMap.put(DELETE, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -168,7 +192,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("replace", new EditorCommand() {
+        aMap.put(REPLACE, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -179,7 +203,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("replaceSel", new EditorCommand() {
+        aMap.put(REPLACE_SEL, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -190,7 +214,15 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("resetSel", new EditorCommand() {
+        aMap.put(RESET_SEL, new EditorCommand() {
+
+            @Override
+            public boolean execute(CommandEditor ce, String[] args) {
+                return ce.resetSel();
+            }
+        });
+
+        aMap.put(UC_SEL, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -198,15 +230,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("ucSel", new EditorCommand() {
-
-            @Override
-            public boolean execute(CommandEditor ce, String[] args) {
-                return ce.ucSel();
-            }
-        });
-
-        aMap.put("lcSel", new EditorCommand() {
+        aMap.put(LC_SEL, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -214,7 +238,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("incSel", new EditorCommand() {
+        aMap.put(INC_SEL, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -222,7 +246,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("addSpace", new EditorCommand() {
+        aMap.put(ADD_SPACE, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -230,7 +254,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("addNewline", new EditorCommand() {
+        aMap.put(ADD_NEWLINE, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -238,7 +262,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("selectAll", new EditorCommand() {
+        aMap.put(SELECT_ALL, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -246,7 +270,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("cut", new EditorCommand() {
+        aMap.put(CUT, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -254,7 +278,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("cutAll", new EditorCommand() {
+        aMap.put(CUT_ALL, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -262,7 +286,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("deleteAll", new EditorCommand() {
+        aMap.put(DELETE_ALL, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -270,7 +294,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("copy", new EditorCommand() {
+        aMap.put(COPY, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -278,7 +302,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("copyAll", new EditorCommand() {
+        aMap.put(COPY_ALL, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -286,7 +310,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("paste", new EditorCommand() {
+        aMap.put(PASTE, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -294,7 +318,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put("go", new EditorCommand() {
+        aMap.put(GO, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
@@ -322,11 +346,6 @@ public class CommandEditorManager {
         EditorCommand editorCommand = get(commandId);
         if (editorCommand == null) {
             return false;
-        }
-        if (args == null) {
-            Log.i(commandId + "(null)");
-        } else {
-            Log.i(commandId + "(" + TextUtils.join(",", args) + ")");
         }
         return editorCommand.execute(mCommandEditor, args);
     }

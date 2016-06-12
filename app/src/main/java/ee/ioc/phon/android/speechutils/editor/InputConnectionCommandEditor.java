@@ -22,8 +22,18 @@ import ee.ioc.phon.android.speechutils.Log;
  */
 public class InputConnectionCommandEditor implements CommandEditor {
 
-    public interface Op {
-        boolean execute();
+    public abstract class Op {
+        private final String mId;
+
+        public Op(String id) {
+            mId = id;
+        }
+
+        public String toString() {
+            return mId;
+        }
+
+        abstract public boolean execute();
     }
 
     // Maximum number of utterances that a command can contain + 1
@@ -67,6 +77,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     /**
      * Writes the text into the text field and forgets the previous entry.
+     * TODO: distinguish between things that were parsed as commands and things that were
+     * successfully executed.
      */
     @Override
     public UtteranceRewriter.Triple commitFinalResult(final String text) {
@@ -97,7 +109,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
             } else {
                 final int len = text.length();
                 if (len > 0) {
-                    push(new Op() {
+                    push(new Op("deleteSurroundingText") {
                         @Override
                         public boolean execute() {
                             // TODO: account for the glue symbol
@@ -155,15 +167,19 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     @Override
     public boolean undo() {
-        Log.i("run command: undo: " + mUndoStack.size());
+        Log.i("undo: size: " + mUndoStack.size());
+        if (mUndoStack.isEmpty()) {
+            Log.i("undo: pop: <no such element>");
+            return true;
+        }
         boolean success = false;
         mInputConnection.beginBatchEdit();
         try {
             Op op = mUndoStack.pop();
             success = op.execute();
+            Log.i("undo: pop: " + op.toString());
         } catch (NoSuchElementException ex) {
-            // Intentional
-            Log.i("run command: undo: no such element");
+            // Cannot happen
         }
         mInputConnection.endBatchEdit();
         return success;
@@ -186,52 +202,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public boolean setSelection(int i, int j) {
-        boolean success = false;
-        mInputConnection.beginBatchEdit();
-        ExtractedText et = getExtractedText();
-        if (et != null) {
-            success = setSelection(i, j, et.selectionStart, et.selectionEnd);
-        }
-        mInputConnection.endBatchEdit();
-        return success;
-    }
-
-    @Override
     public boolean goToCharacterPosition(int pos) {
         return setSelection(pos, pos);
     }
 
-    @Override
-    public boolean move(final int numberOfChars) {
-        return move(numberOfChars, true);
-    }
-
-    private boolean move(final int numberOfChars, boolean undo) {
-        boolean success = false;
-        mInputConnection.beginBatchEdit();
-        ExtractedText extractedText = getExtractedText();
-        if (extractedText != null) {
-            int pos;
-            if (numberOfChars < 0) {
-                pos = extractedText.selectionStart;
-            } else {
-                pos = extractedText.selectionEnd;
-            }
-            int newPos = pos + numberOfChars;
-            success = mInputConnection.setSelection(newPos, newPos);
-            if (success && undo) {
-                push(new Op() {
-                    @Override
-                    public boolean execute() {
-                        return move(-1 * numberOfChars, false);
-                    }
-                });
-            }
-        }
-        mInputConnection.endBatchEdit();
-        return success;
-    }
 
     @Override
     public boolean goForward(final int numberOfChars) {
@@ -341,20 +315,19 @@ public class InputConnectionCommandEditor implements CommandEditor {
     /**
      * Deletes all characters up to the leftmost whitespace from the cursor (including the whitespace).
      * If something is selected then delete the selection.
-     * TODO: maybe expensive?
-     * TODO: support undo
      */
     @Override
     public boolean deleteLeftWord() {
         boolean success = false;
         mInputConnection.beginBatchEdit();
         // If something is selected then delete the selection and return
-        if (mInputConnection.getSelectedText(0) != null) {
-            success = mInputConnection.commitText("", 0);
+        String oldText = getSelectedText();
+        if (oldText.length() > 0) {
+            success = commitText(oldText, "");
         } else {
-            CharSequence beforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
+            final CharSequence beforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
             if (beforeCursor != null) {
-                int beforeCursorLength = beforeCursor.length();
+                final int beforeCursorLength = beforeCursor.length();
                 Matcher m = WHITESPACE_AND_TOKEN.matcher(beforeCursor);
                 int lastIndex = 0;
                 while (m.find()) {
@@ -366,6 +339,16 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     success = mInputConnection.deleteSurroundingText(beforeCursorLength - lastIndex, 0);
                 } else if (beforeCursorLength < MAX_DELETABLE_CONTEXT) {
                     success = mInputConnection.deleteSurroundingText(beforeCursorLength, 0);
+                }
+                if (success) {
+                    final CharSequence cs = lastIndex > 0 ? beforeCursor.subSequence(lastIndex, beforeCursorLength) : beforeCursor;
+                    push(new Op("commitText: " + cs) {
+                        @Override
+                        public boolean execute() {
+                            return mInputConnection.commitText(cs, 0);
+                        }
+                    });
+
                 }
             }
         }
@@ -404,26 +387,31 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 success = mInputConnection.setSelection(index, index);
                 if (success) {
                     success = mInputConnection.deleteSurroundingText(0, str1.length());
-                    if (!str2.isEmpty()) {
-                        success = mInputConnection.commitText(str2, 0);
+                    if (str2.isEmpty()) {
                         if (success) {
-                            push(new Op() {
+                            push(new Op("undo replace1") {
                                 @Override
                                 public boolean execute() {
-                                    return mInputConnection.deleteSurroundingText(str2.length(), 0) &&
-                                            mInputConnection.commitText(str1, 0) &&
+                                    mInputConnection.beginBatchEdit();
+                                    boolean success2 = mInputConnection.commitText(str1, 1) &&
                                             mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                                    mInputConnection.endBatchEdit();
+                                    return success2;
                                 }
                             });
                         }
                     } else {
+                        success = mInputConnection.commitText(str2, 1);
                         if (success) {
-                            push(new Op() {
+                            push(new Op("undo replace2") {
                                 @Override
                                 public boolean execute() {
-                                    return mInputConnection.deleteSurroundingText(str2.length(), 0) &&
-                                            mInputConnection.commitText(str1, 0) &&
+                                    mInputConnection.beginBatchEdit();
+                                    boolean success2 = mInputConnection.deleteSurroundingText(str2.length(), 0) &&
+                                            mInputConnection.commitText(str1, 1) &&
                                             mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                                    mInputConnection.endBatchEdit();
+                                    return success2;
                                 }
                             });
                         }
@@ -541,21 +529,31 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return true;
     }
 
+    @Override
+    public String getUndoStack() {
+        return mUndoStack.toString();
+    }
+
     private boolean addText(final CharSequence text) {
         return commitText(null, text);
     }
 
-    // TODO: restore the selection in undo
     private boolean commitText(final CharSequence oldText, final CharSequence newText) {
+        final ExtractedText et = getExtractedText();
         boolean success = mInputConnection.commitText(newText, 1);
         if (success) {
-            push(new Op() {
+            push(new Op("deleteSurroundingText+commitText") {
                 @Override
                 public boolean execute() {
+                    mInputConnection.beginBatchEdit();
                     boolean success2 = mInputConnection.deleteSurroundingText(newText.length(), 0);
                     if (success2 && oldText != null) {
                         success2 = mInputConnection.commitText(oldText, 1);
                     }
+                    if (success2) {
+                        success2 = mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                    }
+                    mInputConnection.endBatchEdit();
                     return success2;
                 }
             });
@@ -574,7 +572,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private boolean setSelection(int i, int j, final int oldSelectionStart, final int oldSelectionEnd) {
         boolean success = mInputConnection.setSelection(i, j);
         if (success) {
-            push(new Op() {
+            push(new Op("setSelection") {
                 @Override
                 public boolean execute() {
                     return mInputConnection.setSelection(oldSelectionStart, oldSelectionEnd);
@@ -614,7 +612,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private boolean goUp(boolean undo) {
         boolean success = mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP));
         if (success && undo) {
-            push(new Op() {
+            push(new Op("goDown") {
                 @Override
                 public boolean execute() {
                     return goDown(false);
@@ -627,7 +625,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private boolean goDown(boolean undo) {
         boolean success = mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN));
         if (success && undo) {
-            push(new Op() {
+            push(new Op("goUp") {
                 @Override
                 public boolean execute() {
                     return goUp(false);
@@ -640,7 +638,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private boolean goLeft(boolean undo) {
         boolean success = mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT));
         if (success && undo) {
-            push(new Op() {
+            push(new Op("goRight") {
                 @Override
                 public boolean execute() {
                     return goRight(false);
@@ -653,7 +651,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private boolean goRight(boolean undo) {
         boolean success = mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT));
         if (success && undo) {
-            push(new Op() {
+            push(new Op("goLeft") {
                 @Override
                 public boolean execute() {
                     return goLeft(false);
@@ -663,9 +661,49 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return success;
     }
 
+    private boolean setSelection(int i, int j) {
+        boolean success = false;
+        mInputConnection.beginBatchEdit();
+        ExtractedText et = getExtractedText();
+        if (et != null) {
+            success = setSelection(i, j, et.selectionStart, et.selectionEnd);
+        }
+        mInputConnection.endBatchEdit();
+        return success;
+    }
+
+    /**
+     * Move either left (negative number of steps) or right (positive num of steps)
+     */
+    private boolean move(final int numberOfChars, boolean undo) {
+        boolean success = false;
+        mInputConnection.beginBatchEdit();
+        ExtractedText extractedText = getExtractedText();
+        if (extractedText != null) {
+            int pos;
+            if (numberOfChars < 0) {
+                pos = extractedText.selectionStart;
+            } else {
+                pos = extractedText.selectionEnd;
+            }
+            int newPos = pos + numberOfChars;
+            success = mInputConnection.setSelection(newPos, newPos);
+            if (success && undo) {
+                push(new Op("move") {
+                    @Override
+                    public boolean execute() {
+                        return move(-1 * numberOfChars, false);
+                    }
+                });
+            }
+        }
+        mInputConnection.endBatchEdit();
+        return success;
+    }
+
     private void push(Op op) {
-        Log.i("run command: push: " + mUndoStack.size());
         mUndoStack.push(op);
+        Log.i("undo: push: " + mUndoStack.toString());
     }
 
     /**

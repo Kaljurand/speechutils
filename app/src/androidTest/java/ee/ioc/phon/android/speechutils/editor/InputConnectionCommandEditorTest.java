@@ -288,46 +288,56 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test26() {
         assertNotNull(mEditor.commitFinalResult("1234567890"));
-        assertNotNull(mEditor.goBackward(1));
-        assertNotNull(mEditor.deleteLeftWord());
+        assertTrue(mEditor.goBackward(1));
+        assertTrue(mEditor.goBackward(1));
+        assertTrue(mEditor.undo());
+        assertTrue(mEditor.deleteLeftWord());
         assertThatTextIs("0");
+        assertTrue(mEditor.undo());
+        assertThatTextIs("1234567890");
     }
 
-    //@Test
+    /**
+     * TODO: goLeft does not work
+     */
+    @Test
     public void test27() {
         assertNotNull(mEditor.commitFinalResult("1234567890"));
-        assertNotNull(mEditor.goLeft());
-        assertNotNull(mEditor.goLeft());
-        assertNotNull(mEditor.undo());
-        assertNotNull(mEditor.deleteLeftWord());
+        assertTrue(mEditor.goLeft());
+        assertTrue(mEditor.goLeft());
+        assertTrue(mEditor.undo());
+        assertTrue(mEditor.deleteLeftWord());
         assertThatTextIs("0");
     }
 
     @Test
     public void test28() {
         assertNotNull(mEditor.commitFinalResult("1234567890"));
-        assertNotNull(mEditor.move(-5));
-        assertNotNull(mEditor.move(2));
-        assertNotNull(mEditor.undo());
-        assertNotNull(mEditor.undo());
-        assertNotNull(mEditor.move(-1));
-        assertNotNull(mEditor.deleteLeftWord());
-        assertThatTextIs("0");
+        assertTrue(mEditor.goBackward(5));
+        assertTrue(mEditor.goForward(2));
+        assertTrue(mEditor.undo());
+        assertTrue(mEditor.undo());
+        assertTrue(mEditor.goBackward(1));
+        assertTrue(mEditor.deleteLeftWord());
+        assertTrue(mEditor.undo());
+        assertThatTextIs("1234567890");
     }
 
     @Test
     public void test29() {
         assertNotNull(mEditor.commitFinalResult("test old_word"));
         assertNotNull(mEditor.commitFinalResult("s/old_word/new_word/"));
-        assertNotNull(mEditor.undo());
+        assertThat(mEditor.getUndoStack(), is("[undo replace2, deleteSurroundingText]"));
+        assertTrue(mEditor.undo());
+        assertThat(mEditor.getUndoStack(), is("[deleteSurroundingText]"));
         assertThatTextIs("Test old_word");
     }
 
     @Test
     public void test30() {
-        assertNotNull(mEditor.addSpace());
+        assertTrue(mEditor.addSpace());
         assertThatTextIs(" ");
-        assertNotNull(mEditor.undo());
+        assertTrue(mEditor.undo());
         assertThatTextIs("");
     }
 

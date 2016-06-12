@@ -40,9 +40,6 @@ public interface CommandEditor {
     // Go to the character at the given position
     boolean goToCharacterPosition(int pos);
 
-    // Move either left (negative number of steps) or right (positive num of steps)
-    boolean move(int numOfChars);
-
     // Move the cursor forward by the given number of characters
     boolean goForward(int numOfChars);
 
@@ -53,8 +50,6 @@ public interface CommandEditor {
     boolean goToEnd();
 
     boolean select(String str);
-
-    boolean setSelection(int i, int j);
 
     // Reset selection
     boolean resetSel();
@@ -102,4 +97,6 @@ public interface CommandEditor {
      * Performs the Search-action, e.g. to launch search on a searchbar.
      */
     boolean go();
+
+    String getUndoStack();
 }
