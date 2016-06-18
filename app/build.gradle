@@ -13,7 +13,7 @@ dependencies {
     // Required -- JUnit 4 framework
     testCompile 'junit:junit:4.12'
 
-    androidTestCompile 'com.android.support:support-annotations:23.4.0'
+    androidTestCompile 'com.android.support:support-annotations:24.0.0'
     androidTestCompile 'com.android.support.test:runner:0.4.1'
     androidTestCompile 'com.android.support.test:rules:0.4.1'
     // Optional -- Hamcrest library
@@ -21,14 +21,14 @@ dependencies {
 }
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.3"
+    compileSdkVersion 24
+    buildToolsVersion '24.0.0'
 
     defaultConfig {
         minSdkVersion 11
-        targetSdkVersion 23
-        versionCode 203
-        versionName '0.2.03'
+        targetSdkVersion 24
+        versionCode 204
+        versionName '0.2.04'
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
 }
