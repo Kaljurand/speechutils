@@ -36,8 +36,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
         abstract public boolean execute();
     }
 
-    // Maximum number of utterances that a command can contain + 1
-    private static final int MAX_UTT_IN_COMMAND = 4;
+    // Maximum number of previous utterances that a command can contain
+    private static final int MAX_UTT_IN_COMMAND = 3;
 
     // Maximum number of characters that left-swipe is willing to delete
     private static final int MAX_DELETABLE_CONTEXT = 100;
@@ -48,7 +48,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     private String mPrevText = "";
 
-    private List<String> mFinalStrings = new ArrayList<>();
+    private List<String> mCommandPrefix = new ArrayList<>();
 
     private Deque<Op> mUndoStack = new ArrayDeque<>();
 
@@ -76,51 +76,39 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     /**
-     * Writes the text into the text field and forgets the previous entry.
-     * TODO: distinguish between things that were parsed as commands and things that were
-     * successfully executed.
+     * Writes the text into the text field or executes a command.
      */
     @Override
-    public UtteranceRewriter.Triple commitFinalResult(final String text) {
-        UtteranceRewriter.Triple triple = null;
+    public UtteranceRewriter.Rewrite commitFinalResult(final String text) {
+        UtteranceRewriter.Rewrite rewrite = null;
         if (mUtteranceRewriter == null) {
+            // If rewrites/commands are not defined (default), then selection can be dicated over.
             commitText(text, true);
         } else {
-            triple = mUtteranceRewriter.rewrite(text);
-            String textRewritten = triple.mStr;
-            boolean isCommand = mCommandEditorManager.execute(triple.mId, triple.mArgs, textRewritten);
-            mFinalStrings.add(textRewritten);
-
-            // TODO: if the command failed then try to make a command by concatenating
-            // the previous utterances
-            if (!isCommand) {
-                int len = mFinalStrings.size();
-                for (int i = 2; i < Math.min(MAX_UTT_IN_COMMAND, len); i++) {
-                    String possibleCommand = TextUtils.join(" ", mFinalStrings.subList(len - i, len));
-                    triple = mUtteranceRewriter.rewrite(possibleCommand);
-                    textRewritten = triple.mStr;
-                    if (triple.mId != null) {
-                        isCommand = mCommandEditorManager.execute(triple.mId, triple.mArgs, "");
+            // Try to interpret the text as a command and if it is, then apply it.
+            // Otherwise write out the text as usual.
+            rewrite = applyCommand(text);
+            String textRewritten = rewrite.mStr;
+            final int len = commitText(textRewritten, false);
+            if (len > 0) {
+                push(new Op("delete " + len) {
+                    @Override
+                    public boolean execute() {
+                        return mInputConnection.deleteSurroundingText(len, 0);
                     }
-                }
+                });
             }
-            if (isCommand) {
-                mFinalStrings.clear();
+            if (rewrite.isCommand()) {
+                mCommandPrefix.clear();
+                // TODO: return the success info to the caller (to be shown in the GUI, e.g. prefix
+                // the GUI string with + or - depending on success)
+                mCommandEditorManager.execute(rewrite.mId, rewrite.mArgs);
             } else {
-                final int len = text.length();
-                if (len > 0) {
-                    push(new Op("deleteSurroundingText") {
-                        @Override
-                        public boolean execute() {
-                            // TODO: account for the glue symbol
-                            return mInputConnection.deleteSurroundingText(len, 0);
-                        }
-                    });
-                }
+                mCommandPrefix.add(textRewritten);
             }
         }
         mPrevText = "";
-        return triple;
+        return rewrite;
     }
 
     /**
@@ -129,11 +117,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public boolean commitPartialResult(String text) {
         String textRewritten = rewrite(text);
-        boolean success = commitText(textRewritten, false);
-        if (success) {
+        int lengthWritten = commitText(textRewritten, false);
+        if (lengthWritten > 0) {
             mPrevText = textRewritten;
         }
-        return success;
+        return true;
     }
 
     @Override
@@ -167,22 +155,23 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     @Override
     public boolean undo() {
-        Log.i("undo: size: " + mUndoStack.size());
-        if (mUndoStack.isEmpty()) {
-            Log.i("undo: pop: <no such element>");
-            return true;
-        }
-        boolean success = false;
+        return undo(1);
+    }
+
+    @Override
+    public boolean undo(int steps) {
         mInputConnection.beginBatchEdit();
-        try {
-            Op op = mUndoStack.pop();
-            success = op.execute();
-            Log.i("undo: pop: " + op.toString());
-        } catch (NoSuchElementException ex) {
-            // Cannot happen
+        for (int i = 0; i < steps; i++) {
+            try {
+                if (!mUndoStack.pop().execute()) {
+                    return false;
+                }
+            } catch (NoSuchElementException ex) {
+                break;
+            }
         }
         mInputConnection.endBatchEdit();
-        return success;
+        return true;
     }
 
     /**
@@ -483,15 +472,16 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     /**
      * Updates the text field, modifying only the parts that have changed.
+     * Adds text at the cursor, possibly overwriting a selection.
+     * Returns true if text was added.
      */
-    @Override
-    public boolean commitText(String text, boolean overwriteSelection) {
+    private int commitText(String text, boolean overwriteSelection) {
         mInputConnection.beginBatchEdit();
         if (!overwriteSelection) {
             CharSequence cs = mInputConnection.getSelectedText(0);
             if (cs != null && cs.length() > 0) {
                 mInputConnection.endBatchEdit();
-                return false;
+                return 0;
             }
         }
         // Calculate the length of the text that has changed
@@ -506,7 +496,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
         if (text.isEmpty() || commonPrefixLength == text.length()) {
             mInputConnection.endBatchEdit();
-            return true;
+            return text.length();
         }
 
         // We look at the left context of the cursor
@@ -526,7 +516,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
         text = capitalizeIfNeeded(text, leftContext);
         mInputConnection.commitText(glue + text, 1);
         mInputConnection.endBatchEdit();
-        return true;
+        return glue.length() + text.length();
     }
 
     @Override
@@ -565,7 +555,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
         if (mUtteranceRewriter == null) {
             return str;
         }
-        UtteranceRewriter.Triple triple = mUtteranceRewriter.rewrite(str);
+        UtteranceRewriter.Rewrite triple = mUtteranceRewriter.getRewrite(str);
         return triple.mStr;
     }
 
@@ -704,6 +694,26 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private void push(Op op) {
         mUndoStack.push(op);
         Log.i("undo: push: " + mUndoStack.toString());
+    }
+
+    /**
+     * Check the last committed texts if they can be combined into a command. If so, then undo
+     * these commits and return the constructed command.
+     */
+    private UtteranceRewriter.Rewrite applyCommand(String text) {
+        int len = mCommandPrefix.size();
+        for (int i = Math.min(MAX_UTT_IN_COMMAND, len); i > 0; i--) {
+            List sublist = mCommandPrefix.subList(len - i, len);
+            String possibleCommand = TextUtils.join(" ", sublist) + " " + text;
+            Log.i("applyCommand: testing: <" + possibleCommand + ">");
+            UtteranceRewriter.Rewrite rewrite = mUtteranceRewriter.getRewrite(possibleCommand);
+            if (rewrite.isCommand()) {
+                Log.i("applyCommand: isCommand: " + possibleCommand);
+                undo(i);
+                return rewrite;
+            }
+        }
+        return mUtteranceRewriter.getRewrite(text);
     }
 
     /**

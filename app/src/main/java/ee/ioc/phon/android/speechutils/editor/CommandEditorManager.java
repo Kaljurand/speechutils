@@ -337,12 +337,7 @@ public class CommandEditorManager {
         return EDITOR_COMMANDS.get(id);
     }
 
-    public boolean execute(String commandId, String[] args, String textRewritten) {
-        mCommandEditor.commitText(textRewritten, false);
-        return commandId != null && execute(commandId, args);
-    }
-
-    private boolean execute(String commandId, String[] args) {
+    public boolean execute(String commandId, String[] args) {
         EditorCommand editorCommand = get(commandId);
         if (editorCommand == null) {
             return false;

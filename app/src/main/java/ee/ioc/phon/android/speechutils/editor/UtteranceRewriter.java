@@ -20,15 +20,19 @@ public class UtteranceRewriter {
 
     private static final Pattern PATTERN_TRAILING_TABS = Pattern.compile("\t*$");
 
-    public static class Triple {
+    public static class Rewrite {
         public final String mId;
         public final String mStr;
         public final String[] mArgs;
 
-        public Triple(String id, String str, String[] args) {
+        public Rewrite(String id, String str, String[] args) {
             mId = id;
             mStr = str;
             mArgs = args;
+        }
+
+        public boolean isCommand() {
+            return mId != null;
         }
 
         public String toString() {
@@ -62,7 +66,7 @@ public class UtteranceRewriter {
      * Rewrites and returns the given string,
      * and the first matching command.
      */
-    public Triple rewrite(String str) {
+    public Rewrite getRewrite(String str) {
         for (Command command : mCommands) {
             Log.i("editor: rewrite with command: " + str + ": " + command);
             Pair<String, String[]> pair = command.match(str);
@@ -73,10 +77,10 @@ public class UtteranceRewriter {
                 // If there is a full match (pair.second != null) and there is a command (commandId != null)
                 // then stop the search and return the command.
                 str = pair.first;
-                return new Triple(commandId, str, pair.second);
+                return new Rewrite(commandId, str, pair.second);
             }
         }
-        return new Triple(null, str, null);
+        return new Rewrite(null, str, null);
     }
 
     /**
@@ -85,7 +89,7 @@ public class UtteranceRewriter {
     public List<String> rewrite(List<String> results) {
         List<String> rewrittenResults = new ArrayList<>();
         for (String result : results) {
-            rewrittenResults.add(rewrite(result).mStr);
+            rewrittenResults.add(getRewrite(result).mStr);
         }
         return rewrittenResults;
     }

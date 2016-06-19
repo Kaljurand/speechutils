@@ -9,11 +9,7 @@ public interface CommandEditor {
 
     void setUtteranceRewriter(UtteranceRewriter ur);
 
-    // Adds text at the cursor, possibly overwriting a selection.
-    // Returns true if text was added.
-    boolean commitText(String str, boolean overwriteSelection);
-
-    UtteranceRewriter.Triple commitFinalResult(String str);
+    UtteranceRewriter.Rewrite commitFinalResult(String str);
 
     boolean commitPartialResult(String str);
 
@@ -26,6 +22,8 @@ public interface CommandEditor {
     boolean goRight();
 
     boolean undo();
+
+    boolean undo(int steps);
 
     // Moving between fields
 
