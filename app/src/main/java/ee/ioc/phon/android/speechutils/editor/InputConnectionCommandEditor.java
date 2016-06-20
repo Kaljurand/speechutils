@@ -48,8 +48,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     private String mPrevText = "";
 
+    // Restrict the size of these stacks
     private List<String> mCommandPrefix = new ArrayList<>();
-
     private Deque<Op> mUndoStack = new ArrayDeque<>();
 
     private InputConnection mInputConnection;
@@ -79,45 +79,60 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * Writes the text into the text field or executes a command.
      */
     @Override
-    public UtteranceRewriter.Rewrite commitFinalResult(final String text) {
-        UtteranceRewriter.Rewrite rewrite = null;
+    public CommandEditorResult commitFinalResult(final String text) {
+        CommandEditorResult result = null;
         if (mUtteranceRewriter == null) {
-            // If rewrites/commands are not defined (default), then selection can be dicated over.
-            commitText(text, true);
+            // If rewrites/commands are not defined (default), then selection can be dictated over.
+            commitWithOverwrite(text);
         } else {
+            final ExtractedText et = getExtractedText();
+            final String selectedText = getSelectedText();
             // Try to interpret the text as a command and if it is, then apply it.
             // Otherwise write out the text as usual.
-            rewrite = applyCommand(text);
+            UtteranceRewriter.Rewrite rewrite = applyCommand(text);
             String textRewritten = rewrite.mStr;
-            final int len = commitText(textRewritten, false);
+            final int len = commitWithOverwrite(textRewritten);
+            // TODO: add undo for setSelection even if len==0
             if (len > 0) {
                 push(new Op("delete " + len) {
                     @Override
                     public boolean execute() {
-                        return mInputConnection.deleteSurroundingText(len, 0);
+                        mInputConnection.beginBatchEdit();
+                        boolean success = mInputConnection.deleteSurroundingText(len, 0);
+                        if (et != null && selectedText.length() > 0) {
+                            success = mInputConnection.commitText(selectedText, 1) &&
+                                    mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                        }
+                        mInputConnection.endBatchEdit();
+                        return success;
                     }
                 });
             }
+            boolean success = false;
             if (rewrite.isCommand()) {
                 mCommandPrefix.clear();
-                // TODO: return the success info to the caller (to be shown in the GUI, e.g. prefix
-                // the GUI string with + or - depending on success)
-                mCommandEditorManager.execute(rewrite.mId, rewrite.mArgs);
+                success = mCommandEditorManager.execute(rewrite.mId, rewrite.mArgs);
             } else {
                 mCommandPrefix.add(textRewritten);
             }
+            result = new CommandEditorResult(success, rewrite);
         }
         mPrevText = "";
-        return rewrite;
+        return result;
     }
 
     /**
      * Writes the text into the text field and stores it for future reference.
+     * If there is a selection then partial results are not written out.
      */
     @Override
     public boolean commitPartialResult(String text) {
+        CharSequence cs = mInputConnection.getSelectedText(0);
+        if (cs != null && cs.length() > 0) {
+            return false;
+        }
         String textRewritten = rewrite(text);
-        int lengthWritten = commitText(textRewritten, false);
+        int lengthWritten = commitWithOverwrite(textRewritten);
         if (lengthWritten > 0) {
             mPrevText = textRewritten;
         }
@@ -475,15 +490,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * Adds text at the cursor, possibly overwriting a selection.
      * Returns true if text was added.
      */
-    private int commitText(String text, boolean overwriteSelection) {
+    private int commitWithOverwrite(String text) {
         mInputConnection.beginBatchEdit();
-        if (!overwriteSelection) {
-            CharSequence cs = mInputConnection.getSelectedText(0);
-            if (cs != null && cs.length() > 0) {
-                mInputConnection.endBatchEdit();
-                return 0;
-            }
-        }
         // Calculate the length of the text that has changed
         String commonPrefix = greatestCommonPrefix(mPrevText, text);
         int commonPrefixLength = commonPrefix.length();

@@ -14,8 +14,6 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import ee.ioc.phon.android.speechutils.Log;
-
 public class UtteranceRewriter {
 
     private static final Pattern PATTERN_TRAILING_TABS = Pattern.compile("\t*$");
@@ -68,7 +66,6 @@ public class UtteranceRewriter {
      */
     public Rewrite getRewrite(String str) {
         for (Command command : mCommands) {
-            Log.i("editor: rewrite with command: " + str + ": " + command);
             Pair<String, String[]> pair = command.match(str);
             String commandId = command.getId();
             if (commandId == null) {

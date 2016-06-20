@@ -9,7 +9,7 @@ public interface CommandEditor {
 
     void setUtteranceRewriter(UtteranceRewriter ur);
 
-    UtteranceRewriter.Rewrite commitFinalResult(String str);
+    CommandEditorResult commitFinalResult(String str);
 
     boolean commitPartialResult(String str);
 
