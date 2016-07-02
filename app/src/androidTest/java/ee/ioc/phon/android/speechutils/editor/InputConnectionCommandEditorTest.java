@@ -508,6 +508,18 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("Test word1 word2 word3");
     }
 
+    /**
+     * Partial results should not have an effect on the command.
+     */
+    @Test
+    public void test44() {
+        add("test word1", ".");
+        addPartial("s/word1");
+        addPartial("s/word1/word2/");
+        add("s/word1/word2/");
+        assertThatTextIs("Test word2.");
+    }
+
     @Test
     public void test50() {
         assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
@@ -557,6 +569,12 @@ public class InputConnectionCommandEditorTest {
 
     private String getTextBeforeCursor(int n) {
         return mEditor.getInputConnection().getTextBeforeCursor(n, 0).toString();
+    }
+
+    private void addPartial(String... texts) {
+        for (String text : texts) {
+            assertTrue(mEditor.commitPartialResult(text));
+        }
     }
 
     private void add(String... texts) {
