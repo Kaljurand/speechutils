@@ -97,4 +97,6 @@ public interface CommandEditor {
     boolean go();
 
     String getUndoStack();
+
+    void reset();
 }

@@ -48,7 +48,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     private String mPrevText = "";
 
-    // Restrict the size of these stacks
+    // TODO: Restrict the size of these stacks
+
+    // The command prefix is a list of consecutive final results whose concatenation can possibly
+    // form a command. An item is added to the list for every final result that is not a command.
+    // The list if cleared if a command is executed or if reset() is called.
     private List<String> mCommandPrefix = new ArrayList<>();
     private Deque<Op> mUndoStack = new ArrayDeque<>();
 
@@ -73,6 +77,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public void setUtteranceRewriter(UtteranceRewriter ur) {
         mUtteranceRewriter = ur;
+    }
+
+    @Override
+    public void reset() {
+        mCommandPrefix.clear();
     }
 
     /**
