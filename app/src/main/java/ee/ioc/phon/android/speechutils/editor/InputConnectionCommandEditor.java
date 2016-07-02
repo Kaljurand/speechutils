@@ -484,14 +484,25 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public boolean go() {
+    public boolean imeActionDone() {
         // Does not work on Google Searchbar
-        // mInputConnection.performEditorAction(EditorInfo.IME_ACTION_DONE);
+        return mInputConnection.performEditorAction(EditorInfo.IME_ACTION_DONE);
+    }
 
+    @Override
+    public boolean imeActionGo() {
         // Works in Google Searchbar, GF Translator, but NOT in the Firefox search widget
-        //mInputConnection.performEditorAction(EditorInfo.IME_ACTION_GO);
+        return mInputConnection.performEditorAction(EditorInfo.IME_ACTION_GO);
+    }
 
+    @Override
+    public boolean imeActionSearch() {
         return mInputConnection.performEditorAction(EditorInfo.IME_ACTION_SEARCH);
+    }
+
+    @Override
+    public boolean imeActionSend() {
+        return mInputConnection.performEditorAction(EditorInfo.IME_ACTION_SEND);
     }
 
     /**

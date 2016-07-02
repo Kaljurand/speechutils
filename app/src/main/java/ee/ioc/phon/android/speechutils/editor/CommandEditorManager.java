@@ -45,7 +45,10 @@ public class CommandEditorManager {
     public static final String UC_SEL = "ucSel";
     public static final String LC_SEL = "lcSel";
     public static final String INC_SEL = "incSel";
-    public static final String GO = "go";
+    public static final String IME_ACTION_DONE = "imeActionDone";
+    public static final String IME_ACTION_GO = "imeActionGo";
+    public static final String IME_ACTION_SEARCH = "imeActionSearch";
+    public static final String IME_ACTION_SEND = "imeActionSend";
     public static final String UNDO = "undo";
 
     public static final Map<String, EditorCommand> EDITOR_COMMANDS;
@@ -318,11 +321,35 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put(GO, new EditorCommand() {
+        aMap.put(IME_ACTION_DONE, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
-                return ce.go();
+                return ce.imeActionDone();
+            }
+        });
+
+        aMap.put(IME_ACTION_GO, new EditorCommand() {
+
+            @Override
+            public boolean execute(CommandEditor ce, String[] args) {
+                return ce.imeActionGo();
+            }
+        });
+
+        aMap.put(IME_ACTION_SEARCH, new EditorCommand() {
+
+            @Override
+            public boolean execute(CommandEditor ce, String[] args) {
+                return ce.imeActionSearch();
+            }
+        });
+
+        aMap.put(IME_ACTION_SEND, new EditorCommand() {
+
+            @Override
+            public boolean execute(CommandEditor ce, String[] args) {
+                return ce.imeActionSend();
             }
         });
 

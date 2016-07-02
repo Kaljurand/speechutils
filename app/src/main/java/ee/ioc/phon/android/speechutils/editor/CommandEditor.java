@@ -91,10 +91,13 @@ public interface CommandEditor {
     // Increment selection
     boolean incSel();
 
-    /**
-     * Performs the Search-action, e.g. to launch search on a searchbar.
-     */
-    boolean go();
+    boolean imeActionDone();
+
+    boolean imeActionGo();
+
+    boolean imeActionSearch();
+
+    boolean imeActionSend();
 
     String getUndoStack();
 
