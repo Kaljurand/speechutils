@@ -1,6 +1,7 @@
 package ee.ioc.phon.android.speechutils.editor;
 
 import android.text.TextUtils;
+import android.util.Pair;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
@@ -47,6 +48,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private static final Pattern ALL = Pattern.compile("^(.*)$");
 
     private String mPrevText = "";
+    private int mAddedLength = 0;
 
     // TODO: Restrict the size of these stacks
 
@@ -82,6 +84,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public void reset() {
         mCommandPrefix.clear();
+        mPrevText = "";
+        mAddedLength = 0;
     }
 
     /**
@@ -127,6 +131,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
             result = new CommandEditorResult(success, rewrite);
         }
         mPrevText = "";
+        mAddedLength = 0;
         return result;
     }
 
@@ -141,10 +146,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
             return false;
         }
         String textRewritten = rewrite(text);
-        int lengthWritten = commitWithOverwrite(textRewritten);
-        if (lengthWritten > 0) {
-            mPrevText = textRewritten;
-        }
+        commitWithOverwrite(textRewritten);
+        mPrevText = textRewritten;
+
         return true;
     }
 
@@ -370,14 +374,14 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public boolean select(String str) {
+    public boolean select(String query) {
         boolean success = false;
         mInputConnection.beginBatchEdit();
         final ExtractedText et = getExtractedText();
         if (et != null) {
-            int index = lastIndexOf(str, et);
-            if (index > -1) {
-                success = setSelection(index, index + str.length(), et.selectionStart, et.selectionEnd);
+            Pair<Integer, CharSequence> queryResult = lastIndexOf(query, et);
+            if (queryResult.first >= 0) {
+                success = setSelection(queryResult.first, queryResult.first + queryResult.second.length(), et.selectionStart, et.selectionEnd);
             }
         }
         mInputConnection.endBatchEdit();
@@ -390,23 +394,25 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public boolean replace(final String str1, final String str2) {
+    public boolean replace(final String query, final String replacement) {
         boolean success = false;
         mInputConnection.beginBatchEdit();
         final ExtractedText et = getExtractedText();
         if (et != null) {
-            int index = lastIndexOf(str1, et);
-            if (index >= 0) {
-                success = mInputConnection.setSelection(index, index);
+            Pair<Integer, CharSequence> queryResult = lastIndexOf(query, et);
+            final CharSequence match = queryResult.second;
+            if (queryResult.first >= 0) {
+                success = mInputConnection.setSelection(queryResult.first, queryResult.first);
                 if (success) {
-                    success = mInputConnection.deleteSurroundingText(0, str1.length());
-                    if (str2.isEmpty()) {
+                    // Delete existing text
+                    success = mInputConnection.deleteSurroundingText(0, match.length());
+                    if (replacement.isEmpty()) {
                         if (success) {
                             push(new Op("undo replace1") {
                                 @Override
                                 public boolean execute() {
                                     mInputConnection.beginBatchEdit();
-                                    boolean success2 = mInputConnection.commitText(str1, 1) &&
+                                    boolean success2 = mInputConnection.commitText(match, 1) &&
                                             mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
                                     mInputConnection.endBatchEdit();
                                     return success2;
@@ -414,14 +420,14 @@ public class InputConnectionCommandEditor implements CommandEditor {
                             });
                         }
                     } else {
-                        success = mInputConnection.commitText(str2, 1);
+                        success = mInputConnection.commitText(replacement, 1);
                         if (success) {
                             push(new Op("undo replace2") {
                                 @Override
                                 public boolean execute() {
                                     mInputConnection.beginBatchEdit();
-                                    boolean success2 = mInputConnection.deleteSurroundingText(str2.length(), 0) &&
-                                            mInputConnection.commitText(str1, 1) &&
+                                    boolean success2 = mInputConnection.deleteSurroundingText(replacement.length(), 0) &&
+                                            mInputConnection.commitText(match, 1) &&
                                             mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
                                     mInputConnection.endBatchEdit();
                                     return success2;
@@ -508,43 +514,47 @@ public class InputConnectionCommandEditor implements CommandEditor {
     /**
      * Updates the text field, modifying only the parts that have changed.
      * Adds text at the cursor, possibly overwriting a selection.
-     * Returns true if text was added.
+     * Returns the number of characters added.
      */
     private int commitWithOverwrite(String text) {
-        mInputConnection.beginBatchEdit();
         // Calculate the length of the text that has changed
         String commonPrefix = greatestCommonPrefix(mPrevText, text);
         int commonPrefixLength = commonPrefix.length();
-        int prevLength = mPrevText.length();
-        int deletableLength = prevLength - commonPrefixLength;
 
+        mInputConnection.beginBatchEdit();
+        // Delete the part that changed compared to the partial text added earlier.
+        int deletableLength = mPrevText.length() - commonPrefixLength;
         if (deletableLength > 0) {
             mInputConnection.deleteSurroundingText(deletableLength, 0);
         }
 
+        // Finish if there is nothing to add
         if (text.isEmpty() || commonPrefixLength == text.length()) {
-            mInputConnection.endBatchEdit();
-            return text.length();
-        }
-
-        // We look at the left context of the cursor
-        // to decide which glue symbol to use and whether to capitalize the text.
-        CharSequence leftContext = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
-        // In some error situation, null is returned
-        if (leftContext == null) {
-            leftContext = "";
-        }
-        String glue = "";
-        if (commonPrefixLength == 0) {
-            glue = getGlue(text, leftContext);
+            mAddedLength -= deletableLength;
         } else {
-            text = text.substring(commonPrefixLength);
+            CharSequence leftContext = "";
+            String glue = "";
+            // If the prev text and the current text share no prefix then recalculate the glue.
+            if (commonPrefixLength == 0) {
+                // We look at the left context of the cursor
+                // to decide which glue symbol to use and whether to capitalize the text.
+                CharSequence textBeforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
+                // In some error situations, null is returned
+                if (textBeforeCursor != null) {
+                    leftContext = textBeforeCursor;
+                }
+                glue = getGlue(text, leftContext);
+                mAddedLength = glue.length() + text.length();
+            } else {
+                text = text.substring(commonPrefixLength);
+                leftContext = commonPrefix;
+                mAddedLength = mAddedLength - deletableLength + text.length();
+            }
+            text = capitalizeIfNeeded(text, leftContext);
+            mInputConnection.commitText(glue + text, 1);
         }
-
-        text = capitalizeIfNeeded(text, leftContext);
-        mInputConnection.commitText(glue + text, 1);
         mInputConnection.endBatchEdit();
-        return glue.length() + text.length();
+        return mAddedLength;
     }
 
     @Override
@@ -601,18 +611,24 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     /**
-     * Using case-insensitive matching.
+     * Tries to match a substring before the cursor, using case-insensitive matching.
      * TODO: this might not work with some Unicode characters
      *
-     * @param str search string
-     * @param et  texts to search from
-     * @return index of the last occurrence of the given string
+     * @param query search string
+     * @param et    text to search from
+     * @return pair index of the last occurrence of the match, and the matched string
      */
-    private int lastIndexOf(String str, ExtractedText et) {
+    private Pair<Integer, CharSequence> lastIndexOf(String query, ExtractedText et) {
         int start = et.selectionStart;
         //int end = extractedText.selectionEnd;
-        CharSequence allText = et.text;
-        return allText.subSequence(0, start).toString().toLowerCase().lastIndexOf(str.toLowerCase());
+        query = query.toLowerCase();
+        CharSequence input = et.text.subSequence(0, start);
+        CharSequence match = null;
+        int index = input.toString().toLowerCase().lastIndexOf(query);
+        if (index >= 0) {
+            match = input.subSequence(index, index + query.length());
+        }
+        return new Pair<>(index, match);
     }
 
     private String getSelectedText() {
@@ -773,6 +789,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return text;
     }
 
+    /**
+     * Return a whitespace iff the 1st character of the text is not punctuation, or whitespace, etc.
+     */
     private static String getGlue(String text, CharSequence leftContext) {
         char firstChar = text.charAt(0);
 
