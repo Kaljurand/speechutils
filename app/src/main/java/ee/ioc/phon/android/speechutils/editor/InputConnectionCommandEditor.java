@@ -389,6 +389,22 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
+    public boolean selectReBefore(String regex) {
+        boolean success = false;
+        mInputConnection.beginBatchEdit();
+        final ExtractedText et = getExtractedText();
+        if (et != null) {
+            CharSequence input = et.text.subSequence(0, et.selectionStart);
+            Pair<Integer, Integer> pos = match(Pattern.compile(regex), input, false);
+            if (pos != null) {
+                success = setSelection(pos.first, pos.second, et.selectionStart, et.selectionEnd);
+            }
+        }
+        mInputConnection.endBatchEdit();
+        return success;
+    }
+
+    @Override
     public boolean delete(String str) {
         return replace(str, "");
     }
@@ -620,7 +636,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
      */
     private Pair<Integer, CharSequence> lastIndexOf(String query, ExtractedText et) {
         int start = et.selectionStart;
-        //int end = extractedText.selectionEnd;
         query = query.toLowerCase();
         CharSequence input = et.text.subSequence(0, start);
         CharSequence match = null;
@@ -629,6 +644,27 @@ public class InputConnectionCommandEditor implements CommandEditor {
             match = input.subSequence(index, index + query.length());
         }
         return new Pair<>(index, match);
+    }
+
+    /**
+     * Go to the first/last match and return the indices of the 1st group in the match if available.
+     * If not then return the indices of the whole match.
+     * If no match was found then return {@code null}.
+     */
+    private Pair<Integer, Integer> match(Pattern pattern, CharSequence input, boolean matchFirst) {
+        Matcher matcher = pattern.matcher(input);
+        Pair<Integer, Integer> pos = null;
+        while (matcher.find()) {
+            int group = 0;
+            if (matcher.groupCount() > 0) {
+                group = 1;
+            }
+            pos = new Pair<>(matcher.start(group), matcher.end(group));
+            if (matchFirst) {
+                return pos;
+            }
+        }
+        return pos;
     }
 
     private String getSelectedText() {

@@ -43,6 +43,7 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("selection_double", "", "replaceSel", new String[]{"{}{}"}));
         list.add(new Command("selection_inc", "", "incSel"));
         list.add(new Command("selection_uc", "", "ucSel"));
+        list.add(new Command("prev_sent", "", "selectReBefore", new String[]{"[.?!]()[^.?!]+[.?!][^.?!]+"}));
         COMMANDS = Collections.unmodifiableList(list);
     }
 
@@ -570,8 +571,44 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("");
     }
 
+    /**
+     * Regex based selection.
+     */
+    @Test
+    public void test49() {
+        add("This is number 1. This is number 2.");
+        assertTrue(mEditor.selectReBefore("number "));
+        add("#");
+        assertThatTextIs("This is number 1. This is #2.");
+    }
+
+    /**
+     * Regex based selection using capturing groups.
+     */
     @Test
     public void test50() {
+        add("This is number 1. This is number 2.");
+        assertTrue(mEditor.selectReBefore("(\\d+)\\."));
+        add("II");
+        assertThatTextIs("This is number 1. This is number II.");
+    }
+
+    /**
+     * Regex based selection using an empty capturing group.
+     */
+    @Test
+    public void test51() {
+        add("This is number 1. This is number 2? This is", "prev_sent");
+        add("yes,");
+        assertThatTextIs("This is number 1. Yes, This is number 2? This is");
+        undo();
+        undo();
+        add("3");
+        assertThatTextIs("This is number 1. This is number 2? This is 3");
+    }
+
+    @Test
+    public void test60() {
         assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
         assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
         assertNotNull(mEditor.commitFinalResult("selection_uc"));
@@ -585,7 +622,7 @@ public class InputConnectionCommandEditorTest {
      * TODO: incorrectly replaces with "_some_" instead of "_SOME_"
      */
     //@Test
-    public void test51() {
+    public void test61() {
         assertNotNull(mEditor.commitFinalResult("this is SOME word"));
         assertNotNull(mEditor.commitFinalResult("underscore some"));
         assertThatEndsWith("_SOME_ word");
@@ -595,7 +632,7 @@ public class InputConnectionCommandEditorTest {
      * Same as before but using selection.
      */
     @Test
-    public void test52() {
+    public void test62() {
         assertNotNull(mEditor.commitFinalResult("this is SOME word"));
         assertNotNull(mEditor.commitFinalResult("select some"));
         assertNotNull(mEditor.commitFinalResult("selection_underscore"));
@@ -606,7 +643,7 @@ public class InputConnectionCommandEditorTest {
      * TODO: Can't create handler inside thread that has not called Looper.prepare()
      */
     //@Test
-    public void test53() {
+    public void test63() {
         assertNotNull(mEditor.commitFinalResult("test word1"));
         assertTrue(mEditor.addSpace());
         assertNotNull(mEditor.commitFinalResult("word2"));

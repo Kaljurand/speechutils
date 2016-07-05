@@ -49,6 +49,8 @@ public interface CommandEditor {
 
     boolean select(String str);
 
+    boolean selectReBefore(String regex);
+
     // Reset selection
     boolean resetSel();
 
