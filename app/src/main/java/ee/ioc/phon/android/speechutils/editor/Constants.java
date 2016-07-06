@@ -17,4 +17,9 @@ public class Constants {
     // We include ) because ;-) often finishes a sentence.
     public static final Set<Character> CHARACTERS_EOS =
             new HashSet<>(Arrays.asList(new Character[]{'.', '!', '?', ')'}));
+
+    // These symbols stick to the next symbol, i.e. no whitespace is added in front of the
+    // following string.
+    public static final Set<Character> CHARACTERS_STICKY =
+            new HashSet<>(Arrays.asList(new Character[]{'(', '[', '{', '<'}));
 }

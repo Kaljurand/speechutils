@@ -46,6 +46,8 @@ public class CommandEditorManager {
     public static final String UC_SEL = "ucSel";
     public static final String LC_SEL = "lcSel";
     public static final String INC_SEL = "incSel";
+    public static final String KEY_CODE = "keyCode";
+    public static final String KEY_CODE_STR = "keyCodeStr";
     public static final String IME_ACTION_DONE = "imeActionDone";
     public static final String IME_ACTION_GO = "imeActionGo";
     public static final String IME_ACTION_SEARCH = "imeActionSearch";
@@ -86,11 +88,20 @@ public class CommandEditorManager {
                 return ce.goRight();
             }
         });
+
         aMap.put(UNDO, new EditorCommand() {
 
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
-                return ce.undo();
+                int steps = 1;
+                if (args != null && args.length > 0) {
+                    try {
+                        steps = Integer.parseInt(args[0]);
+                    } catch (NumberFormatException e) {
+                        // Intentional
+                    }
+                }
+                return ce.undo(steps);
             }
         });
 
@@ -163,6 +174,32 @@ public class CommandEditorManager {
                     }
                 }
                 return ce.goBackward(pos);
+            }
+        });
+
+        aMap.put(KEY_CODE, new EditorCommand() {
+
+            @Override
+            public boolean execute(CommandEditor ce, String[] args) {
+                if (args != null && args.length > 0) {
+                    try {
+                        return ce.keyCode(Integer.parseInt(args[0]));
+                    } catch (NumberFormatException e) {
+                        // Intentional
+                    }
+                }
+                return false;
+            }
+        });
+
+        aMap.put(KEY_CODE_STR, new EditorCommand() {
+
+            @Override
+            public boolean execute(CommandEditor ce, String[] args) {
+                if (args == null || args.length != 1) {
+                    return false;
+                }
+                return ce.keyCodeStr(args[0]);
             }
         });
 

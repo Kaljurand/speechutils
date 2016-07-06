@@ -1,17 +1,16 @@
 package ee.ioc.phon.android.speechutils.editor;
 
-/**
- * TODO: work in progress
- */
+import java.util.Deque;
+
 public interface CommandEditor {
 
-    CharSequence getText();
-
-    void setUtteranceRewriter(UtteranceRewriter ur);
+    // Commit text
 
     CommandEditorResult commitFinalResult(String str);
 
     boolean commitPartialResult(String str);
+
+    // Commands
 
     boolean goUp();
 
@@ -20,8 +19,6 @@ public interface CommandEditor {
     boolean goLeft();
 
     boolean goRight();
-
-    boolean undo();
 
     boolean undo(int steps);
 
@@ -46,6 +43,12 @@ public interface CommandEditor {
 
     // Go to the end of the text
     boolean goToEnd();
+
+    // Add the key with the given code
+    boolean keyCode(int code);
+
+    // Add the key with the given symbolic name
+    boolean keyCodeStr(String codeAsStr);
 
     boolean select(String str);
 
@@ -101,7 +104,14 @@ public interface CommandEditor {
 
     boolean imeActionSend();
 
-    String getUndoStack();
+
+    // Other
+
+    CharSequence getText();
+
+    void setUtteranceRewriter(UtteranceRewriter ur);
+
+    Deque<InputConnectionCommandEditor.Op> getUndoStack();
 
     void reset();
 }

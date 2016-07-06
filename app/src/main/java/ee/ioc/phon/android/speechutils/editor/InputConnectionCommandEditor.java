@@ -182,11 +182,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public boolean undo() {
-        return undo(1);
-    }
-
-    @Override
     public boolean undo(int steps) {
         mInputConnection.beginBatchEdit();
         for (int i = 0; i < steps; i++) {
@@ -505,6 +500,23 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return success;
     }
 
+    // TODO: support undo
+    @Override
+    public boolean keyCode(int code) {
+        return mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, code));
+    }
+
+    // TODO: support undo
+    @Override
+    public boolean keyCodeStr(String symbolicName) {
+        boolean success = false;
+        int code = KeyEvent.keyCodeFromString("KEYCODE_" + symbolicName);
+        if (code != KeyEvent.KEYCODE_UNKNOWN) {
+            success = mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, code));
+        }
+        return success;
+    }
+
     @Override
     public boolean imeActionDone() {
         // Does not work on Google Searchbar
@@ -574,8 +586,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public String getUndoStack() {
-        return mUndoStack.toString();
+    public Deque<Op> getUndoStack() {
+        return mUndoStack;
     }
 
     private boolean addText(final CharSequence text) {
@@ -833,8 +845,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
         if (leftContext.length() == 0
                 || Constants.CHARACTERS_WS.contains(firstChar)
-                || Constants.CHARACTERS_PUNCT.contains(firstChar)
-                || Constants.CHARACTERS_WS.contains(leftContext.charAt(leftContext.length() - 1))) {
+                || Constants.CHARACTERS_PUNCT.contains(firstChar)) {
+            return "";
+        }
+
+        char prevChar = leftContext.charAt(leftContext.length() - 1);
+        if (Constants.CHARACTERS_WS.contains(prevChar)
+                || Constants.CHARACTERS_STICKY.contains(prevChar)) {
             return "";
         }
         return " ";
