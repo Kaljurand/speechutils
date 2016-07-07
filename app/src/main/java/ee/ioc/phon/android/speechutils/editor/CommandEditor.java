@@ -22,6 +22,9 @@ public interface CommandEditor {
 
     boolean undo(int steps);
 
+    // Apply the last command N times
+    boolean apply(int steps);
+
     // Moving between fields
 
     // Go to the previous field

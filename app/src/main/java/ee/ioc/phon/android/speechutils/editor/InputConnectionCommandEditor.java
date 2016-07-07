@@ -50,6 +50,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private String mPrevText = "";
     private int mAddedLength = 0;
 
+    private Op mPrevOp;
+
     // TODO: Restrict the size of these stacks
 
     // The command prefix is a list of consecutive final results whose concatenation can possibly
@@ -191,6 +193,20 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 }
             } catch (NoSuchElementException ex) {
                 break;
+            }
+        }
+        mInputConnection.endBatchEdit();
+        return true;
+    }
+
+    public boolean apply(int steps) {
+        if (mPrevOp == null) {
+            return false;
+        }
+        mInputConnection.beginBatchEdit();
+        for (int i = 0; i < steps; i++) {
+            if (!mPrevOp.execute()) {
+                return false;
             }
         }
         mInputConnection.endBatchEdit();
@@ -369,18 +385,25 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public boolean select(String query) {
-        boolean success = false;
-        mInputConnection.beginBatchEdit();
-        final ExtractedText et = getExtractedText();
-        if (et != null) {
-            Pair<Integer, CharSequence> queryResult = lastIndexOf(query, et);
-            if (queryResult.first >= 0) {
-                success = setSelection(queryResult.first, queryResult.first + queryResult.second.length(), et.selectionStart, et.selectionEnd);
+    public boolean select(final String query) {
+        Op op = new Op("select") {
+            @Override
+            public boolean execute() {
+                boolean success = false;
+                mInputConnection.beginBatchEdit();
+                final ExtractedText et = getExtractedText();
+                if (et != null) {
+                    Pair<Integer, CharSequence> queryResult = lastIndexOf(query, et);
+                    if (queryResult.first >= 0) {
+                        success = setSelection(queryResult.first, queryResult.first + queryResult.second.length(), et.selectionStart, et.selectionEnd);
+                    }
+                }
+                mInputConnection.endBatchEdit();
+                return success;
             }
-        }
-        mInputConnection.endBatchEdit();
-        return success;
+        };
+        mPrevOp = op;
+        return op.execute();
     }
 
     @Override

@@ -53,6 +53,7 @@ public class CommandEditorManager {
     public static final String IME_ACTION_SEARCH = "imeActionSearch";
     public static final String IME_ACTION_SEND = "imeActionSend";
     public static final String UNDO = "undo";
+    public static final String APPLY = "apply";
 
     public static final Map<String, EditorCommand> EDITOR_COMMANDS;
 
@@ -102,6 +103,22 @@ public class CommandEditorManager {
                     }
                 }
                 return ce.undo(steps);
+            }
+        });
+
+        aMap.put(APPLY, new EditorCommand() {
+
+            @Override
+            public boolean execute(CommandEditor ce, String[] args) {
+                int steps = 1;
+                if (args != null && args.length > 0) {
+                    try {
+                        steps = Integer.parseInt(args[0]);
+                    } catch (NumberFormatException e) {
+                        // Intentional
+                    }
+                }
+                return ce.apply(steps);
             }
         });
 

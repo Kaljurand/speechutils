@@ -48,6 +48,7 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("code (\\d+)", "", "keyCode", new String[]{"$1"}));
         list.add(new Command("code letter (.)", "", "keyCodeStr", new String[]{"$1"}));
         list.add(new Command("undo (\\d+)", "", "undo", new String[]{"$1"}));
+        list.add(new Command("apply (\\d+)", "", "apply", new String[]{"$1"}));
         COMMANDS = Collections.unmodifiableList(list);
     }
 
@@ -632,6 +633,19 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("This is a testB");
     }
 
+    /**
+     * Search for a string multiple times.
+     * Change the 5th space with a hyphen.
+     * TODO: rollback currently fails
+     */
+    @Test
+    public void test54() {
+        add("6 5 4 3 2 1 0", "select  ", "apply 4", "-");
+        assertThatTextIs("6 5-4 3 2 1 0");
+        add("undo 4", "_");
+        // TODO: fix extra space
+        assertThatTextIs("6 5 4 3 2 _1 0");
+    }
 
     @Test
     public void test60() {
