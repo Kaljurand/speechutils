@@ -11,12 +11,15 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 public class UtteranceRewriter {
 
     private static final Pattern PATTERN_TRAILING_TABS = Pattern.compile("\t*$");
+
+    public static String[] HEADER = {"Comment", "Locale", "Service", "App", "Utterance", "Replacement", "Command", "Arg1", "Arg2"};
 
     public static class Rewrite {
         public final String mId;
@@ -96,18 +99,9 @@ public class UtteranceRewriter {
      */
     public String toTsv() {
         StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(TextUtils.join("\t", HEADER));
         for (Command command : mCommands) {
-            stringBuilder.append(escape(command.getPattern().toString()));
-            stringBuilder.append('\t');
-            stringBuilder.append(escape(command.getReplacement()));
-            if (command.getId() != null) {
-                stringBuilder.append('\t');
-                stringBuilder.append(escape(command.getId()));
-            }
-            for (String arg : command.getArgs()) {
-                stringBuilder.append('\t');
-                stringBuilder.append(escape(arg));
-            }
+            stringBuilder.append(command.toTsv());
             stringBuilder.append('\n');
         }
         return stringBuilder.toString();
@@ -117,16 +111,7 @@ public class UtteranceRewriter {
         String[] array = new String[mCommands.size()];
         int i = 0;
         for (Command command : mCommands) {
-            array[i] = pp(command.getPattern().toString())
-                    + '\n'
-                    + pp(command.getReplacement());
-            if (command.getId() != null) {
-                array[i] += '\n' + command.getId();
-            }
-            for (String arg : command.getArgs()) {
-                array[i] += '\n' + arg;
-            }
-            i++;
+            array[i++] = command.toPp();
         }
         return array;
     }
@@ -191,8 +176,14 @@ public class UtteranceRewriter {
     private static List<Command> loadRewrites(String str) {
         assert str != null;
         List<Command> commands = new ArrayList<>();
-        for (String line : str.split("\n")) {
-            addLine(commands, line);
+        String[] rows = str.split("\n");
+        if (rows.length > 1) {
+            String[] header = rows[0].split("\t");
+            for (int i = 1; i < rows.length; i++) {
+                if (!addLine(commands, header, rows[i])) {
+                    break;
+                }
+            }
         }
         return commands;
     }
@@ -206,63 +197,93 @@ public class UtteranceRewriter {
         List<Command> commands = new ArrayList<>();
         if (inputStream != null) {
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                addLine(commands, line);
+            String line = reader.readLine();
+            if (line != null) {
+                String[] header = line.split("\t");
+                while ((line = reader.readLine()) != null) {
+                    if (!addLine(commands, header, line)) {
+                        break;
+                    }
+
+                }
             }
             inputStream.close();
         }
         return commands;
     }
 
-    private static boolean addLine(List<Command> commands, String line) {
+    private static boolean addLine(List<Command> commands, String[] header, String line) {
         // TODO: removing trailing tabs means that rewrite cannot delete a string
         String[] splits = PATTERN_TRAILING_TABS.matcher(line).replaceAll("").split("\t");
         if (splits.length > 1) {
             try {
-                commands.add(getCommand(splits));
+                commands.add(getCommand(header, splits));
                 return true;
             } catch (PatternSyntaxException e) {
                 // TODO: collect and expose buggy entries
+                return false;
+            } catch (IllegalArgumentException e) {
+                // Unsupported header field
+                return false;
             }
         }
         return false;
     }
 
-    private static Command getCommand(String[] splits) {
-        String commandId = null;
-        String[] args = null;
-        int numOfArgs = splits.length - 3;
+    private static Command getCommand(String[] header, String[] splits) {
+        String comment = null;
+        Locale locale = null;
+        Pattern service = null;
+        Pattern app = null;
+        Pattern utterance = null;
+        String command = null;
+        String replacement = null;
+        String arg1 = null;
+        String arg2 = null;
 
-        if (numOfArgs >= 0) {
-            commandId = unescape(splits[2]);
-        }
-
-        if (numOfArgs > 0) {
-            args = new String[numOfArgs];
-            for (int i = 0; i < numOfArgs; i++) {
-                args[i] = unescape(splits[i + 3]);
+        for (int i = 0; i < Math.min(header.length, splits.length); i++) {
+            String split = splits[i];
+            switch (header[i]) {
+                case "Comment":
+                    comment = split;
+                    break;
+                case "Locale":
+                    locale = new Locale(split);
+                    break;
+                case "Service":
+                    service = Pattern.compile(split);
+                    break;
+                case "App":
+                    app = Pattern.compile(split);
+                    break;
+                case "Utterance":
+                    utterance = Pattern.compile(split, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+                    break;
+                case "Replacement":
+                    replacement = Command.unescape(split);
+                    break;
+                case "Command":
+                    command = Command.unescape(split);
+                    break;
+                case "Arg1":
+                    arg1 = Command.unescape(split);
+                    break;
+                case "Arg2":
+                    arg2 = Command.unescape(split);
+                    break;
+                default:
+                    throw new IllegalArgumentException(header[i]);
             }
         }
 
-        return new Command(unescape(splits[0]), unescape(splits[1]), commandId, args);
-    }
+        if (arg1 == null) {
+            return new Command(comment, locale, service, app, utterance, replacement, command);
+        }
 
-    /**
-     * Maps newlines and tabs to literals of the form "\n" and "\t".
-     */
-    private static String escape(String str) {
-        return str.replace("\n", "\\n").replace("\t", "\\t");
-    }
+        if (arg2 == null) {
+            return new Command(comment, locale, service, app, utterance, replacement, command, new String[]{arg1});
+        }
 
-    /**
-     * Maps literals of the form "\n" and "\t" to newlines and tabs.
-     */
-    private static String unescape(String str) {
-        return str.replace("\\n", "\n").replace("\\t", "\t");
-    }
-
-    private static String pp(String str) {
-        return escape(str).replace(" ", "·");
+        return new Command(comment, locale, service, app, utterance, replacement, command, new String[]{arg1, arg2});
     }
 }

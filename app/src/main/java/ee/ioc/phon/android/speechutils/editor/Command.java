@@ -3,27 +3,40 @@ package ee.ioc.phon.android.speechutils.editor;
 import android.text.TextUtils;
 import android.util.Pair;
 
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Command {
     private final static String SEPARATOR = "___";
-    private final Pattern mPattern;
+    private final String mComment;
+    private final Locale mLocale;
+    private final Pattern mService;
+    private final Pattern mApp;
+    private final Pattern mUtt;
     private final String mReplacement;
-    private final String mId;
+    private final String mCommand;
     private final String[] mArgs;
     private final String mArgsAsStr;
 
     /**
-     * @param pattern     regular expression with capturing groups
+     * @param comment     free-form comment
+     * @param locale      locale of the utterance
+     * @param service     regular expression to match the recognizer service class name
+     * @param app         regular expression to match the calling app package name
+     * @param utt         regular expression with capturing groups to match the utterance
      * @param replacement replacement string for the matched substrings, typically empty in case of commands
      * @param id          name of the command to execute, null if missing
      * @param args        arguments of the command
      */
-    public Command(Pattern pattern, String replacement, String id, String[] args) {
-        mPattern = pattern;
+    public Command(String comment, Locale locale, Pattern service, Pattern app, Pattern utt, String replacement, String id, String[] args) {
+        mComment = comment;
+        mLocale = locale;
+        mService = service;
+        mApp = app;
+        mUtt = utt;
         mReplacement = replacement;
-        mId = id;
+        mCommand = id;
         if (args == null) {
             mArgs = new String[0];
         } else {
@@ -32,32 +45,41 @@ public class Command {
         mArgsAsStr = TextUtils.join(SEPARATOR, mArgs);
     }
 
-    public Command(String pattern, String replacement, String id, String[] args) {
-        this(Pattern.compile(pattern, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), replacement, id, args);
+    public Command(String comment, Locale locale, Pattern service, Pattern app, Pattern utt, String replacement, String id) {
+        this(comment, locale, service, app, utt, replacement, id, null);
     }
 
-    public Command(String pattern, String replacement, String id) {
-        this(Pattern.compile(pattern, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), replacement, id, null);
+
+    public Command(String utt, String replacement, String id, String[] args) {
+        this(null, null, null, null, Pattern.compile(utt, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), replacement, id, args);
     }
 
-    public Command(String pattern, String replacement) {
-        this(Pattern.compile(pattern, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), replacement, null, null);
+    public Command(String utt, String replacement, String id) {
+        this(null, null, null, null, Pattern.compile(utt, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), replacement, id, null);
+    }
+
+    public Command(String utt, String replacement) {
+        this(null, null, null, null, Pattern.compile(utt, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), replacement, null, null);
     }
 
     public String getId() {
-        return mId;
-    }
-
-    public Pattern getPattern() {
-        return mPattern;
-    }
-
-    public String getReplacement() {
-        return mReplacement;
+        return mCommand;
     }
 
     public String[] getArgs() {
         return mArgs;
+    }
+
+    /**
+     * TODO: generalize locale matching
+     *
+     * @param locale  locale
+     * @param service service
+     * @param app     app
+     * @return true iff this command matches the given arguments
+     */
+    public boolean isApplicable(Locale locale, String service, String app) {
+        return mLocale.equals(locale) && mService.matcher(service).matches() && mApp.matcher(app).matches();
     }
 
     /**
@@ -68,7 +90,7 @@ public class Command {
      * @return pair of replacement and array of arguments
      */
     public Pair<String, String[]> match(CharSequence str) {
-        Matcher m = mPattern.matcher(str);
+        Matcher m = mUtt.matcher(str);
         String newStr = m.replaceAll(mReplacement);
         String[] argsEvaluated = null;
         // If the entire region matches then we evaluate the arguments as well
@@ -78,7 +100,71 @@ public class Command {
         return new Pair<>(newStr, argsEvaluated);
     }
 
+    public String toPp() {
+        String str = pp(mComment) + '\n' +
+                pp(mLocale) + '\n' +
+                pp(mService) + '\n' +
+                pp(mApp) + '\n' +
+                pp(mUtt) + '\n' +
+                pp(mReplacement);
+        if (mCommand != null) {
+            str += '\n' + mCommand;
+        }
+        for (String arg : mArgs) {
+            str += '\n' + arg;
+        }
+        return str;
+    }
+
+    public String toTsv() {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(escape(mComment));
+        stringBuilder.append('\t');
+        stringBuilder.append(escape(mLocale));
+        stringBuilder.append('\t');
+        stringBuilder.append(escape(mService));
+        stringBuilder.append('\t');
+        stringBuilder.append(escape(mApp));
+        stringBuilder.append('\t');
+        stringBuilder.append(escape(mUtt));
+        stringBuilder.append('\t');
+        stringBuilder.append(escape(mReplacement));
+        if (getId() != null) {
+            stringBuilder.append('\t');
+            stringBuilder.append(escape(mCommand));
+        }
+        for (String arg : getArgs()) {
+            stringBuilder.append('\t');
+            stringBuilder.append(escape(arg));
+        }
+        return stringBuilder.toString();
+    }
+
     public String toString() {
-        return mPattern + "/" + mReplacement + "/" + mId + "(" + mArgs + ")";
+        return mUtt + "/" + mReplacement + "/" + mCommand + "(" + mArgs + ")";
+    }
+
+    private static String pp(Object str) {
+        return escape(str).replace(" ", "·");
+    }
+
+    /**
+     * Maps newlines and tabs to literals of the form "\n" and "\t".
+     */
+    public static String escape(Object str) {
+        if (str == null) {
+            return "";
+        }
+        return str.toString().replace("\n", "\\n").replace("\t", "\\t");
+    }
+
+    /**
+     * Maps literals of the form "\n" and "\t" to newlines and tabs.
+     */
+    public static String unescape(String str) {
+        if (str == null) {
+            return "";
+        }
+        return str.replace("\\n", "\n").replace("\\t", "\t");
     }
 }

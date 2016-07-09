@@ -819,7 +819,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
         int len = mCommandPrefix.size();
         for (int i = Math.min(MAX_UTT_IN_COMMAND, len); i > 0; i--) {
             List sublist = mCommandPrefix.subList(len - i, len);
-            String possibleCommand = TextUtils.join(" ", sublist) + " " + text;
+            // TODO: sometimes sublist is empty?
+            String possibleCommand = TextUtils.join(" ", sublist);
+            if (possibleCommand.isEmpty()) {
+                possibleCommand = text;
+            } else {
+                possibleCommand += " " + text;
+            }
             Log.i("applyCommand: testing: <" + possibleCommand + ">");
             UtteranceRewriter.Rewrite rewrite = mUtteranceRewriter.getRewrite(possibleCommand);
             if (rewrite.isCommand()) {
