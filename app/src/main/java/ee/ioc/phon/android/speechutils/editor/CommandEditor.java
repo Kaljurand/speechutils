@@ -77,10 +77,6 @@ public interface CommandEditor {
 
     // Editing
 
-    boolean addSpace();
-
-    boolean addNewline();
-
     boolean deleteLeftWord();
 
     boolean delete(String str);

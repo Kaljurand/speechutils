@@ -191,6 +191,8 @@ public class UtteranceRewriter {
 
     /**
      * Loads the rewrites from an URI using a ContentResolver.
+     * The first line is a header.
+     * Non-header lines are ignored if they start with '#'.
      */
     private static List<Command> loadRewrites(ContentResolver contentResolver, Uri uri) throws IOException {
         InputStream inputStream = contentResolver.openInputStream(uri);
@@ -201,6 +203,9 @@ public class UtteranceRewriter {
             if (line != null) {
                 String[] header = line.split("\t");
                 while ((line = reader.readLine()) != null) {
+                    if (line.charAt(0) == '#') {
+                        continue;
+                    }
                     if (!addLine(commands, header, line)) {
                         break;
                     }
@@ -227,7 +232,7 @@ public class UtteranceRewriter {
                 return false;
             }
         }
-        return false;
+        return true;
     }
 
     private static Command getCommand(String[] header, String[] splits) {

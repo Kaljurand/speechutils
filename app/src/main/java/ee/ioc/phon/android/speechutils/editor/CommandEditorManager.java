@@ -37,8 +37,6 @@ public class CommandEditorManager {
     public static final String CUT_ALL = "cutAll";
     public static final String DELETE_ALL = "deleteAll";
     public static final String COPY_ALL = "copyAll";
-    public static final String ADD_SPACE = "addSpace";
-    public static final String ADD_NEWLINE = "addNewline";
     public static final String DELETE_LEFT_WORD = "deleteLeftWord";
     public static final String DELETE = "delete";
     public static final String REPLACE = "replace";
@@ -312,22 +310,6 @@ public class CommandEditorManager {
             @Override
             public boolean execute(CommandEditor ce, String[] args) {
                 return ce.incSel();
-            }
-        });
-
-        aMap.put(ADD_SPACE, new EditorCommand() {
-
-            @Override
-            public boolean execute(CommandEditor ce, String[] args) {
-                return ce.addSpace();
-            }
-        });
-
-        aMap.put(ADD_NEWLINE, new EditorCommand() {
-
-            @Override
-            public boolean execute(CommandEditor ce, String[] args) {
-                return ce.addNewline();
             }
         });
 

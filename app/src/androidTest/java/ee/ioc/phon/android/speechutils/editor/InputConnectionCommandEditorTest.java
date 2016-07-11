@@ -117,11 +117,11 @@ public class InputConnectionCommandEditorTest {
     public void test06() {
         assertNotNull(mEditor.commitFinalResult("a12345 67890_12345"));
         assertTrue(mEditor.replace("12345", "abcdef"));
-        assertTrue(mEditor.addSpace());
+        assertTrue(mEditor.replaceSel(" "));
         assertTrue(mEditor.replace("12345", "ABC"));
         assertThat(getTextBeforeCursor(2), is("BC"));
-        assertTrue(mEditor.addNewline());
-        assertTrue(mEditor.addSpace());
+        assertTrue(mEditor.replaceSel("\n"));
+        assertTrue(mEditor.replaceSel(" "));
         assertTrue(mEditor.goToCharacterPosition(9));
         assertThat(getTextBeforeCursor(2), is("67"));
     }
@@ -180,7 +180,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test14() {
         assertNotNull(mEditor.commitFinalResult("test word1"));
-        assertTrue(mEditor.addSpace());
+        assertTrue(mEditor.replaceSel(" "));
         assertNotNull(mEditor.commitFinalResult("word2"));
         assertThatEndsWith("word1 word2");
         assertNotNull(mEditor.commitFinalResult("connect word1 and word2"));
@@ -190,7 +190,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test15() {
         assertNotNull(mEditor.commitFinalResult("test word1"));
-        assertTrue(mEditor.addSpace());
+        assertTrue(mEditor.replaceSel(" "));
         assertNotNull(mEditor.commitFinalResult("word2"));
         assertThat(getTextBeforeCursor(11), is("word1 word2"));
         assertTrue(mEditor.deleteAll());
@@ -340,7 +340,7 @@ public class InputConnectionCommandEditorTest {
 
     @Test
     public void test30() {
-        assertTrue(mEditor.addSpace());
+        assertTrue(mEditor.replaceSel(" "));
         assertThatTextIs(" ");
         undo();
         assertThatTextIs("");
@@ -685,7 +685,7 @@ public class InputConnectionCommandEditorTest {
     //@Test
     public void test63() {
         assertNotNull(mEditor.commitFinalResult("test word1"));
-        assertTrue(mEditor.addSpace());
+        assertTrue(mEditor.replaceSel(" "));
         assertNotNull(mEditor.commitFinalResult("word2"));
         assertThatEndsWith("word1 word2");
         assertTrue(mEditor.cutAll());

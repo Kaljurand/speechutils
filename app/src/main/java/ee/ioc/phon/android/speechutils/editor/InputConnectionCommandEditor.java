@@ -319,16 +319,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public boolean addSpace() {
-        return addText(" ");
-    }
-
-    @Override
-    public boolean addNewline() {
-        return addText("\n");
-    }
-
-    @Override
     public boolean resetSel() {
         boolean success = false;
         mInputConnection.beginBatchEdit();
@@ -611,10 +601,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public Deque<Op> getUndoStack() {
         return mUndoStack;
-    }
-
-    private boolean addText(final CharSequence text) {
-        return commitText(null, text);
     }
 
     private boolean commitText(final CharSequence oldText, final CharSequence newText) {
