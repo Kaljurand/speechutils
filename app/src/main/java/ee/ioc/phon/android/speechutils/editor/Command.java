@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 public class Command {
     private final static String SEPARATOR = "___";
     private final String mComment;
-    private final Locale mLocale;
+    private final Pattern mLocale;
     private final Pattern mService;
     private final Pattern mApp;
     private final Pattern mUtt;
@@ -29,7 +29,7 @@ public class Command {
      * @param id          name of the command to execute, null if missing
      * @param args        arguments of the command
      */
-    public Command(String comment, Locale locale, Pattern service, Pattern app, Pattern utt, String replacement, String id, String[] args) {
+    public Command(String comment, Pattern locale, Pattern service, Pattern app, Pattern utt, String replacement, String id, String[] args) {
         mComment = comment;
         mLocale = locale;
         mService = service;
@@ -45,7 +45,7 @@ public class Command {
         mArgsAsStr = TextUtils.join(SEPARATOR, mArgs);
     }
 
-    public Command(String comment, Locale locale, Pattern service, Pattern app, Pattern utt, String replacement, String id) {
+    public Command(String comment, Pattern locale, Pattern service, Pattern app, Pattern utt, String replacement, String id) {
         this(comment, locale, service, app, utt, replacement, id, null);
     }
 
@@ -68,18 +68,6 @@ public class Command {
 
     public String[] getArgs() {
         return mArgs;
-    }
-
-    /**
-     * TODO: generalize locale matching
-     *
-     * @param locale  locale
-     * @param service service
-     * @param app     app
-     * @return true iff this command matches the given arguments
-     */
-    public boolean isApplicable(Locale locale, String service, String app) {
-        return mLocale.equals(locale) && mService.matcher(service).matches() && mApp.matcher(app).matches();
     }
 
     /**

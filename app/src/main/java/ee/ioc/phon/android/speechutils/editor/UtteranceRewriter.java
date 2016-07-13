@@ -11,9 +11,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+
+import ee.ioc.phon.android.speechutils.Log;
 
 public class UtteranceRewriter {
 
@@ -51,8 +52,8 @@ public class UtteranceRewriter {
         mCommands = commands;
     }
 
-    public UtteranceRewriter(String str) {
-        this(loadRewrites(str));
+    public UtteranceRewriter(String str, CommandMatcher commandMatcher) {
+        this(loadRewrites(str, commandMatcher));
     }
 
     public UtteranceRewriter(ContentResolver contentResolver, Uri uri) throws IOException {
@@ -173,14 +174,14 @@ public class UtteranceRewriter {
     /**
      * Loads the rewrites from tab-separated values.
      */
-    private static List<Command> loadRewrites(String str) {
+    private static List<Command> loadRewrites(String str, CommandMatcher commandMatcher) {
         assert str != null;
         List<Command> commands = new ArrayList<>();
         String[] rows = str.split("\n");
         if (rows.length > 1) {
             String[] header = rows[0].split("\t");
             for (int i = 1; i < rows.length; i++) {
-                if (!addLine(commands, header, rows[i])) {
+                if (!addLine(commands, header, rows[i], commandMatcher)) {
                     break;
                 }
             }
@@ -206,7 +207,7 @@ public class UtteranceRewriter {
                     if (line.charAt(0) == '#') {
                         continue;
                     }
-                    if (!addLine(commands, header, line)) {
+                    if (!addLine(commands, header, line, null)) {
                         break;
                     }
 
@@ -217,12 +218,15 @@ public class UtteranceRewriter {
         return commands;
     }
 
-    private static boolean addLine(List<Command> commands, String[] header, String line) {
+    private static boolean addLine(List<Command> commands, String[] header, String line, CommandMatcher commandMatcher) {
         // TODO: removing trailing tabs means that rewrite cannot delete a string
         String[] splits = PATTERN_TRAILING_TABS.matcher(line).replaceAll("").split("\t");
         if (splits.length > 1) {
             try {
-                commands.add(getCommand(header, splits));
+                Command command = getCommand(header, splits, commandMatcher);
+                if (command != null) {
+                    commands.add(command);
+                }
                 return true;
             } catch (PatternSyntaxException e) {
                 // TODO: collect and expose buggy entries
@@ -235,9 +239,9 @@ public class UtteranceRewriter {
         return true;
     }
 
-    private static Command getCommand(String[] header, String[] splits) {
+    private static Command getCommand(String[] header, String[] splits, CommandMatcher commandMatcher) {
         String comment = null;
-        Locale locale = null;
+        Pattern locale = null;
         Pattern service = null;
         Pattern app = null;
         Pattern utterance = null;
@@ -253,7 +257,7 @@ public class UtteranceRewriter {
                     comment = split;
                     break;
                 case "Locale":
-                    locale = new Locale(split);
+                    locale = Pattern.compile(split);
                     break;
                 case "Service":
                     service = Pattern.compile(split);
@@ -279,6 +283,11 @@ public class UtteranceRewriter {
                 default:
                     throw new IllegalArgumentException(header[i]);
             }
+        }
+
+        if (commandMatcher != null && !commandMatcher.matches(locale, service, app)) {
+            Log.i("command matcher: FAIL: " + locale + " " + service + " " + app);
+            return null;
         }
 
         if (arg1 == null) {
