@@ -647,6 +647,18 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("6 5 4 3 2 _1 0");
     }
 
+    /**
+     * Delete a string multiple times.
+     */
+    @Test
+    public void test55() {
+        add("6 5 4 3 2 1 0", "delete  ", "apply 4", "-");
+        assertThatTextIs("6 5-43210");
+        add("undo 4", "_");
+        // TODO: fix extra space
+        assertThatTextIs("6 5 4 3 2 _10");
+    }
+
     @Test
     public void test60() {
         assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));

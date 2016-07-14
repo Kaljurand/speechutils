@@ -88,9 +88,16 @@ public class Command {
         return new Pair<>(newStr, argsEvaluated);
     }
 
+    /**
+     * Pretty-prints the command by putting the components of the command onto separate lines,
+     * and marks spaces with middot in every component except for the human-readable comment and the
+     * command ID (which does not contain spaces). The human-readable comment is only shown if it
+     * is non-empty.
+     *
+     * @return pretty-printed command
+     */
     public String toPp() {
-        String str = pp(mComment) + '\n' +
-                pp(mLocale) + '\n' +
+        String str = pp(mLocale) + '\n' +
                 pp(mService) + '\n' +
                 pp(mApp) + '\n' +
                 pp(mUtt) + '\n' +
@@ -99,7 +106,10 @@ public class Command {
             str += '\n' + mCommand;
         }
         for (String arg : mArgs) {
-            str += '\n' + arg;
+            str += '\n' + pp(arg);
+        }
+        if (mComment != null && !mComment.isEmpty()) {
+            return mComment + '\n' + str;
         }
         return str;
     }

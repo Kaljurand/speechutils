@@ -419,51 +419,59 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     @Override
     public boolean replace(final String query, final String replacement) {
-        boolean success = false;
-        mInputConnection.beginBatchEdit();
-        final ExtractedText et = getExtractedText();
-        if (et != null) {
-            Pair<Integer, CharSequence> queryResult = lastIndexOf(query, et);
-            final CharSequence match = queryResult.second;
-            if (queryResult.first >= 0) {
-                success = mInputConnection.setSelection(queryResult.first, queryResult.first);
-                if (success) {
-                    // Delete existing text
-                    success = mInputConnection.deleteSurroundingText(0, match.length());
-                    if (replacement.isEmpty()) {
+        Op op = new Op("replace") {
+            @Override
+            public boolean execute() {
+
+                boolean success = false;
+                mInputConnection.beginBatchEdit();
+                final ExtractedText et = getExtractedText();
+                if (et != null) {
+                    Pair<Integer, CharSequence> queryResult = lastIndexOf(query, et);
+                    final CharSequence match = queryResult.second;
+                    if (queryResult.first >= 0) {
+                        success = mInputConnection.setSelection(queryResult.first, queryResult.first);
                         if (success) {
-                            push(new Op("undo replace1") {
-                                @Override
-                                public boolean execute() {
-                                    mInputConnection.beginBatchEdit();
-                                    boolean success2 = mInputConnection.commitText(match, 1) &&
-                                            mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
-                                    mInputConnection.endBatchEdit();
-                                    return success2;
+                            // Delete existing text
+                            success = mInputConnection.deleteSurroundingText(0, match.length());
+                            if (replacement.isEmpty()) {
+                                if (success) {
+                                    push(new Op("undo replace1") {
+                                        @Override
+                                        public boolean execute() {
+                                            mInputConnection.beginBatchEdit();
+                                            boolean success2 = mInputConnection.commitText(match, 1) &&
+                                                    mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                                            mInputConnection.endBatchEdit();
+                                            return success2;
+                                        }
+                                    });
                                 }
-                            });
-                        }
-                    } else {
-                        success = mInputConnection.commitText(replacement, 1);
-                        if (success) {
-                            push(new Op("undo replace2") {
-                                @Override
-                                public boolean execute() {
-                                    mInputConnection.beginBatchEdit();
-                                    boolean success2 = mInputConnection.deleteSurroundingText(replacement.length(), 0) &&
-                                            mInputConnection.commitText(match, 1) &&
-                                            mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
-                                    mInputConnection.endBatchEdit();
-                                    return success2;
+                            } else {
+                                success = mInputConnection.commitText(replacement, 1);
+                                if (success) {
+                                    push(new Op("undo replace2") {
+                                        @Override
+                                        public boolean execute() {
+                                            mInputConnection.beginBatchEdit();
+                                            boolean success2 = mInputConnection.deleteSurroundingText(replacement.length(), 0) &&
+                                                    mInputConnection.commitText(match, 1) &&
+                                                    mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                                            mInputConnection.endBatchEdit();
+                                            return success2;
+                                        }
+                                    });
                                 }
-                            });
+                            }
                         }
                     }
                 }
+                mInputConnection.endBatchEdit();
+                return success;
             }
-        }
-        mInputConnection.endBatchEdit();
-        return success;
+        };
+        mPrevOp = op;
+        return op.execute();
     }
 
     @Override
@@ -857,6 +865,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
      */
     private static String getGlue(String text, CharSequence leftContext) {
         char firstChar = text.charAt(0);
+
+        // TODO: experimental: glue all 1-character strings (somewhat Estonian-specific)
+        if (text.length() == 1 && Character.isLetter(firstChar)) {
+            return "";
+        }
 
         if (leftContext.length() == 0
                 || Constants.CHARACTERS_WS.contains(firstChar)
