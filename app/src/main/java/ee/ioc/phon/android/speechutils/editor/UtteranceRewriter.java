@@ -56,6 +56,10 @@ public class UtteranceRewriter {
         this(loadRewrites(str, commandMatcher));
     }
 
+    public UtteranceRewriter(String str) {
+        this(str, null);
+    }
+
     public UtteranceRewriter(ContentResolver contentResolver, Uri uri) throws IOException {
         this(loadRewrites(contentResolver, uri));
     }
@@ -204,13 +208,9 @@ public class UtteranceRewriter {
             if (line != null) {
                 String[] header = line.split("\t");
                 while ((line = reader.readLine()) != null) {
-                    if (line.charAt(0) == '#') {
-                        continue;
-                    }
                     if (!addLine(commands, header, line, null)) {
                         break;
                     }
-
                 }
             }
             inputStream.close();
@@ -221,7 +221,7 @@ public class UtteranceRewriter {
     private static boolean addLine(List<Command> commands, String[] header, String line, CommandMatcher commandMatcher) {
         // TODO: removing trailing tabs means that rewrite cannot delete a string
         String[] splits = PATTERN_TRAILING_TABS.matcher(line).replaceAll("").split("\t");
-        if (splits.length > 1) {
+        if (splits.length > 1 && line.charAt(0) != '#') {
             try {
                 Command command = getCommand(header, splits, commandMatcher);
                 if (command != null) {
