@@ -2,6 +2,9 @@ package ee.ioc.phon.android.speechutils.editor;
 
 import java.util.Deque;
 
+/**
+ * Most methods return an operation (op), which when run returns an undo operation.
+ */
 public interface CommandEditor {
 
     // Commit text
@@ -12,96 +15,99 @@ public interface CommandEditor {
 
     // Commands
 
-    boolean goUp();
+    Op goUp();
 
-    boolean goDown();
+    Op goDown();
 
-    boolean goLeft();
+    Op goLeft();
 
-    boolean goRight();
+    Op goRight();
 
-    boolean undo(int steps);
+    Op undo(int steps);
+
+    // Combine the last N commands
+    Op combine(int steps);
 
     // Apply the last command N times
-    boolean apply(int steps);
+    Op apply(int steps);
 
     // Moving between fields
 
     // Go to the previous field
-    boolean goToPreviousField();
+    Op goToPreviousField();
 
     // Go to the next field
-    boolean goToNextField();
+    Op goToNextField();
 
     // Moving around in the string
 
     // Go to the character at the given position
-    boolean goToCharacterPosition(int pos);
+    Op goToCharacterPosition(int pos);
 
     // Move the cursor forward by the given number of characters
-    boolean goForward(int numOfChars);
+    Op goForward(int numOfChars);
 
     // Move the cursor backward by the given number of characters
-    boolean goBackward(int numOfChars);
+    Op goBackward(int numOfChars);
 
     // Go to the end of the text
-    boolean goToEnd();
+    Op goToEnd();
 
     // Add the key with the given code
-    boolean keyCode(int code);
+    Op keyCode(int code);
 
     // Add the key with the given symbolic name
-    boolean keyCodeStr(String codeAsStr);
+    Op keyCodeStr(String codeAsStr);
 
-    boolean select(String str);
+    Op select(String str);
 
-    boolean selectReBefore(String regex);
+    Op selectReBefore(String regex);
 
     // Reset selection
-    boolean resetSel();
+    Op resetSel();
 
-    boolean selectAll();
+    Op selectAll();
 
     // Context menu actions
-    boolean cut();
+    Op cut();
 
-    boolean copy();
+    Op copy();
 
-    boolean paste();
+    Op paste();
 
-    boolean cutAll();
+    Op cutAll();
 
-    boolean copyAll();
+    Op copyAll();
 
-    boolean deleteAll();
+    Op deleteAll();
 
     // Editing
 
-    boolean deleteLeftWord();
+    Op deleteLeftWord();
 
-    boolean delete(String str);
+    Op delete(String str);
 
-    boolean replace(String str1, String str2);
+    Op replace(String str1, String str2);
 
     // Replace selection
-    boolean replaceSel(String str1);
+    Op replaceSel(String str1);
 
     // Uppercase selection
-    boolean ucSel();
+    Op ucSel();
 
     // Lowercase selection
-    boolean lcSel();
+    Op lcSel();
 
     // Increment selection
-    boolean incSel();
+    Op incSel();
 
-    boolean imeActionDone();
+    Op imeActionDone();
 
-    boolean imeActionGo();
+    Op imeActionGo();
 
-    boolean imeActionSearch();
+    Op imeActionSearch();
 
-    boolean imeActionSend();
+    Op imeActionSend();
 
 
     // Other
@@ -110,7 +116,15 @@ public interface CommandEditor {
 
     void setUtteranceRewriter(UtteranceRewriter ur);
 
-    Deque<InputConnectionCommandEditor.Op> getUndoStack();
+    Deque<Op> getOpStack();
+
+    Deque<Op> getUndoStack();
+
+    void pushOp(Op op);
+
+    void popOp();
+
+    void pushOpUndo(Op op);
 
     void reset();
 }

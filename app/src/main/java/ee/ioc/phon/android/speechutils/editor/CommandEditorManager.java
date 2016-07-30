@@ -12,7 +12,7 @@ import java.util.Map;
 public class CommandEditorManager {
 
     public interface EditorCommand {
-        boolean execute(CommandEditor commandEditor, String[] args);
+        Op getOp(CommandEditor commandEditor, String[] args);
     }
 
     private final CommandEditor mCommandEditor;
@@ -51,6 +51,7 @@ public class CommandEditorManager {
     public static final String IME_ACTION_SEARCH = "imeActionSearch";
     public static final String IME_ACTION_SEND = "imeActionSend";
     public static final String UNDO = "undo";
+    public static final String COMBINE = "combine";
     public static final String APPLY = "apply";
 
     public static final Map<String, EditorCommand> EDITOR_COMMANDS;
@@ -62,28 +63,28 @@ public class CommandEditorManager {
         aMap.put(GO_UP, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.goUp();
             }
         });
         aMap.put(GO_DOWN, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.goDown();
             }
         });
         aMap.put(GO_LEFT, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.goLeft();
             }
         });
         aMap.put(GO_RIGHT, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.goRight();
             }
         });
@@ -91,7 +92,7 @@ public class CommandEditorManager {
         aMap.put(UNDO, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 int steps = 1;
                 if (args != null && args.length > 0) {
                     try {
@@ -104,10 +105,26 @@ public class CommandEditorManager {
             }
         });
 
+        aMap.put(COMBINE, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                int numOfOps = 2;
+                if (args != null && args.length > 0) {
+                    try {
+                        numOfOps = Integer.parseInt(args[0]);
+                    } catch (NumberFormatException e) {
+                        // Intentional
+                    }
+                }
+                return ce.combine(numOfOps);
+            }
+        });
+
         aMap.put(APPLY, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 int steps = 1;
                 if (args != null && args.length > 0) {
                     try {
@@ -123,7 +140,7 @@ public class CommandEditorManager {
         aMap.put(GO_TO_PREVIOUS_FIELD, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.goToPreviousField();
             }
         });
@@ -131,7 +148,7 @@ public class CommandEditorManager {
         aMap.put(GO_TO_NEXT_FIELD, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.goToNextField();
             }
         });
@@ -139,7 +156,7 @@ public class CommandEditorManager {
         aMap.put(GO_TO_END, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.goToEnd();
             }
         });
@@ -147,7 +164,7 @@ public class CommandEditorManager {
         aMap.put(GO_TO_CHARACTER_POSITION, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 int pos = 0;
                 if (args != null && args.length > 0) {
                     try {
@@ -163,7 +180,7 @@ public class CommandEditorManager {
         aMap.put(GO_FORWARD, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 int pos = 1;
                 if (args != null && args.length > 0) {
                     try {
@@ -179,7 +196,7 @@ public class CommandEditorManager {
         aMap.put(GO_BACKWARD, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 int pos = 1;
                 if (args != null && args.length > 0) {
                     try {
@@ -195,7 +212,7 @@ public class CommandEditorManager {
         aMap.put(KEY_CODE, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 if (args != null && args.length > 0) {
                     try {
                         return ce.keyCode(Integer.parseInt(args[0]));
@@ -203,16 +220,16 @@ public class CommandEditorManager {
                         // Intentional
                     }
                 }
-                return false;
+                return null;
             }
         });
 
         aMap.put(KEY_CODE_STR, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 if (args == null || args.length != 1) {
-                    return false;
+                    return null;
                 }
                 return ce.keyCodeStr(args[0]);
             }
@@ -221,9 +238,9 @@ public class CommandEditorManager {
         aMap.put(SELECT, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 if (args == null || args.length != 1) {
-                    return false;
+                    return null;
                 }
                 return ce.select(args[0]);
             }
@@ -232,9 +249,9 @@ public class CommandEditorManager {
         aMap.put(SELECT_RE_BEFORE, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 if (args == null || args.length != 1) {
-                    return false;
+                    return null;
                 }
                 return ce.selectReBefore(args[0]);
             }
@@ -243,7 +260,7 @@ public class CommandEditorManager {
         aMap.put(DELETE_LEFT_WORD, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.deleteLeftWord();
             }
         });
@@ -251,9 +268,9 @@ public class CommandEditorManager {
         aMap.put(DELETE, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 if (args == null || args.length != 1) {
-                    return false;
+                    return null;
                 }
                 return ce.delete(args[0]);
             }
@@ -262,9 +279,9 @@ public class CommandEditorManager {
         aMap.put(REPLACE, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 if (args == null || args.length != 2) {
-                    return false;
+                    return null;
                 }
                 return ce.replace(args[0], args[1]);
             }
@@ -273,9 +290,9 @@ public class CommandEditorManager {
         aMap.put(REPLACE_SEL, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 if (args == null || args.length != 1) {
-                    return false;
+                    return null;
                 }
                 return ce.replaceSel(args[0]);
             }
@@ -284,7 +301,7 @@ public class CommandEditorManager {
         aMap.put(RESET_SEL, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.resetSel();
             }
         });
@@ -292,7 +309,7 @@ public class CommandEditorManager {
         aMap.put(UC_SEL, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.ucSel();
             }
         });
@@ -300,7 +317,7 @@ public class CommandEditorManager {
         aMap.put(LC_SEL, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.lcSel();
             }
         });
@@ -308,7 +325,7 @@ public class CommandEditorManager {
         aMap.put(INC_SEL, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.incSel();
             }
         });
@@ -316,7 +333,7 @@ public class CommandEditorManager {
         aMap.put(SELECT_ALL, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.selectAll();
             }
         });
@@ -324,7 +341,7 @@ public class CommandEditorManager {
         aMap.put(CUT, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.cut();
             }
         });
@@ -332,7 +349,7 @@ public class CommandEditorManager {
         aMap.put(CUT_ALL, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.cutAll();
             }
         });
@@ -340,7 +357,7 @@ public class CommandEditorManager {
         aMap.put(DELETE_ALL, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.deleteAll();
             }
         });
@@ -348,7 +365,7 @@ public class CommandEditorManager {
         aMap.put(COPY, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.copy();
             }
         });
@@ -356,7 +373,7 @@ public class CommandEditorManager {
         aMap.put(COPY_ALL, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.copyAll();
             }
         });
@@ -364,7 +381,7 @@ public class CommandEditorManager {
         aMap.put(PASTE, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.paste();
             }
         });
@@ -372,7 +389,7 @@ public class CommandEditorManager {
         aMap.put(IME_ACTION_DONE, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.imeActionDone();
             }
         });
@@ -380,7 +397,7 @@ public class CommandEditorManager {
         aMap.put(IME_ACTION_GO, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.imeActionGo();
             }
         });
@@ -388,7 +405,7 @@ public class CommandEditorManager {
         aMap.put(IME_ACTION_SEARCH, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.imeActionSearch();
             }
         });
@@ -396,7 +413,7 @@ public class CommandEditorManager {
         aMap.put(IME_ACTION_SEND, new EditorCommand() {
 
             @Override
-            public boolean execute(CommandEditor ce, String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
                 return ce.imeActionSend();
             }
         });
@@ -417,6 +434,16 @@ public class CommandEditorManager {
         if (editorCommand == null) {
             return false;
         }
-        return editorCommand.execute(mCommandEditor, args);
+        Op op = editorCommand.getOp(mCommandEditor, args);
+        Op undo = op.run();
+        if (undo == null) {
+            // Operation failed;
+            return false;
+        }
+        if (!undo.isNoOp()) {
+            mCommandEditor.pushOp(op);
+            mCommandEditor.pushOpUndo(undo);
+        }
+        return true;
     }
 }

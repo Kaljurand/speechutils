@@ -48,6 +48,7 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("code (\\d+)", "", "keyCode", new String[]{"$1"}));
         list.add(new Command("code letter (.)", "", "keyCodeStr", new String[]{"$1"}));
         list.add(new Command("undo (\\d+)", "", "undo", new String[]{"$1"}));
+        list.add(new Command("combine (\\d+)", "", "combine", new String[]{"$1"}));
         list.add(new Command("apply (\\d+)", "", "apply", new String[]{"$1"}));
         COMMANDS = Collections.unmodifiableList(list);
     }
@@ -72,105 +73,106 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test01() {
         assertNotNull(mEditor.getInputConnection());
+        assertTrue(Op.NO_OP.isNoOp());
     }
 
     @Test
     public void test02() {
         add("start12345 67890");
-        assertThatEndsWith("67890");
-        assertTrue(mEditor.deleteLeftWord());
-        assertThatEndsWith("12345");
-        assertTrue(mEditor.delete("12345"));
-        assertThatEndsWith("Start");
+        assertThatTextIs("Start12345 67890");
+        runOp(mEditor.deleteLeftWord());
+        assertThatTextIs("Start12345");
+        runOp(mEditor.delete("12345"));
+        assertThatTextIs("Start");
     }
 
-
-    // TODO: @Test
-    // Can't create handler inside thread that has not called Looper.prepare()
+    @Test
     public void test03() {
-        assertTrue(mEditor.copy());
-        assertTrue(mEditor.paste());
-        assertTrue(mEditor.paste());
+        assertTrue(true);
     }
 
     @Test
     public void test04() {
-        assertTrue(mEditor.commitPartialResult("...123"));
-        assertTrue(mEditor.commitPartialResult("...124"));
-        assertNotNull(mEditor.commitFinalResult("...1245"));
-        assertTrue(mEditor.goToCharacterPosition(4));
+        addPartial("...123");
+        addPartial("...124");
+        add("...1245");
+        runOp(mEditor.goToCharacterPosition(4));
         assertThat(getTextBeforeCursor(10), is("...1"));
+        add("-");
+        assertThatTextIs("...1-245");
+        add("undo 2", "-");
+        assertThatTextIs("...1245-");
     }
 
     @Test
     public void test05() {
-        assertNotNull(mEditor.commitFinalResult("a12345 67890_12345"));
-        assertTrue(mEditor.select("12345"));
+        add("a12345 67890_12345");
+        runOp(mEditor.select("12345"));
         assertThat(getTextBeforeCursor(2), is("0_"));
-        assertTrue(mEditor.deleteLeftWord());
-        assertThatEndsWith("0_");
-        assertTrue(mEditor.deleteLeftWord());
-        assertThatEndsWith("45");
+        runOp(mEditor.deleteLeftWord());
+        assertThatTextIs("A12345 67890_");
+        runOp(mEditor.deleteLeftWord());
+        assertThatTextIs("A12345");
     }
 
     @Test
     public void test06() {
-        assertNotNull(mEditor.commitFinalResult("a12345 67890_12345"));
-        assertTrue(mEditor.replace("12345", "abcdef"));
-        assertTrue(mEditor.replaceSel(" "));
-        assertTrue(mEditor.replace("12345", "ABC"));
+        add("a12345 67890_12345");
+        runOp(mEditor.replace("12345", "abcdef"));
+        runOp(mEditor.replaceSel(" "));
+        runOp(mEditor.replace("12345", "ABC"));
         assertThat(getTextBeforeCursor(2), is("BC"));
-        assertTrue(mEditor.replaceSel("\n"));
-        assertTrue(mEditor.replaceSel(" "));
-        assertTrue(mEditor.goToCharacterPosition(9));
+        runOp(mEditor.replaceSel("\n"));
+        runOp(mEditor.replaceSel(" "));
+        runOp(mEditor.goToCharacterPosition(9));
         assertThat(getTextBeforeCursor(2), is("67"));
     }
 
     @Test
     public void test07() {
-        assertNotNull(mEditor.commitFinalResult("123456789"));
-        assertTrue(mEditor.goToCharacterPosition(2));
+        add("123456789");
+        runOp(mEditor.goToCharacterPosition(2));
         assertThat(getTextBeforeCursor(2), is("12"));
-        assertThatEndsWith("89");
+        assertThatTextIs("123456789");
     }
 
     @Test
     public void test08() {
-        assertNotNull(mEditor.commitFinalResult("old_word"));
-        assertThatEndsWith("New_word");
+        add("old_word");
+        assertThatTextIs("New_word");
     }
 
     @Test
     public void test09() {
-        assertNotNull(mEditor.commitFinalResult("r2_old"));
-        assertThatEndsWith("R2_new");
+        add("r2_old");
+        assertThatTextIs("R2_new");
     }
 
     @Test
     public void test10() {
-        assertNotNull(mEditor.commitFinalResult("test old_word test"));
-        assertThatEndsWith("new_word test");
+        add("test old_word test");
+        assertThatTextIs("Test new_word test");
     }
 
     @Test
     public void test11() {
-        assertNotNull(mEditor.commitFinalResult("test word1"));
-        assertNotNull(mEditor.commitFinalResult("s/word1/word2/"));
+        add("test word1");
+        add("s/word1/word2/");
         assertThatTextIs("Test word2");
     }
 
     @Test
     public void test12() {
-        assertNotNull(mEditor.commitFinalResult("test word1 word2"));
-        assertNotNull(mEditor.commitFinalResult("connect word1 and word2"));
-        assertThatEndsWith("word1-word2");
+        add("test word1 word2");
+        add("connect word1 and word2");
+        assertThatTextIs("Test word1-word2");
     }
 
     @Test
     public void test13() {
-        assertNotNull(mEditor.commitFinalResult("test word1 word2"));
-        assertNotNull(mEditor.commitFinalResult("connect word1"));
-        assertNotNull(mEditor.commitFinalResult("and"));
+        add("test word1 word2");
+        add("connect word1");
+        add("and");
         assertThatUndoIs("[delete 4, delete 14, delete 16]");
         assertThat(mEditor.commitFinalResult("word2").toString(), is("+replace(word1 word2,word1-word2)"));
         assertThatUndoIs("[undo replace2, delete 16]");
@@ -179,21 +181,21 @@ public class InputConnectionCommandEditorTest {
 
     @Test
     public void test14() {
-        assertNotNull(mEditor.commitFinalResult("test word1"));
-        assertTrue(mEditor.replaceSel(" "));
-        assertNotNull(mEditor.commitFinalResult("word2"));
-        assertThatEndsWith("word1 word2");
-        assertNotNull(mEditor.commitFinalResult("connect word1 and word2"));
-        assertThatEndsWith("word1-word2");
+        add("test word1");
+        runOp(mEditor.replaceSel(" "));
+        add("word2");
+        assertThatTextIs("Test word1 word2");
+        add("connect word1 and word2");
+        assertThatTextIs("Test word1-word2");
     }
 
     @Test
     public void test15() {
-        assertNotNull(mEditor.commitFinalResult("test word1"));
-        assertTrue(mEditor.replaceSel(" "));
-        assertNotNull(mEditor.commitFinalResult("word2"));
+        add("test word1");
+        runOp(mEditor.replaceSel(" "));
+        add("word2");
         assertThat(getTextBeforeCursor(11), is("word1 word2"));
-        assertTrue(mEditor.deleteAll());
+        runOp(mEditor.deleteAll());
         assertThat(getTextBeforeCursor(1), is(""));
     }
 
@@ -202,94 +204,84 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test16() {
-        assertNotNull(mEditor.commitFinalResult("I will delete something"));
-        assertThatEndsWith("something");
+        add("I will delete something");
+        assertThatTextIs("I will delete something");
     }
 
     @Test
     public void test17() {
-        assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
-        assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
-        assertTrue(mEditor.goToEnd());
-        assertThatEndsWith("word2...");
+        add("there are word1 and word2...");
+        add("select word1 and word2");
+        runOp(mEditor.goToEnd());
+        assertThatTextIs("There are word1 and word2...");
     }
 
     @Test
     public void test18() {
-        assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
-        assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
-        assertNotNull(mEditor.commitFinalResult("selection_replace REPL"));
-        assertThatEndsWith("re REPL...");
+        add("there are word1 and word2...", "select word1 and word2", "selection_replace REPL");
+        assertThatTextIs("There are REPL...");
     }
 
     @Test
     public void test19() {
-        assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
-        assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
-        assertNotNull(mEditor.commitFinalResult("selection_underscore"));
-        assertThatEndsWith("are _word1 and word2_...");
+        add("there are word1 and word2...", "select word1 and word2", "selection_underscore");
+        assertThatTextIs("There are _word1 and word2_...");
         undo();
-        assertThatEndsWith("are word1 and word2...");
+        assertThatTextIs("There are word1 and word2...");
     }
 
     @Test
     public void test20() {
-        assertNotNull(mEditor.commitFinalResult("a"));
-        assertNotNull(mEditor.commitFinalResult("select a"));
-        assertNotNull(mEditor.commitFinalResult("selection_double"));
-        assertNotNull(mEditor.commitFinalResult("selection_double"));
-        assertTrue(mEditor.goToEnd());
+        add("a", "select a", "selection_double", "selection_double");
+        runOp(mEditor.goToEnd());
         assertThat(getTextBeforeCursor(5), is("AA"));
     }
 
     @Test
     public void test21() {
-        assertNotNull(mEditor.commitFinalResult("123456789"));
-        assertNotNull(mEditor.commitFinalResult("select 3"));
-        assertNotNull(mEditor.commitFinalResult("selection_inc"));
-        assertTrue(mEditor.goForward(3));
-        assertNotNull(mEditor.commitFinalResult("select 5"));
-        assertNotNull(mEditor.commitFinalResult("selection_inc"));
-        assertThatEndsWith("124466789");
+        add("123456789", "select 3", "selection_inc");
+        runOp(mEditor.goForward(3));
+        add("select 5", "selection_inc");
+        assertThatTextIs("124466789");
     }
 
     @Test
     public void test22() {
-        assertNotNull(mEditor.commitFinalResult("this is some word"));
-        assertNotNull(mEditor.commitFinalResult("select is some"));
-        assertNotNull(mEditor.commitFinalResult("selection_uc"));
-        assertThatEndsWith("his IS SOME word");
+        add("this is some word");
+        add("select is some");
+        add("selection_uc");
+        assertThatTextIs("This IS SOME word");
     }
 
     @Test
     public void test23() {
-        assertNotNull(mEditor.commitFinalResult("this is some word"));
-        assertTrue(mEditor.selectAll());
-        assertNotNull(mEditor.commitFinalResult("selection_replace REPL"));
+        add("this is some word");
+        runOp(mEditor.selectAll());
+        add("selection_replace REPL");
         assertThat(mEditor.getText().toString(), is("REPL"));
     }
 
     @Test
     public void test24() {
-        assertNotNull(mEditor.commitFinalResult("test word1 word2"));
-        assertNotNull(mEditor.commitFinalResult("connect word1 and not_exist"));
+        add("test word1 word2");
+        add("connect word1 and not_exist");
         assertThatTextIs("Test word1 word2");
     }
 
     @Test
     public void test25() {
-        assertNotNull(mEditor.commitFinalResult("test word1 word2"));
+        add("test word1 word2");
         undo();
         assertThatTextIs("");
     }
 
     @Test
     public void test26() {
-        assertNotNull(mEditor.commitFinalResult("1234567890"));
+        add("1234567890");
         add("step back");
-        assertTrue(mEditor.goBackward(1));
+        runOp(mEditor.goBackward(1));
         undo();
-        assertTrue(mEditor.deleteLeftWord());
+        runOp(mEditor.deleteLeftWord());
         assertThatTextIs("0");
         undo();
         assertThatTextIs("1234567890");
@@ -300,23 +292,22 @@ public class InputConnectionCommandEditorTest {
      */
     //@Test
     public void test27() {
-        assertNotNull(mEditor.commitFinalResult("1234567890"));
-        assertTrue(mEditor.goLeft());
-        assertTrue(mEditor.goLeft());
+        add("1234567890");
+        runOp(mEditor.goLeft());
+        runOp(mEditor.goLeft());
         undo();
-        assertTrue(mEditor.deleteLeftWord());
+        runOp(mEditor.deleteLeftWord());
         assertThatTextIs("0");
     }
 
     @Test
     public void test28() {
-        assertNotNull(mEditor.commitFinalResult("1234567890"));
-        assertTrue(mEditor.goBackward(5));
-        assertTrue(mEditor.goForward(2));
-        undo();
-        undo();
-        assertTrue(mEditor.goBackward(1));
-        assertTrue(mEditor.deleteLeftWord());
+        add("1234567890");
+        runOp(mEditor.goBackward(5));
+        runOp(mEditor.goForward(2));
+        undo(2);
+        runOp(mEditor.goBackward(1));
+        runOp(mEditor.deleteLeftWord());
         undo();
         assertThatTextIs("1234567890");
     }
@@ -326,9 +317,9 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test29() {
-        assertNotNull(mEditor.commitFinalResult("test old_word"));
+        add("test old_word");
         assertThatTextIs("Test new_word");
-        assertNotNull(mEditor.commitFinalResult("s/new_word/NEWER_WORD/"));
+        add("s/new_word/NEWER_WORD/");
         assertThatUndoIs("[undo replace2, delete 13]");
         assertThatTextIs("Test NEWER_WORD");
         undo();
@@ -340,7 +331,7 @@ public class InputConnectionCommandEditorTest {
 
     @Test
     public void test30() {
-        assertTrue(mEditor.replaceSel(" "));
+        runOp(mEditor.replaceSel(" "));
         assertThatTextIs(" ");
         undo();
         assertThatTextIs("");
@@ -348,13 +339,11 @@ public class InputConnectionCommandEditorTest {
 
     @Test
     public void test31() {
-        assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
-        assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
-        assertNotNull(mEditor.commitFinalResult("selection_replace REPL"));
-        assertThatEndsWith("re REPL...");
+        add("there are word1 and word2...", "select word1 and word2", "selection_replace REPL");
+        assertThatTextIs("There are REPL...");
         assertThatUndoIs("[deleteSurroundingText+commitText, setSelection, delete 28]");
         undo();
-        assertThatEndsWith("re word1 and word2...");
+        assertThatTextIs("There are word1 and word2...");
     }
 
     /**
@@ -362,8 +351,8 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test32() {
-        assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
-        assertNotNull(mEditor.commitFinalResult("select nonexisting_word"));
+        add("there are word1 and word2...");
+        add("select nonexisting_word");
         undo();
         assertThatTextIs("");
     }
@@ -386,8 +375,8 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test34() {
-        assertNotNull(mEditor.commitFinalResult("this_is_a_text"));
-        assertNotNull(mEditor.commitFinalResult("delete2 is_a"));
+        add("this_is_a_text");
+        add("delete2 is_a");
         assertThatTextIs("This__text D2");
         assertThatUndoIs("[undo replace1, delete 3, delete 14]");
         undo();
@@ -401,9 +390,9 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test35() {
-        assertNotNull(mEditor.commitFinalResult("test word1 word2"));
-        assertNotNull(mEditor.commitFinalResult("connect word1"));
-        assertNotNull(mEditor.commitFinalResult("and"));
+        add("test word1 word2");
+        add("connect word1");
+        add("and");
         assertThat(mEditor.commitFinalResult("word2").toString(), is("+replace(word1 word2,word1-word2)"));
         assertThatUndoIs("[undo replace2, delete 16]");
         assertThatTextIs("Test word1-word2");
@@ -416,9 +405,9 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test36() {
-        assertNotNull(mEditor.commitFinalResult("test word1 word2"));
-        assertNotNull(mEditor.commitFinalResult("connect word1"));
-        assertNotNull(mEditor.commitFinalResult("and"));
+        add("test word1 word2");
+        add("connect word1");
+        add("and");
         assertThat(mEditor.commitFinalResult("nonexisting_word").toString(), is("-replace(word1 nonexisting_word,word1-nonexisting_word)"));
         assertThatUndoIs("[delete 16]");
         assertThatTextIs("Test word1 word2");
@@ -432,7 +421,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test37() {
         add("this is a text");
-        add("select", "is a");
+        add("select is a");
         add("is not a");
         assertThatTextIs("This is not a text");
     }
@@ -440,15 +429,15 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test38() {
         add("this is a text");
-        add("select", "is a");
-        add("selection_replace", "is not a");
+        add("select is a");
+        add("selection_replace is not a");
         assertThatTextIs("This is not a text");
     }
 
     @Test
     public void test39() {
         add("this is a text");
-        add("select", "is a");
+        add("select is a");
         add("selection_replace is not a");
         assertThatUndoIs("[deleteSurroundingText+commitText, setSelection, delete 14]");
         assertThatTextIs("This is not a text");
@@ -459,7 +448,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test40() {
         add("this is a text");
-        add("select", "is a");
+        add("select is a");
         add("selection_replace");
         assertThatUndoIs("[delete 17, setSelection, delete 14]");
         assertThatTextIs("This selection_replace text");
@@ -480,9 +469,9 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test41() {
-        assertNotNull(mEditor.commitFinalResult("1234567890"));
-        add("select", "456");
-        assertTrue(mEditor.deleteLeftWord());
+        add("1234567890");
+        add("select 456");
+        runOp(mEditor.deleteLeftWord());
         assertThatTextIs("1237890");
         undo();
         assertThatTextIs("1234567890");
@@ -491,12 +480,12 @@ public class InputConnectionCommandEditorTest {
 
     @Test
     public void test42() {
-        assertNotNull(mEditor.commitFinalResult("test word1 word2"));
+        add("test word1 word2");
         assertTrue(mEditor.commitPartialResult("connect word1 and word2"));
-        assertNotNull(mEditor.commitFinalResult("connect word1 and word2"));
-        assertThatEndsWith("word1-word2");
+        add("connect word1 and word2");
+        assertThatTextIs("Test word1-word2");
         undo();
-        assertThatEndsWith("Test word1 word2");
+        assertThatTextIs("Test word1 word2");
     }
 
     /**
@@ -505,7 +494,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test43() {
         add("test word1 word2 word3");
-        add("select", "word3");
+        add("select word3");
         assertThatTextIs("Test word1 word2 word3");
         // Returns false if there is a selection
         assertFalse(mEditor.commitPartialResult("connect word1 and word2"));
@@ -582,7 +571,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test49() {
         add("This is number 1. This is number 2.");
-        assertTrue(mEditor.selectReBefore("number "));
+        runOp(mEditor.selectReBefore("number "));
         add("#");
         assertThatTextIs("This is number 1. This is #2.");
     }
@@ -593,7 +582,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test50() {
         add("This is number 1. This is number 2.");
-        assertTrue(mEditor.selectReBefore("(\\d+)\\."));
+        runOp(mEditor.selectReBefore("(\\d+)\\."));
         add("II");
         assertThatTextIs("This is number 1. This is number II.");
     }
@@ -618,8 +607,8 @@ public class InputConnectionCommandEditorTest {
     //@Test
     public void test52() {
         add("This is a test", "code 66");
-        assertTrue(mEditor.keyCode(66));
-        assertTrue(mEditor.keyCodeStr("A"));
+        runOp(mEditor.keyCode(66));
+        runOp(mEditor.keyCodeStr("A"));
         assertThatTextIs("This is a testA");
     }
 
@@ -634,17 +623,19 @@ public class InputConnectionCommandEditorTest {
     }
 
     /**
-     * Search for a string multiple times.
-     * Change the 5th space with a hyphen.
-     * TODO: rollback currently fails
+     * Apply a command multiple times.
      */
     @Test
     public void test54() {
-        add("6 5 4 3 2 1 0", "select  ", "apply 4", "-");
-        assertThatTextIs("6 5-4 3 2 1 0");
-        add("undo 4", "_");
-        // TODO: fix extra space
-        assertThatTextIs("6 5 4 3 2 _1 0");
+        add("6543210", "step back", "apply 4", "-");
+        assertThatTextIs("65-43210");
+        assertThatUndoIs("[delete 1, undo apply 4, setSelection, delete 7]");
+        undo();
+        assertThatTextIs("6543210");
+        undo();
+        assertThatUndoIs("[setSelection, delete 7]");
+        add("-");
+        assertThatTextIs("654321-0");
     }
 
     /**
@@ -654,20 +645,57 @@ public class InputConnectionCommandEditorTest {
     public void test55() {
         add("6 5 4 3 2 1 0", "delete  ", "apply 4", "-");
         assertThatTextIs("6 5-43210");
-        add("undo 4", "_");
-        // TODO: fix extra space
-        assertThatTextIs("6 5 4 3 2 _10");
+        add("undo 1");
+        assertThatTextIs("6 543210");
+        add("undo 1");
+        assertThatTextIs("6 5 4 3 2 10");
+    }
+
+    /**
+     * Combine last 3 commands and apply the result 2 times.
+     */
+    @Test
+    public void test56() {
+        add("0 a a a a b a", "select a", "selection_uc", "step back");
+        assertThatTextIs("0 a a a a b A");
+        add("-");
+        assertThatTextIs("0 a a a a b -A");
+        undo();
+        assertThatTextIs("0 a a a a b A");
+        assertThatOpStackIs("[move, ucSel, select a]");
+        add("combine 3");
+        assertThatTextIs("0 a a a a b A");
+        assertThatOpStackIs("[[select a, ucSel, move]]");
+        add("apply 2");
+        assertThatTextIs("0 a a A A b A");
+    }
+
+    /**
+     * Search for a string multiple times (i.e. apply "select" multiple times).
+     * Change the 5th space with a hyphen.
+     */
+    @Test
+    public void test57() {
+        add("6 5 4 3 2 1 0", "select  ", "apply 4", "-");
+        assertThatTextIs("6 5-4 3 2 1 0");
+        undo();
+        assertThatTextIs("6 5 4 3 2 1 0");
+        undo();
+        assertThatTextIs("6 5 4 3 2 1 0");
+        add("-");
+        assertThatTextIs("6 5 4 3 2 1-0");
     }
 
     @Test
     public void test60() {
-        assertNotNull(mEditor.commitFinalResult("there are word1 and word2..."));
-        assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
-        assertNotNull(mEditor.commitFinalResult("selection_uc"));
-        assertTrue(mEditor.goToEnd());
-        assertNotNull(mEditor.commitFinalResult("select word1 and word2"));
-        assertNotNull(mEditor.commitFinalResult("selection_quote"));
-        assertThatEndsWith("are \"WORD1 AND WORD2\"...");
+        add("there are word1 and word2...");
+        add("select word1 and word2");
+        add("selection_uc");
+        assertThatTextIs("There are WORD1 AND WORD2...");
+        runOp(mEditor.goToEnd());
+        add("select word1 and word2");
+        add("selection_quote");
+        assertThatTextIs("There are \"WORD1 AND WORD2\"...");
     }
 
     /**
@@ -675,9 +703,9 @@ public class InputConnectionCommandEditorTest {
      */
     //@Test
     public void test61() {
-        assertNotNull(mEditor.commitFinalResult("this is SOME word"));
-        assertNotNull(mEditor.commitFinalResult("underscore some"));
-        assertThatEndsWith("_SOME_ word");
+        add("this is SOME word");
+        add("underscore some");
+        assertThatTextIs("This is _SOME_ word");
     }
 
     /**
@@ -685,10 +713,10 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test62() {
-        assertNotNull(mEditor.commitFinalResult("this is SOME word"));
-        assertNotNull(mEditor.commitFinalResult("select some"));
-        assertNotNull(mEditor.commitFinalResult("selection_underscore"));
-        assertThatEndsWith("is _SOME_ word");
+        add("this is SOME word");
+        add("select some");
+        add("selection_underscore");
+        assertThatTextIs("This is _SOME_ word");
     }
 
     /**
@@ -696,14 +724,59 @@ public class InputConnectionCommandEditorTest {
      */
     //@Test
     public void test63() {
-        assertNotNull(mEditor.commitFinalResult("test word1"));
-        assertTrue(mEditor.replaceSel(" "));
-        assertNotNull(mEditor.commitFinalResult("word2"));
-        assertThatEndsWith("word1 word2");
-        assertTrue(mEditor.cutAll());
+        add("test word1");
+        runOp(mEditor.replaceSel(" "));
+        add("word2");
+        assertThatTextIs("Test word1 word2");
+        runOp(mEditor.cutAll());
         assertThat(getTextBeforeCursor(1), is(""));
-        assertTrue(mEditor.paste());
-        assertThatEndsWith("word1 word2");
+        runOp(mEditor.paste());
+        assertThatTextIs("Test word1 word2");
+    }
+
+    /**
+     * Undoing a move restores the selection.
+     */
+    @Test
+    public void test64() {
+        add("123 456 789");
+        add("select 456");
+        add("step back", "step back");
+        undo(2);
+        add("selection_underscore");
+        assertThatTextIs("123 _456_ 789");
+    }
+
+    /**
+     * Repeat the last utterance twice.
+     * TODO: not implemented
+     */
+    @Test
+    public void test65() {
+        add("123");
+        add("apply 2");
+        assertThatTextIs("123123123");
+    }
+
+    /**
+     * Combine last 3 commands and apply the result 2 times.
+     */
+    @Test
+    public void test66() {
+        add("0 a _ a _ a _", "s/a/b/", "s/_/*/");
+        assertThatTextIs("0 a _ a * b _");
+        add("combine 2");
+        assertThatOpStackIs("[[replace, replace]]");
+        add("apply 2");
+        assertThatTextIs("0 b * b * b _");
+    }
+
+    // TODO: @Test
+    // Can't create handler inside thread that has not called Looper.prepare()
+    public void test80() {
+        runOp(mEditor.copy());
+        runOp(mEditor.paste());
+        runOp(mEditor.paste());
     }
 
     private String getTextBeforeCursor(int n) {
@@ -723,26 +796,38 @@ public class InputConnectionCommandEditorTest {
     }
 
     private void undo() {
-        assertTrue(mEditor.undo(1));
+        undo(1);
     }
 
-    /**
-     * AssertThat the editor ends with the given string.
-     * Note that we need to undo the cursor positioning that goToEnd applies.
-     *
-     * @param str string to be checked
-     */
-    private void assertThatEndsWith(String str) {
-        assertTrue(mEditor.goToEnd());
-        assertThat(getTextBeforeCursor(str.length()), is(str));
-        undo();
+    private void undo(int steps) {
+        runOp(mEditor.undo(steps));
     }
 
     private void assertThatUndoIs(String str) {
         assertThat(mEditor.getUndoStack().toString(), is(str));
     }
 
+    private void assertThatOpStackIs(String str) {
+        assertThat(mEditor.getOpStack().toString(), is(str));
+    }
+
     private void assertThatTextIs(String str) {
         assertThat(mEditor.getText().toString(), is(str));
+    }
+
+    private void runOp(Op op) {
+        assertNotNull(op);
+        Op undo = op.run();
+        assertNotNull(undo);
+        // TODO: do we need to add an op that cannot be undone?
+        if (!undo.isNoOp()) {
+            mEditor.pushOp(op);
+            mEditor.pushOpUndo(undo);
+        }
+        // TODO: we could check for each op if undo works as expected
+        // do + undo
+        //assertNotNull(op.run().run());
+        // do
+        //assertNotNull(op.run());
     }
 }

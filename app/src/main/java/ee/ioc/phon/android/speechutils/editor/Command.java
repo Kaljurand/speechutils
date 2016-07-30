@@ -3,7 +3,6 @@ package ee.ioc.phon.android.speechutils.editor;
 import android.text.TextUtils;
 import android.util.Pair;
 
-import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
