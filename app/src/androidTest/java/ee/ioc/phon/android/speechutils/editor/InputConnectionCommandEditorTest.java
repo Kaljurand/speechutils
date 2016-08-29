@@ -817,13 +817,7 @@ public class InputConnectionCommandEditorTest {
 
     private void runOp(Op op) {
         assertNotNull(op);
-        Op undo = op.run();
-        assertNotNull(undo);
-        // TODO: do we need to add an op that cannot be undone?
-        if (!undo.isNoOp()) {
-            mEditor.pushOp(op);
-            mEditor.pushOpUndo(undo);
-        }
+        assertTrue(mEditor.runOp(op));
         // TODO: we could check for each op if undo works as expected
         // do + undo
         //assertNotNull(op.run().run());

@@ -434,16 +434,6 @@ public class CommandEditorManager {
         if (editorCommand == null) {
             return false;
         }
-        Op op = editorCommand.getOp(mCommandEditor, args);
-        Op undo = op.run();
-        if (undo == null) {
-            // Operation failed;
-            return false;
-        }
-        if (!undo.isNoOp()) {
-            mCommandEditor.pushOp(op);
-            mCommandEditor.pushOpUndo(undo);
-        }
-        return true;
+        return mCommandEditor.runOp(editorCommand.getOp(mCommandEditor, args));
     }
 }

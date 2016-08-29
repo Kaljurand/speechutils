@@ -13,6 +13,8 @@ public interface CommandEditor {
 
     boolean commitPartialResult(String str);
 
+    boolean runOp(Op op);
+
     // Commands
 
     Op goUp();

@@ -76,6 +76,20 @@ public class InputConnectionCommandEditor implements CommandEditor {
         mAddedLength = 0;
     }
 
+    @Override
+    public boolean runOp(Op op) {
+        Op undo = op.run();
+        if (undo == null) {
+            // Operation failed;
+            return false;
+        }
+        if (!undo.isNoOp()) {
+            pushOp(op);
+            pushOpUndo(undo);
+        }
+        return true;
+    }
+
     /**
      * Writes the text into the text field or executes a command.
      */
@@ -999,7 +1013,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
             UtteranceRewriter.Rewrite rewrite = mUtteranceRewriter.getRewrite(possibleCommand);
             if (rewrite.isCommand()) {
                 Log.i("applyCommand: isCommand: " + possibleCommand);
-                undo(i);
+                undo(i).run();
                 return rewrite;
             }
         }
