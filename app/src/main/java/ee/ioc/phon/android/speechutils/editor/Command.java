@@ -7,7 +7,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Command {
-    private final static String SEPARATOR = "___";
+    private final static String SEPARATOR = "<___>";
     private final String mComment;
     private final Pattern mLocale;
     private final Pattern mService;
@@ -72,6 +72,13 @@ public class Command {
     /**
      * Rewrites the given string and extracts the arguments if the string
      * corresponds to the command (i.e. if the entire string matches the pattern).
+     * Example:
+     * mUtt = replace (.*) with (.*)
+     * str = replace A with B
+     * newStr = ""
+     * $1<___>$2
+     * A<___>B
+     * argsEvaluated = [A, B]
      *
      * @param str string to be matched
      * @return pair of replacement and array of arguments
@@ -97,8 +104,6 @@ public class Command {
      */
     public String toPp() {
         String str = pp(mLocale) + '\n' +
-                pp(mService) + '\n' +
-                pp(mApp) + '\n' +
                 pp(mUtt) + '\n' +
                 pp(mReplacement);
         if (mCommand != null) {
@@ -107,8 +112,9 @@ public class Command {
         for (String arg : mArgs) {
             str += '\n' + pp(arg);
         }
+        str += '\n' + pp(mService) + '\n' + pp(mApp);
         if (mComment != null && !mComment.isEmpty()) {
-            return mComment + '\n' + str;
+            return str + '\n' + mComment;
         }
         return str;
     }
@@ -138,7 +144,7 @@ public class Command {
     }
 
     public String toString() {
-        return mUtt + "/" + mReplacement + "/" + mCommand + "(" + mArgs + ")";
+        return mUtt + "/" + mReplacement + "/" + mCommand + "(" + mArgsAsStr + ")";
     }
 
     private static String pp(Object str) {

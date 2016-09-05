@@ -10,6 +10,7 @@ import android.view.inputmethod.InputConnection;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -50,10 +51,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     private UtteranceRewriter mUtteranceRewriter;
 
-    private CommandEditorManager mCommandEditorManager;
-
     public InputConnectionCommandEditor() {
-        mCommandEditorManager = new CommandEditorManager(this);
     }
 
     public void setInputConnection(InputConnection inputConnection) {
@@ -90,10 +88,20 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return true;
     }
 
-    /**
-     * Writes the text into the text field or executes a command.
-     */
     @Override
+    public Op getOpFromText(final String text) {
+        List<Op> ops = new ArrayList<>();
+        UtteranceRewriter.Rewrite rewrite = mUtteranceRewriter.getRewrite(text);
+        ops.add(getCommitWithOverwriteOp(rewrite.mStr));
+        if (rewrite.isCommand()) {
+            CommandEditorManager.EditorCommand ec = CommandEditorManager.get(rewrite.mId);
+            if (ec != null) {
+                ops.add(ec.getOp(this, rewrite.mArgs));
+            }
+        }
+        return combineOps(ops);
+    }
+
     public CommandEditorResult commitFinalResult(final String text) {
         CommandEditorResult result = null;
         if (mUtteranceRewriter == null) {
@@ -129,7 +137,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
             boolean success = false;
             if (rewrite.isCommand()) {
                 mCommandPrefix.clear();
-                success = mCommandEditorManager.execute(rewrite.mId, rewrite.mArgs);
+                CommandEditorManager.EditorCommand ec = CommandEditorManager.get(rewrite.mId);
+                if (ec != null) {
+                    success = runOp(ec.getOp(this, rewrite.mArgs));
+                }
             } else {
                 mCommandPrefix.add(textRewritten);
             }
@@ -251,6 +262,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     /**
      * The combine operation modifies the stack by removing the top n elements and adding
      * their combination instead.
+     * TODO: implement undo
      */
     @Override
     public Op combine(final int steps) {
@@ -265,16 +277,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 } catch (NoSuchElementException e) {
                     return null;
                 }
-                pushOp(new Op(combination.toString()) {
-                    @Override
-                    public Op run() {
-                        while (!combination.isEmpty()) {
-                            combination.pop().run();
-                        }
-                        // TODO: return correct combination of undos
-                        return NO_OP;
-                    }
-                });
+                mOpStack.push(combineOps(combination));
                 return NO_OP;
             }
         };
@@ -299,7 +302,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     combination.push(undo);
                 }
                 mInputConnection.endBatchEdit();
-                return new Op("undo apply " + combination.size()) {
+                return new Op("undo apply", combination.size()) {
 
                     @Override
                     public Op run() {
@@ -311,38 +314,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
                         return NO_OP;
                     }
                 };
-            }
-        };
-    }
-
-    /**
-     * There is no undo, because the undo-stack does not survive the jump to another field.
-     */
-    @Override
-    public Op goToPreviousField() {
-        return new Op("imeActionPrevious") {
-            @Override
-            public Op run() {
-                if (mInputConnection.performEditorAction(EditorInfo.IME_ACTION_PREVIOUS)) {
-                    return Op.NO_OP;
-                }
-                return null;
-            }
-        };
-    }
-
-    /**
-     * There is no undo, because the undo-stack does not survive the jump to another field.
-     */
-    @Override
-    public Op goToNextField() {
-        return new Op("imeActionNext") {
-            @Override
-            public Op run() {
-                if (mInputConnection.performEditorAction(EditorInfo.IME_ACTION_NEXT)) {
-                    return Op.NO_OP;
-                }
-                return null;
             }
         };
     }
@@ -431,21 +402,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
     // Not undoable
     @Override
     public Op cutAll() {
-        return new Op("cutAll") {
-            @Override
-            public Op run() {
-                Op undo = null;
-                mInputConnection.beginBatchEdit();
-                Op op = selectAll().run();
-                if (op != null) {
-                    if (cut().run() != null) {
-                        undo = NO_OP;
-                    }
-                }
-                mInputConnection.endBatchEdit();
-                return undo;
-            }
-        };
+        Collection<Op> collection = new ArrayList<>();
+        collection.add(selectAll());
+        collection.add(cut());
+        return combineOps(collection);
     }
 
     // Not undoable
@@ -468,24 +428,47 @@ public class InputConnectionCommandEditor implements CommandEditor {
         };
     }
 
+    // TODO: test with failing ops
+    @Override
+    public Op combineOps(final Collection<Op> ops) {
+        return new Op(ops.toString(), ops.size()) {
+            @Override
+            public Op run() {
+                final Deque<Op> combination = new ArrayDeque<>();
+                mInputConnection.beginBatchEdit();
+                for (Op op : ops) {
+                    Op undo = op.run();
+                    if (undo == null) {
+                        break;
+                    }
+                    combination.push(undo);
+                }
+                mInputConnection.endBatchEdit();
+                return new Op(combination.toString(), combination.size()) {
+                    @Override
+                    public Op run() {
+                        mInputConnection.beginBatchEdit();
+                        while (!combination.isEmpty()) {
+                            Op undo1 = combination.pop().run();
+                            if (undo1 == null) {
+                                break;
+                            }
+                        }
+                        mInputConnection.endBatchEdit();
+                        return combineOps(ops);
+                    }
+                };
+            }
+        };
+    }
+
     // Not undoable
     @Override
     public Op copyAll() {
-        return new Op("copyAll") {
-            @Override
-            public Op run() {
-                Op undo = null;
-                mInputConnection.beginBatchEdit();
-                Op op = selectAll().run();
-                if (op != null) {
-                    if (copy().run() != null) {
-                        undo = NO_OP;
-                    }
-                }
-                mInputConnection.endBatchEdit();
-                return undo;
-            }
-        };
+        Collection<Op> collection = new ArrayList<>();
+        collection.add(selectAll());
+        collection.add(copy());
+        return combineOps(collection);
     }
 
     @Override
@@ -784,6 +767,22 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return null;
     }
 
+    /**
+     * There is no undo, because the undo-stack does not survive the jump to another field.
+     */
+    @Override
+    public Op goToPreviousField() {
+        return getEditorActionOp(EditorInfo.IME_ACTION_PREVIOUS);
+    }
+
+    /**
+     * There is no undo, because the undo-stack does not survive the jump to another field.
+     */
+    @Override
+    public Op goToNextField() {
+        return getEditorActionOp(EditorInfo.IME_ACTION_NEXT);
+    }
+
     @Override
     public Op imeActionDone() {
         // Does not work on Google Searchbar
@@ -897,6 +896,78 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     /**
+     * TODO: review
+     * we should be able to review the last N ops and undo then if they can be interpreted as
+     * a combined op.
+     *
+     * @param text
+     * @return
+     */
+    private Op getCommitWithOverwriteOp(final String text) {
+        return new Op("add " + text) {
+            @Override
+            public Op run() {
+                // Calculate the length of the text that has changed
+                String commonPrefix = greatestCommonPrefix(mPrevText, text);
+                int commonPrefixLength = commonPrefix.length();
+
+                mInputConnection.beginBatchEdit();
+                final ExtractedText et = getExtractedText();
+                final String selectedText = getSelectedText();
+                // Delete the part that changed compared to the partial text added earlier.
+                int deletableLength = mPrevText.length() - commonPrefixLength;
+                if (deletableLength > 0) {
+                    mInputConnection.deleteSurroundingText(deletableLength, 0);
+                }
+
+                // Finish if there is nothing to add
+                if (text.isEmpty() || commonPrefixLength == text.length()) {
+                    mAddedLength -= deletableLength;
+                } else {
+                    CharSequence leftContext = "";
+                    String glue = "";
+                    String text1 = text;
+                    // If the prev text and the current text share no prefix then recalculate the glue.
+                    if (commonPrefixLength == 0) {
+                        // We look at the left context of the cursor
+                        // to decide which glue symbol to use and whether to capitalize the text.
+                        CharSequence textBeforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
+                        // In some error situations, null is returned
+                        if (textBeforeCursor != null) {
+                            leftContext = textBeforeCursor;
+                        }
+                        glue = getGlue(text, leftContext);
+                        mAddedLength = glue.length() + text.length();
+                    } else {
+                        text1 = text.substring(commonPrefixLength);
+                        leftContext = commonPrefix;
+                        mAddedLength = mAddedLength - deletableLength + text1.length();
+                    }
+                    text1 = capitalizeIfNeeded(text1, leftContext);
+                    mInputConnection.commitText(glue + text1, 1);
+                }
+                mInputConnection.endBatchEdit();
+                return new Op("delete " + mAddedLength) {
+                    @Override
+                    public Op run() {
+                        mInputConnection.beginBatchEdit();
+                        boolean success = mInputConnection.deleteSurroundingText(mAddedLength, 0);
+                        if (et != null && selectedText.length() > 0) {
+                            success = mInputConnection.commitText(selectedText, 1) &&
+                                    mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                        }
+                        mInputConnection.endBatchEdit();
+                        if (success) {
+                            return NO_OP;
+                        }
+                        return null;
+                    }
+                };
+            }
+        };
+    }
+
+    /**
      * Op that commits a text at the cursor. If successful then an undo is returned which deletes
      * the text and restores the old selection.
      */
@@ -915,7 +986,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                             if (success && oldText != null) {
                                 success = mInputConnection.commitText(oldText, 1);
                             }
-                            if (success) {
+                            if (et != null && success) {
                                 success = mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
                             }
                             mInputConnection.endBatchEdit();

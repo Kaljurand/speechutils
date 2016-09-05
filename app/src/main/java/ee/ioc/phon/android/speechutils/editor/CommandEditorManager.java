@@ -15,8 +15,6 @@ public class CommandEditorManager {
         Op getOp(CommandEditor commandEditor, String[] args);
     }
 
-    private final CommandEditor mCommandEditor;
-
     public static final String GO_UP = "goUp";
     public static final String GO_DOWN = "goDown";
     public static final String GO_LEFT = "goLeft";
@@ -441,19 +439,7 @@ public class CommandEditorManager {
         EDITOR_COMMANDS = Collections.unmodifiableMap(aMap);
     }
 
-    public CommandEditorManager(CommandEditor commandEditor) {
-        mCommandEditor = commandEditor;
-    }
-
-    public EditorCommand get(String id) {
+    public static EditorCommand get(String id) {
         return EDITOR_COMMANDS.get(id);
-    }
-
-    public boolean execute(String commandId, String[] args) {
-        EditorCommand editorCommand = get(commandId);
-        if (editorCommand == null) {
-            return false;
-        }
-        return mCommandEditor.runOp(editorCommand.getOp(mCommandEditor, args));
     }
 }

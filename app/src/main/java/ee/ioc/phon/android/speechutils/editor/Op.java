@@ -10,13 +10,22 @@ public abstract class Op {
     };
 
     private final String mId;
+    private final int mCount;
 
     public Op(String id) {
+        this(id, 1);
+    }
+
+    public Op(String id, int count) {
         mId = id;
+        mCount = count;
     }
 
     public String toString() {
-        return mId;
+        if (mCount == 1) {
+            return mId;
+        }
+        return mId + " " + mCount;
     }
 
     public boolean isNoOp() {

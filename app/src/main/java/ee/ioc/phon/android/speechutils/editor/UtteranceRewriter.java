@@ -174,6 +174,10 @@ public class UtteranceRewriter {
         return text;
     }
 
+    private static String[] parseHeader(String line) {
+        return line.split("\t");
+    }
+
 
     /**
      * Loads the rewrites from tab-separated values.
@@ -183,7 +187,7 @@ public class UtteranceRewriter {
         List<Command> commands = new ArrayList<>();
         String[] rows = str.split("\n");
         if (rows.length > 1) {
-            String[] header = rows[0].split("\t");
+            String[] header = parseHeader(rows[0]);
             for (int i = 1; i < rows.length; i++) {
                 if (!addLine(commands, header, rows[i], commandMatcher)) {
                     break;
@@ -206,7 +210,7 @@ public class UtteranceRewriter {
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
             String line = reader.readLine();
             if (line != null) {
-                String[] header = line.split("\t");
+                String[] header = parseHeader(line);
                 while ((line = reader.readLine()) != null) {
                     if (!addLine(commands, header, line, null)) {
                         break;
@@ -286,7 +290,6 @@ public class UtteranceRewriter {
         }
 
         if (commandMatcher != null && !commandMatcher.matches(locale, service, app)) {
-            Log.i("command matcher: FAIL: " + locale + " " + service + " " + app);
             return null;
         }
 

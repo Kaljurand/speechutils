@@ -1,5 +1,6 @@
 package ee.ioc.phon.android.speechutils.editor;
 
+import java.util.Collection;
 import java.util.Deque;
 
 /**
@@ -9,9 +10,9 @@ public interface CommandEditor {
 
     // Commit text
 
-    CommandEditorResult commitFinalResult(String str);
+    CommandEditorResult commitFinalResult(String text);
 
-    boolean commitPartialResult(String str);
+    boolean commitPartialResult(String text);
 
     boolean runOp(Op op);
 
@@ -33,14 +34,6 @@ public interface CommandEditor {
     // Apply the last command N times
     Op apply(int steps);
 
-    // Moving between fields
-
-    // Go to the previous field
-    Op goToPreviousField();
-
-    // Go to the next field
-    Op goToNextField();
-
     // Moving around in the string
 
     // Go to the character at the given position
@@ -61,16 +54,18 @@ public interface CommandEditor {
     // Add the key with the given symbolic name
     Op keyCodeStr(String codeAsStr);
 
+    // Selection commands
+
     Op select(String str);
 
     Op selectReBefore(String regex);
 
     Op selectReAfter(String regex, int n);
 
+    Op selectAll();
+
     // Reset selection
     Op resetSel();
-
-    Op selectAll();
 
     // Context menu actions
     Op cut();
@@ -89,9 +84,11 @@ public interface CommandEditor {
 
     Op deleteLeftWord();
 
-    Op delete(String str);
+    Op delete(String text);
 
-    Op replace(String str1, String str2);
+    Op replace(String text1, String text2);
+
+    // Commands applied to the current selection
 
     // Replace selection
     Op replaceSel(String str);
@@ -106,6 +103,12 @@ public interface CommandEditor {
     Op incSel();
 
     // IME actions
+
+    // Go to the previous field
+    Op goToPreviousField();
+
+    // Go to the next field
+    Op goToNextField();
 
     Op imeActionDone();
 
@@ -126,4 +129,8 @@ public interface CommandEditor {
     Deque<Op> getUndoStack();
 
     void reset();
+
+    Op combineOps(Collection<Op> ops);
+
+    Op getOpFromText(String text);
 }

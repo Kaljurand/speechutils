@@ -4,6 +4,8 @@ import android.content.ComponentName;
 
 import java.util.regex.Pattern;
 
+import ee.ioc.phon.android.speechutils.Log;
+
 
 public class CommandMatcherFactory {
 
@@ -26,6 +28,8 @@ public class CommandMatcherFactory {
                         return false;
                     }
                 }
+                Log.i("match: context data: " + localeAsStr + " " + serviceComponent + " " + appComponent);
+                Log.i("match: pattern: <" + localePattern + "> <" + servicePattern + "> <" + appPattern + ">");
                 return true;
             }
         };

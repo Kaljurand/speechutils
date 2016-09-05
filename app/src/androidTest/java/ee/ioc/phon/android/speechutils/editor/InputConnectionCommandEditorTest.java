@@ -11,6 +11,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -291,18 +292,7 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("1234567890");
     }
 
-    /**
-     * TODO: goLeft does not work
-     */
-    //@Test
-    public void test27() {
-        add("1234567890");
-        runOp(mEditor.goLeft());
-        runOp(mEditor.goLeft());
-        undo();
-        runOp(mEditor.deleteLeftWord());
-        assertThatTextIs("0");
-    }
+    // test27
 
     @Test
     public void test28() {
@@ -604,27 +594,7 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("This is number 1. This is number 2? This is 3");
     }
 
-    /**
-     * Numeric keycode.
-     * TODO: Works in the app but not in the test.
-     */
-    //@Test
-    public void test52() {
-        add("This is a test", "code 66");
-        runOp(mEditor.keyCode(66));
-        runOp(mEditor.keyCodeStr("A"));
-        assertThatTextIs("This is a testA");
-    }
-
-    /**
-     * Symbolic keycode
-     * TODO: Works in the app but not in the test.
-     */
-    //@Test
-    public void test53() {
-        add("This is a test", "code letter B");
-        assertThatTextIs("This is a testB");
-    }
+    // test52, test53
 
     /**
      * Apply a command multiple times.
@@ -669,7 +639,7 @@ public class InputConnectionCommandEditorTest {
         assertThatOpStackIs("[move, ucSel, select a]");
         add("combine 3");
         assertThatTextIs("0 a a a a b A");
-        assertThatOpStackIs("[[select a, ucSel, move]]");
+        assertThatOpStackIs("[[select a, ucSel, move] 3]");
         add("apply 2");
         assertThatTextIs("0 a a A A b A");
     }
@@ -705,7 +675,7 @@ public class InputConnectionCommandEditorTest {
     /**
      * TODO: incorrectly replaces with "_some_" instead of "_SOME_"
      */
-    //@Test
+    @Test
     public void test61() {
         add("this is SOME word");
         add("underscore some");
@@ -723,20 +693,7 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("This is _SOME_ word");
     }
 
-    /**
-     * TODO: Can't create handler inside thread that has not called Looper.prepare()
-     */
-    //@Test
-    public void test63() {
-        add("test word1");
-        runOp(mEditor.replaceSel(" "));
-        add("word2");
-        assertThatTextIs("Test word1 word2");
-        runOp(mEditor.cutAll());
-        assertThat(getTextBeforeCursor(1), is(""));
-        runOp(mEditor.paste());
-        assertThatTextIs("Test word1 word2");
-    }
+    // test63
 
     /**
      * Undoing a move restores the selection.
@@ -753,24 +710,22 @@ public class InputConnectionCommandEditorTest {
 
     /**
      * Repeat the last utterance twice.
-     * TODO: not implemented
      */
     @Test
     public void test65() {
-        add("123");
-        add("apply 2");
-        assertThatTextIs("123123123");
+        runOp(mEditor.getOpFromText("123"));
+        runOp(mEditor.getOpFromText("apply 2"));
+        assertThatTextIs("123 123 123");
     }
 
     /**
-     * Combine last 3 commands and apply the result 2 times.
+     * Combine last 2 commands and apply the result 2 times.
      */
     @Test
     public void test66() {
         add("0 a _ a _ a _", "s/a/b/", "s/_/*/");
         assertThatTextIs("0 a _ a * b _");
         add("combine 2");
-        assertThatOpStackIs("[[replace, replace]]");
         add("apply 2");
         assertThatTextIs("0 b * b * b _");
     }
@@ -872,12 +827,142 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("123 456_");
     }
 
-    // TODO: @Test
+    @Test
+    public void test75() {
+        Collection<Op> collection = new ArrayList<>();
+        collection.add(mEditor.goBackward(1));
+        collection.add(mEditor.select("2"));
+        collection.add(mEditor.replaceSel("_"));
+        add("123 4562");
+        runOp(mEditor.combineOps(collection));
+        assertThatTextIs("1_3 4562");
+        add("undo 1");
+        assertThatTextIs("123 4562");
+        add("-");
+        assertThatTextIs("123 4562-");
+    }
+
+    @Test
+    public void test76() {
+        Collection<Op> collection = new ArrayList<>();
+        collection.add(mEditor.goBackward(1));
+        collection.add(mEditor.select("2"));
+        collection.add(mEditor.replaceSel("_"));
+        add("123 123 12");
+        for (Op op : collection) {
+            runOp(op);
+        }
+        assertThatTextIs("123 1_3 12");
+        runOp(mEditor.combine(3));
+        add("apply 1");
+        assertThatOpStackIs("[apply, [move, select 2, replaceSel] 3]");
+        assertThatTextIs("1_3 1_3 12");
+    }
+
+    @Test
+    public void test77() {
+        Collection<Op> collection = new ArrayList<>();
+        collection.add(mEditor.goBackward(1));
+        collection.add(mEditor.select(" "));
+        collection.add(mEditor.replaceSel("-"));
+        collection.add(mEditor.select("2"));
+        collection.add(mEditor.replaceSel("_"));
+        add("123 4562");
+        Op op = mEditor.combineOps(collection);
+        Op undo = op.run();
+        assertThatTextIs("1_3-4562");
+        Op undo1 = undo.run();
+        assertThatTextIs("123 4562");
+        undo1.run();
+        assertThatTextIs("1_3-4562");
+    }
+
+    @Test
+    public void test78() {
+        runOp(mEditor.getOpFromText("123"));
+        assertThatTextIs("123");
+        runOp(mEditor.getOpFromText("undo 1"));
+        assertThatTextIs("");
+        runOp(mEditor.getOpFromText("123"));
+        runOp(mEditor.getOpFromText("select 2"));
+        runOp(mEditor.getOpFromText("selection_replace _"));
+        assertThatTextIs("1_3");
+        // TODO: fix
+        assertThatUndoStackIs("[[deleteSurroundingText+commitText, ] 2, [setSelection, ] 2, [], [NO_OP, ] 2]");
+        //runOp(mEditor.getOpFromText("undo 1"));
+        //assertThatTextIs("123");
+    }
+
+    /**
+     * Failed command is not added to the undo stack.
+     */
+    @Test
+    public void test79() {
+        runOp(mEditor.getOpFromText("123"));
+        runOp(mEditor.getOpFromText("456"));
+        assertThatTextIs("123 456");
+        assertThatOpStackIs("[[add 456], [add 123]]");
+        assertThatUndoStackIs("[[delete 4], [delete 3]]");
+        runOp(mEditor.getOpFromText("select 7"));
+        assertThatOpStackIs("[[add 456], [add 123]]");
+        assertThatUndoStackIs("[[delete 4], [delete 3]]");
+        runOp(mEditor.getOpFromText("undo 1"));
+        assertThatTextIs("");
+    }
+
     // Can't create handler inside thread that has not called Looper.prepare()
-    public void test80() {
+    //@Test
+    public void test201() {
         runOp(mEditor.copy());
         runOp(mEditor.paste());
         runOp(mEditor.paste());
+    }
+
+    //@Test
+    public void test202() {
+        add("1234567890");
+        runOp(mEditor.goLeft());
+        runOp(mEditor.goLeft());
+        undo();
+        runOp(mEditor.deleteLeftWord());
+        assertThatTextIs("0");
+    }
+
+    /**
+     * Numeric keycode.
+     * TODO: Works in the app but not in the test.
+     */
+    //@Test
+    public void test203() {
+        add("This is a test", "code 66");
+        runOp(mEditor.keyCode(66));
+        runOp(mEditor.keyCodeStr("A"));
+        assertThatTextIs("This is a testA");
+    }
+
+    /**
+     * Symbolic keycode
+     * TODO: Works in the app but not in the test.
+     */
+    //@Test
+    public void test204() {
+        add("This is a test", "code letter B");
+        assertThatTextIs("This is a testB");
+    }
+
+    /**
+     * TODO: Can't create handler inside thread that has not called Looper.prepare()
+     */
+    //@Test
+    public void test205() {
+        add("test word1");
+        runOp(mEditor.replaceSel(" "));
+        add("word2");
+        assertThatTextIs("Test word1 word2");
+        runOp(mEditor.cutAll());
+        assertThat(getTextBeforeCursor(1), is(""));
+        runOp(mEditor.paste());
+        assertThatTextIs("Test word1 word2");
     }
 
     private String getTextBeforeCursor(int n) {
