@@ -218,24 +218,32 @@ public class InputConnectionCommandEditor implements CommandEditor {
         };
     }
 
+    /**
+     * Returns an operation that pops the undo stack the given number of times,
+     * executing each popped op. If the stack does not contain the given number of elements, or
+     * one of the ops fails, then returns null. Otherwise returns NO_OP.
+     */
     @Override
     public Op undo(final int steps) {
         return new Op("undo") {
             @Override
             public Op run() {
+                Op undo = Op.NO_OP;
                 mInputConnection.beginBatchEdit();
                 for (int i = 0; i < steps; i++) {
                     try {
                         Op op = mUndoStack.pop().run();
                         if (op == null) {
+                            undo = null;
                             break;
                         }
                     } catch (NoSuchElementException ex) {
+                        undo = null;
                         break;
                     }
                 }
                 mInputConnection.endBatchEdit();
-                return Op.NO_OP;
+                return undo;
             }
         };
     }
@@ -312,11 +320,15 @@ public class InputConnectionCommandEditor implements CommandEditor {
      */
     @Override
     public Op goToPreviousField() {
-        boolean success = mInputConnection.performEditorAction(EditorInfo.IME_ACTION_PREVIOUS);
-        if (success) {
-            return Op.NO_OP;
-        }
-        return null;
+        return new Op("imeActionPrevious") {
+            @Override
+            public Op run() {
+                if (mInputConnection.performEditorAction(EditorInfo.IME_ACTION_PREVIOUS)) {
+                    return Op.NO_OP;
+                }
+                return null;
+            }
+        };
     }
 
     /**
@@ -324,11 +336,15 @@ public class InputConnectionCommandEditor implements CommandEditor {
      */
     @Override
     public Op goToNextField() {
-        boolean success = mInputConnection.performEditorAction(EditorInfo.IME_ACTION_NEXT);
-        if (success) {
-            return Op.NO_OP;
-        }
-        return null;
+        return new Op("imeActionNext") {
+            @Override
+            public Op run() {
+                if (mInputConnection.performEditorAction(EditorInfo.IME_ACTION_NEXT)) {
+                    return Op.NO_OP;
+                }
+                return null;
+            }
+        };
     }
 
     @Override
@@ -377,6 +393,21 @@ public class InputConnectionCommandEditor implements CommandEditor {
         };
     }
 
+    @Override
+    public Op cut() {
+        return getContextMenuActionOp(android.R.id.cut);
+    }
+
+    @Override
+    public Op copy() {
+        return getContextMenuActionOp(android.R.id.copy);
+    }
+
+    @Override
+    public Op paste() {
+        return getContextMenuActionOp(android.R.id.paste);
+    }
+
     /**
      * mInputConnection.performContextMenuAction(android.R.id.selectAll) does not create a selection
      */
@@ -397,67 +428,64 @@ public class InputConnectionCommandEditor implements CommandEditor {
         };
     }
 
-    // TODO: support undo
-    @Override
-    public Op cut() {
-        boolean success = mInputConnection.performContextMenuAction(android.R.id.cut);
-        if (success) {
-            return Op.NO_OP;
-        }
-        return null;
-    }
-
-    // TODO: support undo
+    // Not undoable
     @Override
     public Op cutAll() {
-        mInputConnection.beginBatchEdit();
-        Op op = selectAll();
-        if (op != null) {
-            cut();
-        }
-        mInputConnection.endBatchEdit();
-        return op;
+        return new Op("cutAll") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                Op op = selectAll().run();
+                if (op != null) {
+                    if (cut().run() != null) {
+                        undo = NO_OP;
+                    }
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
     }
 
-    // TODO: support undo
+    // Not undoable
     @Override
     public Op deleteAll() {
-        mInputConnection.beginBatchEdit();
-        Op op = selectAll();
-        mInputConnection.commitText("", 0);
-        mInputConnection.endBatchEdit();
-        return op;
+        return new Op("deleteAll") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                Op op = selectAll().run();
+                if (op != null) {
+                    if (mInputConnection.commitText("", 0)) {
+                        undo = NO_OP;
+                    }
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
     }
 
-    // TODO: support undo
-    @Override
-    public Op copy() {
-        boolean success = mInputConnection.performContextMenuAction(android.R.id.copy);
-        if (success) {
-            return Op.NO_OP;
-        }
-        return null;
-    }
-
-    // TODO: support undo
+    // Not undoable
     @Override
     public Op copyAll() {
-        mInputConnection.beginBatchEdit();
-        Op op = selectAll();
-        if (op != null) {
-            copy();
-        }
-        mInputConnection.endBatchEdit();
-        return op;
-    }
-
-    // TODO: support undo
-    @Override
-    public Op paste() {
-        if (mInputConnection.performContextMenuAction(android.R.id.paste)) {
-            return Op.NO_OP;
-        }
-        return null;
+        return new Op("copyAll") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                Op op = selectAll().run();
+                if (op != null) {
+                    if (copy().run() != null) {
+                        undo = NO_OP;
+                    }
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
     }
 
     @Override
@@ -533,7 +561,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public Op select(final String query) {
         return new Op("select " + query) {
-
             @Override
             public Op run() {
                 Op undo = null;
@@ -554,7 +581,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public Op selectReBefore(final String regex) {
         return new Op("selectReBefore") {
-
             @Override
             public Op run() {
                 Op undo = null;
@@ -562,7 +588,29 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 final ExtractedText et = getExtractedText();
                 if (et != null) {
                     CharSequence input = et.text.subSequence(0, et.selectionStart);
-                    Pair<Integer, Integer> pos = match(Pattern.compile(regex), input, false);
+                    // 0 == last match
+                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex), input, 0);
+                    if (pos != null) {
+                        undo = getOpSetSelection(pos.first, pos.second, et.selectionStart, et.selectionEnd).run();
+                    }
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op selectReAfter(final String regex, final int n) {
+        return new Op("selectReAfter") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                final ExtractedText et = getExtractedText();
+                if (et != null) {
+                    CharSequence input = et.text.subSequence(et.selectionEnd, et.text.length());
+                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex), input, n);
                     if (pos != null) {
                         undo = getOpSetSelection(pos.first, pos.second, et.selectionStart, et.selectionEnd).run();
                     }
@@ -702,7 +750,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
         };
     }
 
-    // TODO: support undo
+    /**
+     * Not undoable
+     *
+     * @param code key code
+     * @return op that sends the given code
+     */
     @Override
     public Op keyCode(final int code) {
         return new Op("keyCode") {
@@ -716,14 +769,17 @@ public class InputConnectionCommandEditor implements CommandEditor {
         };
     }
 
-    // TODO: support undo
+    /**
+     * Not undoable
+     *
+     * @param symbolicName key code's symbolic name
+     * @return op that sends the given code
+     */
     @Override
     public Op keyCodeStr(String symbolicName) {
         int code = KeyEvent.keyCodeFromString("KEYCODE_" + symbolicName);
         if (code != KeyEvent.KEYCODE_UNKNOWN) {
-            if (mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, code))) {
-                return Op.NO_OP;
-            }
+            return keyCode(code);
         }
         return null;
     }
@@ -750,21 +806,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return getEditorActionOp(EditorInfo.IME_ACTION_SEND);
     }
 
-    // TODO: move undo, combine, apply, etc. out of this class because these are meta commands
-    public void popOp() {
-        mOpStack.pop();
-    }
-
-    public void pushOp(Op op) {
-        mOpStack.push(op);
-        Log.i("undo: push op: " + mOpStack.toString());
-    }
-
-    public void pushOpUndo(Op op) {
-        mUndoStack.push(op);
-        Log.i("undo: push undo: " + mUndoStack.toString());
-    }
-
     @Override
     public Deque<Op> getOpStack() {
         return mOpStack;
@@ -775,11 +816,33 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return mUndoStack;
     }
 
+    private void pushOp(Op op) {
+        mOpStack.push(op);
+        Log.i("undo: push op: " + mOpStack.toString());
+    }
+
+    private void pushOpUndo(Op op) {
+        mUndoStack.push(op);
+        Log.i("undo: push undo: " + mUndoStack.toString());
+    }
+
     private Op getEditorActionOp(final int editorAction) {
         return new Op("editorAction " + editorAction) {
             @Override
             public Op run() {
                 if (mInputConnection.performEditorAction(editorAction)) {
+                    return Op.NO_OP;
+                }
+                return null;
+            }
+        };
+    }
+
+    private Op getContextMenuActionOp(final int contextMenuAction) {
+        return new Op("contextMenuAction " + contextMenuAction) {
+            @Override
+            public Op run() {
+                if (mInputConnection.performContextMenuAction(contextMenuAction)) {
                     return Op.NO_OP;
                 }
                 return null;
@@ -919,20 +982,24 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     /**
-     * Go to the first/last match and return the indices of the 1st group in the match if available.
+     * Go to the Nth match and return the indices of the 1st group in the match if available.
      * If not then return the indices of the whole match.
+     * If the match could not be made N times the return the last match (e.g. if n == 0).
      * If no match was found then return {@code null}.
+     * TODO: if possible, support negative N to match from end to beginning.
      */
-    private Pair<Integer, Integer> match(Pattern pattern, CharSequence input, boolean matchFirst) {
+    private Pair<Integer, Integer> matchNth(Pattern pattern, CharSequence input, int n) {
         Matcher matcher = pattern.matcher(input);
         Pair<Integer, Integer> pos = null;
+        int counter = 0;
         while (matcher.find()) {
+            counter++;
             int group = 0;
             if (matcher.groupCount() > 0) {
                 group = 1;
             }
             pos = new Pair<>(matcher.start(group), matcher.end(group));
-            if (matchFirst) {
+            if (counter == n) {
                 return pos;
             }
         }
@@ -958,7 +1025,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return new Op("move") {
             @Override
             public Op run() {
-                Op undoOp = null;
+                Op undo = null;
                 mInputConnection.beginBatchEdit();
                 ExtractedText extractedText = getExtractedText();
                 if (extractedText != null) {
@@ -969,27 +1036,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
                         pos = extractedText.selectionEnd;
                     }
                     int newPos = pos + numberOfChars;
-                    undoOp = getOpSetSelection(newPos, newPos, extractedText.selectionStart, extractedText.selectionEnd).run();
+                    undo = getOpSetSelection(newPos, newPos, extractedText.selectionStart, extractedText.selectionEnd).run();
                 }
                 mInputConnection.endBatchEdit();
-                return undoOp;
-            }
-        };
-    }
-
-    // TODO: not sure we need this
-    private Op push(final Op op) {
-        return new Op("push") {
-            @Override
-            public Op run() {
-                mOpStack.push(op);
-                return new Op("pop") {
-                    @Override
-                    public Op run() {
-                        mOpStack.pop();
-                        return push(op);
-                    }
-                };
+                return undo;
             }
         };
     }

@@ -65,6 +65,8 @@ public interface CommandEditor {
 
     Op selectReBefore(String regex);
 
+    Op selectReAfter(String regex, int n);
+
     // Reset selection
     Op resetSel();
 
@@ -92,7 +94,7 @@ public interface CommandEditor {
     Op replace(String str1, String str2);
 
     // Replace selection
-    Op replaceSel(String str1);
+    Op replaceSel(String str);
 
     // Uppercase selection
     Op ucSel();
@@ -103,6 +105,8 @@ public interface CommandEditor {
     // Increment selection
     Op incSel();
 
+    // IME actions
+
     Op imeActionDone();
 
     Op imeActionGo();
@@ -110,7 +114,6 @@ public interface CommandEditor {
     Op imeActionSearch();
 
     Op imeActionSend();
-
 
     // Other
 
@@ -121,12 +124,6 @@ public interface CommandEditor {
     Deque<Op> getOpStack();
 
     Deque<Op> getUndoStack();
-
-    void pushOp(Op op);
-
-    void popOp();
-
-    void pushOpUndo(Op op);
 
     void reset();
 }

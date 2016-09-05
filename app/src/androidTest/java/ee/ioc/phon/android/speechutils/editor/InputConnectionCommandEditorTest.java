@@ -37,6 +37,8 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("delete2 (.*)", "D2", "replace", new String[]{"$1", ""}));
         list.add(new Command("underscore (.*)", "", "replace", new String[]{"$1", "_$1_"}));
         list.add(new Command("select (.*)", "", "select", new String[]{"$1"}));
+        list.add(new Command("selectAll", "", "selectAll"));
+        list.add(new Command("resetSel", "", "resetSel"));
         list.add(new Command("selection_replace (.*)", "", "replaceSel", new String[]{"$1"}));
         list.add(new Command("selection_underscore", "", "replaceSel", new String[]{"_{}_"}));
         list.add(new Command("selection_quote", "", "replaceSel", new String[]{"\"{}\""}));
@@ -45,6 +47,8 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("selection_uc", "", "ucSel"));
         list.add(new Command("step back", "", "goBackward")); // no args means arg1 = 1
         list.add(new Command("prev_sent", "", "selectReBefore", new String[]{"[.?!]()[^.?!]+[.?!][^.?!]+"}));
+        list.add(new Command("first_number", "", "selectReAfter", new String[]{"(\\d)\\."}));
+        list.add(new Command("second_number", "", "selectReAfter", new String[]{"(\\d)\\.", "2"}));
         list.add(new Command("code (\\d+)", "", "keyCode", new String[]{"$1"}));
         list.add(new Command("code letter (.)", "", "keyCodeStr", new String[]{"$1"}));
         list.add(new Command("undo (\\d+)", "", "undo", new String[]{"$1"}));
@@ -173,9 +177,9 @@ public class InputConnectionCommandEditorTest {
         add("test word1 word2");
         add("connect word1");
         add("and");
-        assertThatUndoIs("[delete 4, delete 14, delete 16]");
+        assertThatUndoStackIs("[delete 4, delete 14, delete 16]");
         assertThat(mEditor.commitFinalResult("word2").toString(), is("+replace(word1 word2,word1-word2)"));
-        assertThatUndoIs("[undo replace2, delete 16]");
+        assertThatUndoStackIs("[undo replace2, delete 16]");
         assertThatTextIs("Test word1-word2");
     }
 
@@ -258,7 +262,7 @@ public class InputConnectionCommandEditorTest {
         add("this is some word");
         runOp(mEditor.selectAll());
         add("selection_replace REPL");
-        assertThat(mEditor.getText().toString(), is("REPL"));
+        assertThatTextIs("REPL");
     }
 
     @Test
@@ -320,10 +324,10 @@ public class InputConnectionCommandEditorTest {
         add("test old_word");
         assertThatTextIs("Test new_word");
         add("s/new_word/NEWER_WORD/");
-        assertThatUndoIs("[undo replace2, delete 13]");
+        assertThatUndoStackIs("[undo replace2, delete 13]");
         assertThatTextIs("Test NEWER_WORD");
         undo();
-        assertThatUndoIs("[delete 13]");
+        assertThatUndoStackIs("[delete 13]");
         assertThatTextIs("Test new_word");
         undo();
         assertThatTextIs("");
@@ -341,7 +345,7 @@ public class InputConnectionCommandEditorTest {
     public void test31() {
         add("there are word1 and word2...", "select word1 and word2", "selection_replace REPL");
         assertThatTextIs("There are REPL...");
-        assertThatUndoIs("[deleteSurroundingText+commitText, setSelection, delete 28]");
+        assertThatUndoStackIs("[deleteSurroundingText+commitText, setSelection, delete 28]");
         undo();
         assertThatTextIs("There are word1 and word2...");
     }
@@ -378,7 +382,7 @@ public class InputConnectionCommandEditorTest {
         add("this_is_a_text");
         add("delete2 is_a");
         assertThatTextIs("This__text D2");
-        assertThatUndoIs("[undo replace1, delete 3, delete 14]");
+        assertThatUndoStackIs("[undo replace1, delete 3, delete 14]");
         undo();
         assertThatTextIs("This_is_a_text D2");
         undo();
@@ -394,7 +398,7 @@ public class InputConnectionCommandEditorTest {
         add("connect word1");
         add("and");
         assertThat(mEditor.commitFinalResult("word2").toString(), is("+replace(word1 word2,word1-word2)"));
-        assertThatUndoIs("[undo replace2, delete 16]");
+        assertThatUndoStackIs("[undo replace2, delete 16]");
         assertThatTextIs("Test word1-word2");
         undo();
         assertThatTextIs("Test word1 word2");
@@ -409,7 +413,7 @@ public class InputConnectionCommandEditorTest {
         add("connect word1");
         add("and");
         assertThat(mEditor.commitFinalResult("nonexisting_word").toString(), is("-replace(word1 nonexisting_word,word1-nonexisting_word)"));
-        assertThatUndoIs("[delete 16]");
+        assertThatUndoStackIs("[delete 16]");
         assertThatTextIs("Test word1 word2");
         undo();
         assertThatTextIs("");
@@ -439,7 +443,7 @@ public class InputConnectionCommandEditorTest {
         add("this is a text");
         add("select is a");
         add("selection_replace is not a");
-        assertThatUndoIs("[deleteSurroundingText+commitText, setSelection, delete 14]");
+        assertThatUndoStackIs("[deleteSurroundingText+commitText, setSelection, delete 14]");
         assertThatTextIs("This is not a text");
         undo();
         assertThatTextIs("This is a text");
@@ -450,13 +454,13 @@ public class InputConnectionCommandEditorTest {
         add("this is a text");
         add("select is a");
         add("selection_replace");
-        assertThatUndoIs("[delete 17, setSelection, delete 14]");
+        assertThatUndoStackIs("[delete 17, setSelection, delete 14]");
         assertThatTextIs("This selection_replace text");
         add("is not a");
-        assertThatUndoIs("[deleteSurroundingText+commitText, setSelection, delete 14]");
+        assertThatUndoStackIs("[deleteSurroundingText+commitText, setSelection, delete 14]");
         assertThatTextIs("This is not a text");
         undo();
-        assertThatUndoIs("[setSelection, delete 14]");
+        assertThatUndoStackIs("[setSelection, delete 14]");
         assertThatTextIs("This is a text");
         undo();
         assertThatTextIs("This is a text");
@@ -629,11 +633,11 @@ public class InputConnectionCommandEditorTest {
     public void test54() {
         add("6543210", "step back", "apply 4", "-");
         assertThatTextIs("65-43210");
-        assertThatUndoIs("[delete 1, undo apply 4, setSelection, delete 7]");
+        assertThatUndoStackIs("[delete 1, undo apply 4, setSelection, delete 7]");
         undo();
         assertThatTextIs("6543210");
         undo();
-        assertThatUndoIs("[setSelection, delete 7]");
+        assertThatUndoStackIs("[setSelection, delete 7]");
         add("-");
         assertThatTextIs("654321-0");
     }
@@ -771,6 +775,103 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("0 b * b * b _");
     }
 
+    /**
+     * Perform regex search that fails.
+     */
+    @Test
+    public void test67() {
+        add("Test 1.");
+        runOpThatFails(mEditor.selectReBefore("(\\d{2})\\."));
+        add("more");
+        assertThatTextIs("Test 1. More");
+    }
+
+    /**
+     * Perform undo that fails.
+     */
+    @Test
+    public void test68() {
+        mEditor.commitPartialResult("Initial text");
+        assertThatOpStackIs("[]");
+        assertThatUndoStackIs("[]");
+        runOpThatFails(mEditor.undo(1));
+        assertThatOpStackIs("[]");
+        assertThatUndoStackIs("[]");
+        assertThatTextIs("Initial text");
+    }
+
+    /**
+     * Perform a command that fails (via add).
+     */
+    @Test
+    public void test69() {
+        mEditor.commitPartialResult("Initial text");
+        assertThatTextIs("Initial text");
+        assertThatOpStackIs("[]");
+        assertThatUndoStackIs("[]");
+        add("select whatever");
+        assertThatOpStackIs("[]");
+        assertThatUndoStackIs("[]");
+        assertThatTextIs("Initial text");
+    }
+
+    /**
+     * Search after the cursor, select the 1st match, and replace it.
+     */
+    @Test
+    public void test70() {
+        add("This is number 1. This is number 2. This is number 3.");
+        runOp(mEditor.goToCharacterPosition(0));
+        //CommandEditorManager.EditorCommand ec = CommandEditorManager.EDITOR_COMMANDS.get(CommandEditorManager.SELECT_RE_AFTER);
+        //runOp(ec.getOp(mEditor, new String[]{"(\\d)\\."}));
+        runOp(mEditor.selectReAfter("(\\d)\\.", 1));
+        // TODO: fails currently
+        //add("first_number");
+        add("I");
+        assertThatTextIs("This is number I. This is number 2. This is number 3.");
+    }
+
+    /**
+     * Search after the cursor, select the 2nd match, and replace it.
+     */
+    @Test
+    public void test71() {
+        add("This is number 1. This is number 2. This is number 3.");
+        runOp(mEditor.goToCharacterPosition(0));
+        runOp(mEditor.selectReAfter("(\\d)\\.", 2));
+        // TODO: fails currently
+        //add("second_number");
+        add("II");
+        assertThatTextIs("This is number 1. This is number II. This is number 3.");
+    }
+
+    @Test
+    public void test72() {
+        add("selectAll", "123 456", "selectAll", "resetSel");
+        add("selection_replace !");
+        assertThatTextIs("123 456!");
+    }
+
+    @Test
+    public void test73() {
+        add("123 456", "selectAll");
+        add("selection_replace !");
+        assertThatTextIs("!");
+        undo(1);
+        add("selection_replace !");
+        assertThatTextIs("!");
+    }
+
+    @Test
+    public void test74() {
+        add("123 456", "step back", "selection_replace _");
+        assertThatTextIs("123 45_6");
+        add("undo 1");
+        assertThatTextIs("123 456");
+        add("undo 1", "selection_replace _");
+        assertThatTextIs("123 456_");
+    }
+
     // TODO: @Test
     // Can't create handler inside thread that has not called Looper.prepare()
     public void test80() {
@@ -803,12 +904,12 @@ public class InputConnectionCommandEditorTest {
         runOp(mEditor.undo(steps));
     }
 
-    private void assertThatUndoIs(String str) {
-        assertThat(mEditor.getUndoStack().toString(), is(str));
-    }
-
     private void assertThatOpStackIs(String str) {
         assertThat(mEditor.getOpStack().toString(), is(str));
+    }
+
+    private void assertThatUndoStackIs(String str) {
+        assertThat(mEditor.getUndoStack().toString(), is(str));
     }
 
     private void assertThatTextIs(String str) {
@@ -823,5 +924,10 @@ public class InputConnectionCommandEditorTest {
         //assertNotNull(op.run().run());
         // do
         //assertNotNull(op.run());
+    }
+
+    private void runOpThatFails(Op op) {
+        assertNotNull(op);
+        assertFalse(mEditor.runOp(op));
     }
 }

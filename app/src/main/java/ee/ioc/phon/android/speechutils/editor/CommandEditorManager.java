@@ -29,6 +29,7 @@ public class CommandEditorManager {
     public static final String GO_TO_END = "goToEnd";
     public static final String SELECT = "select";
     public static final String SELECT_RE_BEFORE = "selectReBefore";
+    public static final String SELECT_RE_AFTER = "selectReAfter";
     public static final String RESET_SEL = "resetSel";
     public static final String SELECT_ALL = "selectAll";
     public static final String CUT = "cut";
@@ -254,6 +255,25 @@ public class CommandEditorManager {
                     return null;
                 }
                 return ce.selectReBefore(args[0]);
+            }
+        });
+
+        aMap.put(SELECT_RE_AFTER, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length == 0 || args.length > 2) {
+                    return null;
+                }
+                int n = 1;
+                if (args.length == 2) {
+                    try {
+                        n = Integer.parseInt(args[1]);
+                    } catch (NumberFormatException e) {
+                        // Intentional
+                    }
+                }
+                return ce.selectReAfter(args[0], n);
             }
         });
 
