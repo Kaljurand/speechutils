@@ -50,6 +50,8 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("prev_sent", "", "selectReBefore", new String[]{"[.?!]()[^.?!]+[.?!][^.?!]+"}));
         list.add(new Command("first_number", "", "selectReAfter", new String[]{"(\\d)\\."}));
         list.add(new Command("second_number", "", "selectReAfter", new String[]{"(\\d)\\.", "2"}));
+        list.add(new Command("next_word", "", "selectReAfter", new String[]{"\\b(.+?)\\b"}));
+        list.add(new Command("next_next_word", "", "selectReAfter", new String[]{"\\b(.+?)\\b", "2"}));
         list.add(new Command("code (\\d+)", "", "keyCode", new String[]{"$1"}));
         list.add(new Command("code letter (.)", "", "keyCodeStr", new String[]{"$1"}));
         list.add(new Command("undo (\\d+)", "", "undo", new String[]{"$1"}));
@@ -908,6 +910,27 @@ public class InputConnectionCommandEditorTest {
         assertThatUndoStackIs("[[delete 4], [delete 3]]");
         runOp(mEditor.getOpFromText("undo 1"));
         assertThatTextIs("");
+    }
+
+    /**
+     * Calling selectReAfter N times vs passing N as the 2nd argument.
+     * Should be equivalent.
+     */
+    @Test
+    public void test80() {
+        add("0 word1 word2 word3 word4 word5 word6");
+        runOp(mEditor.goToCharacterPosition(1));
+        runOp(mEditor.selectReAfter("\\b(.+?)\\b", 1));
+        runOp(mEditor.replaceSel("[]"));
+        assertThatTextIs("0 [] word2 word3 word4 word5 word6");
+        runOp(mEditor.selectReAfter("\\b(.+?)\\b", 1));
+        runOp(mEditor.selectReAfter("\\b(.+?)\\b", 1));
+        runOp(mEditor.replaceSel("[]"));
+        assertThatTextIs("0 [] word2 [] word4 word5 word6");
+        runOp(mEditor.selectReAfter("\\b(.+?)\\b", 2));
+        runOp(mEditor.replaceSel("[]"));
+        // TODO: this currently fails
+        assertThatTextIs("0 [] word2 [] word4 [] word6");
     }
 
     // Can't create handler inside thread that has not called Looper.prepare()

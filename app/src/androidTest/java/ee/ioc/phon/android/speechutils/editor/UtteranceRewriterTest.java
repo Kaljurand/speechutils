@@ -36,7 +36,7 @@ public class UtteranceRewriterTest {
     public void test01() {
         Command command = new Command("s/(.*)/(.*)/", "X", "replace", new String[]{"$1", "$2"});
         assertThat(command.toTsv(), is("\t\t\t\ts/(.*)/(.*)/\tX\treplace\t$1\t$2"));
-        Pair<String, String[]> pair = command.match("s/_/a/");
+        Pair<String, String[]> pair = command.parse("s/_/a/");
         assertThat(pair.first, is("X"));
         assertThat(pair.second[0], is("_"));
         assertThat(pair.second[1], is("a"));

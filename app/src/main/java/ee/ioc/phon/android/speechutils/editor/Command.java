@@ -70,28 +70,28 @@ public class Command {
     }
 
     /**
-     * Rewrites the given string and extracts the arguments if the string
-     * corresponds to the command (i.e. if the entire string matches the pattern).
+     * Parses the given string.
+     * If the entire string matches the utterance pattern, then extracts the arguments as well.
      * Example:
-     * mUtt = replace (.*) with (.*)
      * str = replace A with B
-     * newStr = ""
+     * mUtt = replace (.*) with (.*)
+     * mReplacement = ""
      * $1<___>$2
      * A<___>B
+     * m.replaceAll(mReplacement) = ""
      * argsEvaluated = [A, B]
      *
      * @param str string to be matched
      * @return pair of replacement and array of arguments
      */
-    public Pair<String, String[]> match(CharSequence str) {
+    public Pair<String, String[]> parse(CharSequence str) {
         Matcher m = mUtt.matcher(str);
-        String newStr = m.replaceAll(mReplacement);
         String[] argsEvaluated = null;
         // If the entire region matches then we evaluate the arguments as well
         if (m.matches()) {
             argsEvaluated = TextUtils.split(m.replaceAll(mArgsAsStr), SEPARATOR);
         }
-        return new Pair<>(newStr, argsEvaluated);
+        return new Pair<>(m.replaceAll(mReplacement), argsEvaluated);
     }
 
     /**
@@ -169,5 +169,9 @@ public class Command {
             return "";
         }
         return str.replace("\\n", "\n").replace("\\t", "\t");
+    }
+
+    public static Command createEmptyCommand(String comment) {
+        return new Command(comment, null, null, null, null, null, null, null);
     }
 }

@@ -595,7 +595,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     CharSequence input = et.text.subSequence(et.selectionEnd, et.text.length());
                     Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex), input, n);
                     if (pos != null) {
-                        undo = getOpSetSelection(pos.first, pos.second, et.selectionStart, et.selectionEnd).run();
+                        undo = getOpSetSelection(et.selectionEnd + pos.first, et.selectionEnd + pos.second, et.selectionStart, et.selectionEnd).run();
                     }
                 }
                 mInputConnection.endBatchEdit();
@@ -1062,8 +1062,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private Pair<Integer, Integer> matchNth(Pattern pattern, CharSequence input, int n) {
         Matcher matcher = pattern.matcher(input);
         Pair<Integer, Integer> pos = null;
+        int end = 0;
         int counter = 0;
-        while (matcher.find()) {
+        while (matcher.find(end)) {
             counter++;
             int group = 0;
             if (matcher.groupCount() > 0) {
@@ -1073,6 +1074,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
             if (counter == n) {
                 return pos;
             }
+            end = matcher.end(group);
         }
         return pos;
     }

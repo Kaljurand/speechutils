@@ -14,8 +14,6 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import ee.ioc.phon.android.speechutils.Log;
-
 public class UtteranceRewriter {
 
     private static final Pattern PATTERN_TRAILING_TABS = Pattern.compile("\t*$");
@@ -74,7 +72,7 @@ public class UtteranceRewriter {
      */
     public Rewrite getRewrite(String str) {
         for (Command command : mCommands) {
-            Pair<String, String[]> pair = command.match(str);
+            Pair<String, String[]> pair = command.parse(str);
             String commandId = command.getId();
             if (commandId == null) {
                 str = pair.first;
@@ -106,8 +104,8 @@ public class UtteranceRewriter {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(TextUtils.join("\t", HEADER));
         for (Command command : mCommands) {
-            stringBuilder.append(command.toTsv());
             stringBuilder.append('\n');
+            stringBuilder.append(command.toTsv());
         }
         return stringBuilder.toString();
     }
@@ -189,9 +187,7 @@ public class UtteranceRewriter {
         if (rows.length > 1) {
             String[] header = parseHeader(rows[0]);
             for (int i = 1; i < rows.length; i++) {
-                if (!addLine(commands, header, rows[i], commandMatcher)) {
-                    break;
-                }
+                addLine(commands, header, rows[i], commandMatcher);
             }
         }
         return commands;
@@ -212,9 +208,7 @@ public class UtteranceRewriter {
             if (line != null) {
                 String[] header = parseHeader(line);
                 while ((line = reader.readLine()) != null) {
-                    if (!addLine(commands, header, line, null)) {
-                        break;
-                    }
+                    addLine(commands, header, line, null);
                 }
             }
             inputStream.close();
@@ -222,7 +216,7 @@ public class UtteranceRewriter {
         return commands;
     }
 
-    private static boolean addLine(List<Command> commands, String[] header, String line, CommandMatcher commandMatcher) {
+    private static void addLine(List<Command> commands, String[] header, String line, CommandMatcher commandMatcher) {
         // TODO: removing trailing tabs means that rewrite cannot delete a string
         String[] splits = PATTERN_TRAILING_TABS.matcher(line).replaceAll("").split("\t");
         if (splits.length > 1 && line.charAt(0) != '#') {
@@ -231,19 +225,24 @@ public class UtteranceRewriter {
                 if (command != null) {
                     commands.add(command);
                 }
-                return true;
             } catch (PatternSyntaxException e) {
-                // TODO: collect and expose buggy entries
-                return false;
+                commands.add(Command.createEmptyCommand("ERROR: " + e.getMessage()));
             } catch (IllegalArgumentException e) {
                 // Unsupported header field
-                return false;
+                commands.add(Command.createEmptyCommand("ERROR: " + e.getMessage()));
             }
         }
-        return true;
     }
 
-    private static Command getCommand(String[] header, String[] splits, CommandMatcher commandMatcher) {
+    /**
+     * Creates a command based on the given fields.
+     *
+     * @param header         header row
+     * @param fields         fields of a single row
+     * @param commandMatcher command matcher
+     * @return command or null if commandMatcher rejects the command
+     */
+    private static Command getCommand(String[] header, String[] fields, CommandMatcher commandMatcher) {
         String comment = null;
         Pattern locale = null;
         Pattern service = null;
@@ -254,29 +253,34 @@ public class UtteranceRewriter {
         String arg1 = null;
         String arg2 = null;
 
-        for (int i = 0; i < Math.min(header.length, splits.length); i++) {
-            String split = splits[i];
+        for (int i = 0; i < Math.min(header.length, fields.length); i++) {
+            String split = fields[i];
             switch (header[i]) {
                 case "Comment":
-                    comment = split;
+                    comment = split.trim();
                     break;
                 case "Locale":
-                    locale = Pattern.compile(split);
+                    locale = Pattern.compile(split.trim());
                     break;
                 case "Service":
-                    service = Pattern.compile(split);
+                    service = Pattern.compile(split.trim());
                     break;
                 case "App":
-                    app = Pattern.compile(split);
+                    app = Pattern.compile(split.trim());
                     break;
                 case "Utterance":
+                    split = split.trim();
+                    // TODO: test if this works
+                    if (split.isEmpty()) {
+                        throw new IllegalArgumentException("Utterance must not be empty");
+                    }
                     utterance = Pattern.compile(split, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
                     break;
                 case "Replacement":
                     replacement = Command.unescape(split);
                     break;
                 case "Command":
-                    command = Command.unescape(split);
+                    command = Command.unescape(split.trim());
                     break;
                 case "Arg1":
                     arg1 = Command.unescape(split);
