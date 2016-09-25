@@ -72,7 +72,7 @@ public class InputConnectionCommandEditorTest {
         //editorInfo.initialSelEnd = 19;
         InputConnection connection = view.onCreateInputConnection(editorInfo);
         //InputConnection connection = new BaseInputConnection(view, true);
-        mEditor = new InputConnectionCommandEditor();
+        mEditor = new InputConnectionCommandEditor(context);
         mEditor.setInputConnection(connection);
         mEditor.setUtteranceRewriter(new UtteranceRewriter(COMMANDS));
     }
@@ -931,6 +931,17 @@ public class InputConnectionCommandEditorTest {
         runOp(mEditor.replaceSel("[]"));
         // TODO: this currently fails
         assertThatTextIs("0 [] word2 [] word4 [] word6");
+    }
+
+    @Test
+    public void test81() {
+        add("0 word1 word2 word3", "select word2");
+        runOp(mEditor.saveSel("key"));
+        runOp(mEditor.replaceSel("REPL"));
+        assertThatTextIs("0 word1 REPL word3");
+        add("select word1");
+        runOp(mEditor.loadSel("key"));
+        assertThatTextIs("0 word2 REPL word3");
     }
 
     // Can't create handler inside thread that has not called Looper.prepare()

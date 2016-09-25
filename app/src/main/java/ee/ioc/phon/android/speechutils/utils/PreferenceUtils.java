@@ -12,8 +12,12 @@ import java.util.UUID;
 
 public class PreferenceUtils {
 
+    public static String getPrefString(SharedPreferences prefs, String key, String defaultValue) {
+        return prefs.getString(key, defaultValue);
+    }
+
     public static String getPrefString(SharedPreferences prefs, Resources res, int key, int defaultValue) {
-        return prefs.getString(res.getString(key), res.getString(defaultValue));
+        return getPrefString(prefs, res.getString(key), res.getString(defaultValue));
     }
 
     public static String getPrefString(SharedPreferences prefs, Resources res, int key) {
@@ -55,10 +59,14 @@ public class PreferenceUtils {
         return Arrays.asList(res.getStringArray(key));
     }
 
-    public static void putPrefString(SharedPreferences prefs, Resources res, int key, String value) {
+    public static void putPrefString(SharedPreferences prefs, String key, String value) {
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putString(res.getString(key), value);
+        editor.putString(key, value);
         editor.apply();
+    }
+
+    public static void putPrefString(SharedPreferences prefs, Resources res, int key, String value) {
+        putPrefString(prefs, res.getString(key), value);
     }
 
     public static void putPrefStringSet(SharedPreferences prefs, Resources res, int key, Set<String> value) {

@@ -1,5 +1,8 @@
 package ee.ioc.phon.android.speechutils.editor;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.Pair;
 import android.view.KeyEvent;
@@ -18,6 +21,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import ee.ioc.phon.android.speechutils.Log;
+import ee.ioc.phon.android.speechutils.utils.PreferenceUtils;
 
 /**
  * TODO: keep track of added spaces
@@ -35,6 +39,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private static final Pattern SELREF = Pattern.compile("\\{\\}");
     private static final Pattern ALL = Pattern.compile("^(.*)$");
 
+    private static final String PREFIX_REWRITE = "RW";
+
+    private SharedPreferences mPreferences;
+
     private String mPrevText = "";
     private int mAddedLength = 0;
 
@@ -51,7 +59,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     private UtteranceRewriter mUtteranceRewriter;
 
-    public InputConnectionCommandEditor() {
+    public InputConnectionCommandEditor(Context context) {
+        mPreferences = PreferenceManager.getDefaultSharedPreferences(context);
     }
 
     public void setInputConnection(InputConnection inputConnection) {
@@ -678,8 +687,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 String out = SELREF.matcher(str).replaceAll("\\$1");
                 mInputConnection.beginBatchEdit();
                 // Change the current selection with the input argument, possibly embedding the selection.
-                String oldText = getSelectedText();
-                Op undo = getCommitTextOp(oldText, ALL.matcher(oldText).replaceAll(out)).run();
+                String selectedText = getSelectedText();
+                Op undo = getCommitTextOp(selectedText, ALL.matcher(selectedText).replaceAll(out)).run();
                 mInputConnection.endBatchEdit();
                 return undo;
             }
@@ -728,6 +737,37 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     // Intentional
                 }
                 mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op saveSel(final String key) {
+        return new Op("saveSel " + key) {
+            @Override
+            public Op run() {
+                mInputConnection.beginBatchEdit();
+                String selectedText = getSelectedText();
+                mInputConnection.endBatchEdit();
+                PreferenceUtils.putPrefString(mPreferences, PREFIX_REWRITE + key, selectedText);
+                return Op.NO_OP;
+            }
+        };
+    }
+
+    @Override
+    public Op loadSel(final String key) {
+        return new Op("loadSel " + key) {
+            @Override
+            public Op run() {
+                Op undo = null;
+                String savedText = PreferenceUtils.getPrefString(mPreferences, PREFIX_REWRITE + key, null);
+                if (savedText != null) {
+                    mInputConnection.beginBatchEdit();
+                    undo = getCommitTextOp(getSelectedText(), savedText).run();
+                    mInputConnection.endBatchEdit();
+                }
                 return undo;
             }
         };
@@ -813,6 +853,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public Deque<Op> getUndoStack() {
         return mUndoStack;
+    }
+
+    @Override
+    public ExtractedText getExtractedText() {
+        return mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
     }
 
     private void pushOp(Op op) {
@@ -976,6 +1021,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
             @Override
             public Op run() {
                 Op undo = null;
+                // TODO: use getSelection
                 final ExtractedText et = getExtractedText();
                 if (mInputConnection.commitText(newText, 1)) {
                     undo = new Op("deleteSurroundingText+commitText") {
@@ -1085,10 +1131,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
             return "";
         }
         return cs.toString();
-    }
-
-    private ExtractedText getExtractedText() {
-        return mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
     }
 
     /**

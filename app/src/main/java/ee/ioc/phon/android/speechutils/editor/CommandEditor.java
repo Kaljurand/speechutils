@@ -1,5 +1,7 @@
 package ee.ioc.phon.android.speechutils.editor;
 
+import android.view.inputmethod.ExtractedText;
+
 import java.util.Collection;
 import java.util.Deque;
 
@@ -80,6 +82,15 @@ public interface CommandEditor {
 
     Op deleteAll();
 
+    // Preference actions
+
+    // Save the current selection under the given key in the app preferences
+    Op saveSel(String key);
+
+    // Load the string saved under the given key from the app preferences,
+    // and replace the current selection with the string.
+    Op loadSel(String key);
+
     // Editing
 
     Op deleteLeftWord();
@@ -119,6 +130,8 @@ public interface CommandEditor {
     Op imeActionSend();
 
     // Other
+
+    ExtractedText getExtractedText();
 
     CharSequence getText();
 

@@ -43,6 +43,8 @@ public class CommandEditorManager {
     public static final String UC_SEL = "ucSel";
     public static final String LC_SEL = "lcSel";
     public static final String INC_SEL = "incSel";
+    public static final String SAVE_SEL = "saveSel";
+    public static final String LOAD_SEL = "loadSel";
     public static final String KEY_CODE = "keyCode";
     public static final String KEY_CODE_STR = "keyCodeStr";
     public static final String IME_ACTION_DONE = "imeActionDone";
@@ -313,6 +315,28 @@ public class CommandEditorManager {
                     return null;
                 }
                 return ce.replaceSel(args[0]);
+            }
+        });
+
+        aMap.put(SAVE_SEL, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length != 1) {
+                    return null;
+                }
+                return ce.saveSel(args[0]);
+            }
+        });
+
+        aMap.put(LOAD_SEL, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length != 1) {
+                    return null;
+                }
+                return ce.loadSel(args[0]);
             }
         });
 
