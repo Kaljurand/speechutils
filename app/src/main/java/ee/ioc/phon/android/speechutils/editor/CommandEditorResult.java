@@ -14,10 +14,11 @@ public class CommandEditorResult {
         return mRewrite.isCommand();
     }
 
+    public boolean isSuccess() {
+        return mSuccess;
+    }
+
     public String toString() {
-        if (mSuccess) {
-            return "+" + mRewrite.toString();
-        }
-        return "-" + mRewrite.toString();
+        return mRewrite.toString();
     }
 }

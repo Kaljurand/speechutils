@@ -18,7 +18,20 @@ import ee.ioc.phon.android.speechutils.R;
 
 public class MicButton extends ImageButton {
 
-    public enum State {INIT, WAITING, RECORDING, LISTENING, TRANSCRIBING, ERROR}
+    public enum State {
+        // Initial state
+        INIT,
+        // An attempt was made to start the recording/transcription, but unclear if it succeeded
+        WAITING,
+        // We are listening (if there is human speech)
+        LISTENING,
+        // We are recording and sending the (speech) audio for transcription
+        RECORDING,
+        // Recording has stopped but not all the recorded audio has been processed yet
+        TRANSCRIBING,
+        // An error has occurred
+        ERROR
+    }
 
     // TODO: take these from some device specific configuration
     private static final float DB_MIN = 15.0f;

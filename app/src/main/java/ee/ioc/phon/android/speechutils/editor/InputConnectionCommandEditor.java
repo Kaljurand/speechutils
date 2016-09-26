@@ -111,6 +111,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return combineOps(ops);
     }
 
+    @Override
     public CommandEditorResult commitFinalResult(final String text) {
         CommandEditorResult result = null;
         if (mUtteranceRewriter == null) {
@@ -173,7 +174,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
         String textRewritten = rewrite(text);
         commitWithOverwrite(textRewritten);
         mPrevText = textRewritten;
-
         return true;
     }
 

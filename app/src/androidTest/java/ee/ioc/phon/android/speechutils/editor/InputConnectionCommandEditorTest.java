@@ -181,7 +181,9 @@ public class InputConnectionCommandEditorTest {
         add("connect word1");
         add("and");
         assertThatUndoStackIs("[delete 4, delete 14, delete 16]");
-        assertThat(mEditor.commitFinalResult("word2").toString(), is("+replace(word1 word2,word1-word2)"));
+        CommandEditorResult cer = mEditor.commitFinalResult("word2");
+        assertTrue(cer.isSuccess());
+        assertThat(cer.toString(), is("replace(word1 word2,word1-word2)"));
         assertThatUndoStackIs("[undo replace2, delete 16]");
         assertThatTextIs("Test word1-word2");
     }
@@ -389,7 +391,9 @@ public class InputConnectionCommandEditorTest {
         add("test word1 word2");
         add("connect word1");
         add("and");
-        assertThat(mEditor.commitFinalResult("word2").toString(), is("+replace(word1 word2,word1-word2)"));
+        CommandEditorResult cer = mEditor.commitFinalResult("word2");
+        assertTrue(cer.isSuccess());
+        assertThat(cer.toString(), is("replace(word1 word2,word1-word2)"));
         assertThatUndoStackIs("[undo replace2, delete 16]");
         assertThatTextIs("Test word1-word2");
         undo();
@@ -404,7 +408,9 @@ public class InputConnectionCommandEditorTest {
         add("test word1 word2");
         add("connect word1");
         add("and");
-        assertThat(mEditor.commitFinalResult("nonexisting_word").toString(), is("-replace(word1 nonexisting_word,word1-nonexisting_word)"));
+        CommandEditorResult cer = mEditor.commitFinalResult("nonexisting_word");
+        assertFalse(cer.isSuccess());
+        assertThat(cer.toString(), is("replace(word1 nonexisting_word,word1-nonexisting_word)"));
         assertThatUndoStackIs("[delete 16]");
         assertThatTextIs("Test word1 word2");
         undo();
@@ -758,7 +764,7 @@ public class InputConnectionCommandEditorTest {
     }
 
     /**
-     * Perform a command that fails (via add).
+     * Partial results are deleted, if followed by a command.
      */
     @Test
     public void test69() {
@@ -769,7 +775,7 @@ public class InputConnectionCommandEditorTest {
         add("select whatever");
         assertThatOpStackIs("[]");
         assertThatUndoStackIs("[]");
-        assertThatTextIs("Initial text");
+        assertThatTextIs("");
     }
 
     /**
