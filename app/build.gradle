@@ -3,7 +3,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.1.3'
+        classpath 'com.android.tools.build:gradle:2.2.1'
     }
 }
 
@@ -14,18 +14,18 @@ dependencies {
     testCompile 'junit:junit:4.12'
 
     androidTestCompile 'com.android.support:support-annotations:24.2.1'
-    androidTestCompile 'com.android.support.test:runner:0.4.1'
-    androidTestCompile 'com.android.support.test:rules:0.4.1'
+    androidTestCompile 'com.android.support.test:runner:0.5'
+    androidTestCompile 'com.android.support.test:rules:0.5'
     // Optional -- Hamcrest library
     androidTestCompile 'org.hamcrest:hamcrest-library:1.3'
 }
 
 android {
     compileSdkVersion 24
-    buildToolsVersion "24.0.2"
+    buildToolsVersion '24.0.2'
 
     defaultConfig {
-        minSdkVersion 11
+        minSdkVersion 12
         targetSdkVersion 24
         versionCode 204
         versionName '0.2.04'
