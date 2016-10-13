@@ -16,3 +16,4 @@ Used by
 
 - https://github.com/Kaljurand/K6nele
 - https://github.com/Kaljurand/Arvutaja
+- https://github.com/willblaschko/AlexaAndroid
