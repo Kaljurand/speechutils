@@ -950,6 +950,78 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("0 word2 REPL word3");
     }
 
+    @Test
+    public void test82() {
+        add("Test 1.");
+        runOp(mEditor.selectReBefore("^"));
+        add("more");
+        assertThatTextIs("MoreTest 1.");
+    }
+
+    @Test
+    public void test83() {
+        add("Test 1.");
+        runOp(mEditor.selectReBefore("$"));
+        add("more");
+        assertThatTextIs("Test 1. More");
+    }
+
+    /**
+     * Go to the beginning of the current sentence.
+     */
+    @Test
+    public void test84() {
+        add("Sent 1? Sent, 2.");
+        //runOp(mEditor.selectReBefore("(?:^|[.?!]\\s+)()[^.?!]*[.?!]*"));
+        runOp(mEditor.selectReBefore("(?:^|[.?!]\\s+)()"));
+        add("more");
+        assertThatTextIs("Sent 1? MoreSent, 2.");
+    }
+
+    /**
+     * Go to the beginning of the current sentence.
+     */
+    @Test
+    public void test85() {
+        add("Sent 1!");
+        runOp(mEditor.selectReBefore("(?:^|[.?!]\\s+)()"));
+        add("more");
+        assertThatTextIs("MoreSent 1!");
+    }
+
+    /**
+     * Go to the end of the current sentence.
+     */
+    @Test
+    public void test86() {
+        add("Sent 1? Sent, 2.");
+        runOp(mEditor.goToCharacterPosition(0));
+        runOp(mEditor.selectReAfter("(?:$|[.?!]\\s+)()", 1));
+        add("more");
+        assertThatTextIs("Sent 1? MoreSent, 2.");
+    }
+
+    /**
+     * Go to the end of the next sentence.
+     */
+    @Test
+    public void test87() {
+        add("Sent 1? Sent, 2.");
+        runOp(mEditor.goToCharacterPosition(0));
+        runOp(mEditor.selectReAfter("(?:$|[.?!]\\s+)()", 2));
+        add("more");
+        assertThatTextIs("Sent 1? Sent, 2. More");
+    }
+
+    @Test
+    public void test88() {
+        add("123456789");
+        runOp(mEditor.goToCharacterPosition(0));
+        runOp(mEditor.selectReAfter("(.)|(\\d)", 5));
+        add("_");
+        assertThatTextIs("1234 _6789");
+    }
+
     // Can't create handler inside thread that has not called Looper.prepare()
     //@Test
     public void test201() {

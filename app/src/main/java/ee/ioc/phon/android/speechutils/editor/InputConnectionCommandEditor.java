@@ -1118,9 +1118,18 @@ public class InputConnectionCommandEditor implements CommandEditor {
             }
             pos = new Pair<>(matcher.start(group), matcher.end(group));
             if (counter == n) {
-                return pos;
+                break;
             }
-            end = matcher.end(group);
+            int newEnd = matcher.end(group);
+            // We require the end position to increase to avoid infinite loop when matching ^.
+            if (newEnd <= end) {
+                end++;
+                if (end >= input.length()) {
+                    break;
+                }
+            } else {
+                end = newEnd;
+            }
         }
         return pos;
     }
