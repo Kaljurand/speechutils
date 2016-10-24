@@ -25,7 +25,11 @@ public class PreferenceUtils {
     }
 
     public static Set<String> getPrefStringSet(SharedPreferences prefs, Resources res, int key) {
-        return prefs.getStringSet(res.getString(key), Collections.<String>emptySet());
+        try {
+            return prefs.getStringSet(res.getString(key), Collections.<String>emptySet());
+        } catch (ClassCastException e) {
+            return Collections.emptySet();
+        }
     }
 
     public static Set<String> getPrefStringSet(SharedPreferences prefs, Resources res, int key, int defaultValue) {

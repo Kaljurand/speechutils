@@ -26,6 +26,10 @@ public class Extras {
     // SERVER_URL should be a legal URL
     public static final String EXTRA_SERVER_URL = "ee.ioc.phon.android.extra.SERVER_URL";
 
+    // String that combines the recognizer component name with the locale label, e.g.
+    // ee.ioc.phon.android.speak/.service.WebSocketRecognitionService;et-EE
+    public static final String EXTRA_COMBO = "ee.ioc.phon.android.extra.COMBO";
+
     // GRAMMAR_URL should be a legal URL
     public static final String EXTRA_GRAMMAR_URL = "ee.ioc.phon.android.extra.GRAMMAR_URL";
 

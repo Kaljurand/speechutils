@@ -149,6 +149,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 mCommandPrefix.clear();
                 CommandEditorManager.EditorCommand ec = CommandEditorManager.get(rewrite.mId);
                 if (ec != null) {
+                    // TODO: dont call runOp from here
                     success = runOp(ec.getOp(this, rewrite.mArgs));
                 }
             } else {
