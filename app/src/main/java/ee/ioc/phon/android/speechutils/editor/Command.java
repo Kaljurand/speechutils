@@ -91,7 +91,13 @@ public class Command {
         if (m.matches()) {
             argsEvaluated = TextUtils.split(m.replaceAll(mArgsAsStr), SEPARATOR);
         }
-        return new Pair<>(m.replaceAll(mReplacement), argsEvaluated);
+        try {
+            return new Pair<>(m.replaceAll(mReplacement), argsEvaluated);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            // This happens if the replacement references a group that does not exist
+            // TODO: maybe throw an exception
+        }
+        return new Pair<>(mReplacement, argsEvaluated);
     }
 
     /**
