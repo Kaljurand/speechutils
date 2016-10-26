@@ -289,7 +289,9 @@ public class UtteranceRewriter {
                     arg2 = Command.unescape(split);
                     break;
                 default:
-                    throw new IllegalArgumentException(header[i]);
+                    // Columns with undefined names are ignored
+                    //throw new IllegalArgumentException(header[i]);
+                    break;
             }
         }
 

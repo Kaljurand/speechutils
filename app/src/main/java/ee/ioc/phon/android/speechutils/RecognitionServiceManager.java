@@ -66,8 +66,37 @@ public class RecognitionServiceManager {
         return localeAsStr;
     }
 
+    /**
+     * On LOLLIPOP we use a builtin to parse the locale string, and return
+     * the name of the language in the language of the current locale. In pre-LOLLIPOP we just return
+     * the formal name (e.g. "et-ee"), because the Locale-constructor is not able to parse it.
+     *
+     * @param localeAsStr Formal name of the locale, e.g. "et-ee"
+     * @return The name of the language in the language of the current locale
+     */
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    public static String getDisplayLanguage(String localeAsStr) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            return Locale.forLanguageTag(localeAsStr).getDisplayLanguage();
+        }
+        return localeAsStr;
+    }
+
     public static String[] getServiceAndLang(String str) {
         return TextUtils.split(str, SEPARATOR);
+    }
+
+    public static Pair<ComponentName, String> unflattenFromString(String comboId) {
+        String serviceAsStr = "";
+        String localeAsStr = "";
+        String[] splits = RecognitionServiceManager.getServiceAndLang(comboId);
+        if (splits.length > 0) {
+            serviceAsStr = splits[0];
+            if (splits.length > 1) {
+                localeAsStr = splits[1];
+            }
+        }
+        return new Pair(ComponentName.unflattenFromString(serviceAsStr), localeAsStr);
     }
 
     /**
@@ -85,41 +114,26 @@ public class RecognitionServiceManager {
     }
 
     public static String getServiceLabel(Context context, ComponentName recognizerComponentName) {
-        String recognizer = "[?]";
-        PackageManager pm = context.getPackageManager();
-        if (recognizerComponentName != null) {
-            try {
-                ServiceInfo si = pm.getServiceInfo(recognizerComponentName, 0);
-                recognizer = si.loadLabel(pm).toString();
-            } catch (PackageManager.NameNotFoundException e) {
-                // ignored
-            }
-        }
-        return recognizer;
-    }
-
-    public static Pair<String, String> getLabel(Context context, String comboAsString) {
-        String recognizer = "[?]";
-        String language = "[?]";
-        String[] splits = TextUtils.split(comboAsString, SEPARATOR);
-        if (splits.length > 0) {
+        try {
             PackageManager pm = context.getPackageManager();
-            ComponentName recognizerComponentName = ComponentName.unflattenFromString(splits[0]);
-            if (recognizerComponentName != null) {
-                try {
-                    ServiceInfo si = pm.getServiceInfo(recognizerComponentName, 0);
-                    recognizer = si.loadLabel(pm).toString();
-                } catch (PackageManager.NameNotFoundException e) {
-                    // ignored
-                }
-            }
+            ServiceInfo si = pm.getServiceInfo(recognizerComponentName, 0);
+            return si.loadLabel(pm).toString();
+        } catch (PackageManager.NameNotFoundException e) {
+            // ignored
         }
-        if (splits.length > 1) {
-            language = makeLangLabel(splits[1]);
-        }
-        return new Pair<>(recognizer, language);
+        return "[?]";
     }
 
+    public static int getServiceIcon(Context context, ComponentName recognizerComponentName) {
+        try {
+            PackageManager pm = context.getPackageManager();
+            ServiceInfo si = pm.getServiceInfo(recognizerComponentName, 0);
+            return si.getIconResource();
+        } catch (PackageManager.NameNotFoundException e) {
+            // ignored
+        }
+        return R.drawable.ic_service;
+    }
 
     public void setCombosExcluded(Set<String> set) {
         mCombosExcluded = set;
