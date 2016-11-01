@@ -178,7 +178,7 @@ public class UtteranceRewriter {
 
 
     /**
-     * Loads the rewrites from tab-separated values.
+     * Loads the rewrites from a string of tab-separated values.
      */
     private static List<Command> loadRewrites(String str, CommandMatcher commandMatcher) {
         assert str != null;
@@ -187,12 +187,11 @@ public class UtteranceRewriter {
         if (rows.length > 1) {
             String[] header = parseHeader(rows[0]);
             for (int i = 1; i < rows.length; i++) {
-                addLine(commands, header, rows[i], commandMatcher);
+                addLine(commands, header, rows[i], i, commandMatcher);
             }
         }
         return commands;
     }
-
 
     /**
      * Loads the rewrites from an URI using a ContentResolver.
@@ -206,9 +205,11 @@ public class UtteranceRewriter {
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
             String line = reader.readLine();
             if (line != null) {
+                int lineCounter = 0;
                 String[] header = parseHeader(line);
                 while ((line = reader.readLine()) != null) {
-                    addLine(commands, header, line, null);
+                    lineCounter++;
+                    addLine(commands, header, line, lineCounter, null);
                 }
             }
             inputStream.close();
@@ -216,7 +217,7 @@ public class UtteranceRewriter {
         return commands;
     }
 
-    private static void addLine(List<Command> commands, String[] header, String line, CommandMatcher commandMatcher) {
+    private static void addLine(List<Command> commands, String[] header, String line, int lineCounter, CommandMatcher commandMatcher) {
         // TODO: removing trailing tabs means that rewrite cannot delete a string
         String[] splits = PATTERN_TRAILING_TABS.matcher(line).replaceAll("").split("\t");
         if (splits.length > 1 && line.charAt(0) != '#') {
@@ -226,10 +227,10 @@ public class UtteranceRewriter {
                     commands.add(command);
                 }
             } catch (PatternSyntaxException e) {
-                commands.add(Command.createEmptyCommand("ERROR: " + e.getMessage()));
+                commands.add(0, Command.createEmptyCommand("ERROR: line " + lineCounter + ": " + e.getLocalizedMessage()));
             } catch (IllegalArgumentException e) {
                 // Unsupported header field
-                commands.add(Command.createEmptyCommand("ERROR: " + e.getMessage()));
+                commands.add(0, Command.createEmptyCommand("ERROR: line " + lineCounter + ": " + e.getLocalizedMessage()));
             }
         }
     }
