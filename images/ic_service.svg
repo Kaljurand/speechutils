@@ -24,7 +24,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -39,7 +39,7 @@
      guidetolerance="10"
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
-     inkscape:window-width="1292"
+     inkscape:window-width="887"
      inkscape:window-height="1005"
      id="namedview3392"
      showgrid="true"
@@ -47,12 +47,12 @@
      inkscape:showpageshadow="false"
      showborder="true"
      inkscape:zoom="11.79"
-     inkscape:cx="17.091321"
+     inkscape:cx="7.6862411"
      inkscape:cy="20.142494"
-     inkscape:window-x="362"
-     inkscape:window-y="39"
+     inkscape:window-x="948"
+     inkscape:window-y="34"
      inkscape:window-maximized="0"
-     inkscape:current-layer="layer1">
+     inkscape:current-layer="layer2">
     <inkscape:grid
        type="xygrid"
        id="grid5111" />
@@ -83,7 +83,7 @@
     <path
        d="m 23.960302,28.146403 c 2.30925,0 4.15943,-1.65565 4.15943,-3.706676 l 0.01392,-7.413335 c 0,-2.051028 -1.864087,-3.706675 -4.173335,-3.706675 -2.309249,0 -4.173342,1.655647 -4.173342,3.706675 l 0,7.413335 c 0,2.051026 1.864093,3.706676 4.173342,3.706676 z m 7.372903,-3.706676 c 0,3.706676 -3.533425,6.301345 -7.372903,6.301345 -3.839474,0 -7.372899,-2.594669 -7.372899,-6.301345 l -2.364893,0 c 0,4.213254 3.783831,7.697533 8.346683,8.302948 l 0,4.052627 2.782222,0 0,-4.052627 c 4.56285,-0.593064 8.346683,-4.077341 8.346683,-8.302948 l -2.364893,0 z"
        id="path3388"
-       style="fill:#ffcc00;fill-opacity:0.73333333;stroke:#ffcc00;stroke-width:0.5244121;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       style="fill:#ffc107;fill-opacity:1;stroke:#ffb30f;stroke-width:0.5244121;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:0.94117647"
        inkscape:connector-curvature="0" />
   </g>
 </svg>
