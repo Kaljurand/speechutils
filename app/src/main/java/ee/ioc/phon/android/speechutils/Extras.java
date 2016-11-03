@@ -28,7 +28,7 @@ public class Extras {
 
     // String that combines the recognizer component name with the locale label, e.g.
     // ee.ioc.phon.android.speak/.service.WebSocketRecognitionService;et-EE
-    public static final String EXTRA_COMBO = "ee.ioc.phon.android.extra.COMBO";
+    public static final String EXTRA_SERVICE_COMPONENT = "ee.ioc.phon.android.extra.SERVICE_COMPONENT";
 
     // GRAMMAR_URL should be a legal URL
     public static final String EXTRA_GRAMMAR_URL = "ee.ioc.phon.android.extra.GRAMMAR_URL";
@@ -112,9 +112,8 @@ public class Extras {
     // Byte array. Currently not used.
     public static final String RESULTS_AUDIO_ENCODED = "ee.ioc.phon.android.extra.RESULTS_AUDIO_ENCODED";
 
-    // TODO: experimental
-    public static final String EXTRA_RESULT_PREFIX = "ee.ioc.phon.android.extra.RESULT_PREFIX";
-    public static final String EXTRA_RESULT_SUFFIX = "ee.ioc.phon.android.extra.RESULT_SUFFIX";
+    public static final String EXTRA_RESULT_UTTERANCE = "ee.ioc.phon.android.extra.RESULT_UTTERANCE";
+    public static final String EXTRA_RESULT_REPLACEMENT = "ee.ioc.phon.android.extra.RESULT_REPLACEMENT";
 
     public static final String EXTRA_LAUNCH_RECOGNIZER = "ee.ioc.phon.android.extra.LAUNCH_RECOGNIZER";
 

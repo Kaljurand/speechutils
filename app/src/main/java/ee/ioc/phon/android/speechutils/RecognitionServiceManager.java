@@ -86,6 +86,10 @@ public class RecognitionServiceManager {
         return TextUtils.split(str, SEPARATOR);
     }
 
+    public static String createComboString(String service, String locale) {
+        return service + SEPARATOR + locale;
+    }
+
     public static Pair<ComponentName, String> unflattenFromString(String comboId) {
         String serviceAsStr = "";
         String localeAsStr = "";
