@@ -697,6 +697,21 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
+    public Op replaceSelRe(final String regex, final String repl) {
+        return new Op("replaceSelRe") {
+            @Override
+            public Op run() {
+                mInputConnection.beginBatchEdit();
+                String selectedText = getSelectedText();
+                String newText = selectedText.replaceAll(regex, repl);
+                Op undo = getCommitTextOp(selectedText, newText).run();
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    @Override
     public Op ucSel() {
         return new Op("ucSel") {
             @Override

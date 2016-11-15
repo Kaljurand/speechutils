@@ -66,6 +66,10 @@ public interface CommandEditor {
 
     Op selectAll();
 
+    // Apply a regular expression to the selection,
+    // and replace the matches with the given replacement string.
+    Op replaceSelRe(String regex, String repl);
+
     // Reset selection
     Op resetSel();
 
