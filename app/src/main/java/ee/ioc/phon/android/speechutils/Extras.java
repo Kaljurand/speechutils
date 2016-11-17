@@ -41,6 +41,11 @@ public class Extras {
     // should be transcribed.
     public static final String EXTRA_PHRASE = "ee.ioc.phon.android.extra.PHRASE";
 
+    // String.
+    // Optional text prompt to read out to the user when asking them to speak in the RecognizerIntent activity.
+    // See also "android.speech.extra.PROMPT"
+    public static final String EXTRA_VOICE_PROMPT = "ee.ioc.phon.android.extra.VOICE_PROMPT";
+
     // Bundle with information about the editor in which the IME is running
     public static final String EXTRA_EDITOR_INFO = "ee.ioc.phon.android.extra.EDITOR_INFO";
 
