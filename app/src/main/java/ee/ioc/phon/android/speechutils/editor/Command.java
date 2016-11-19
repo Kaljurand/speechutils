@@ -88,16 +88,16 @@ public class Command {
         Matcher m = mUtt.matcher(str);
         String[] argsEvaluated = null;
         // If the entire region matches then we evaluate the arguments as well
-        if (m.matches()) {
+        if (!mArgsAsStr.isEmpty() && m.matches()) {
             argsEvaluated = TextUtils.split(m.replaceAll(mArgsAsStr), SEPARATOR);
         }
         try {
             return new Pair<>(m.replaceAll(mReplacement), argsEvaluated);
         } catch (ArrayIndexOutOfBoundsException e) {
             // This happens if the replacement references a group that does not exist
-            // TODO: maybe throw an exception
+            // TODO: throw an exception
+            return new Pair<>("[ERROR: " + e.getLocalizedMessage() + "]", argsEvaluated);
         }
-        return new Pair<>(mReplacement, argsEvaluated);
     }
 
     /**
@@ -160,7 +160,7 @@ public class Command {
     /**
      * Maps newlines and tabs to literals of the form "\n" and "\t".
      */
-    public static String escape(Object str) {
+    private static String escape(Object str) {
         if (str == null) {
             return "";
         }

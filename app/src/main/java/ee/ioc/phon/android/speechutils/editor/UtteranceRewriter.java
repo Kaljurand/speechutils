@@ -54,8 +54,16 @@ public class UtteranceRewriter {
         this(loadRewrites(str, commandMatcher));
     }
 
+    public UtteranceRewriter(String str, String[] header, CommandMatcher commandMatcher) {
+        this(loadRewrites(str, header, commandMatcher));
+    }
+
+    public UtteranceRewriter(String str, String[] header) {
+        this(str, header, null);
+    }
+
     public UtteranceRewriter(String str) {
-        this(str, null);
+        this(str, (CommandMatcher) null);
     }
 
     public UtteranceRewriter(ContentResolver contentResolver, Uri uri) throws IOException {
@@ -187,6 +195,23 @@ public class UtteranceRewriter {
         if (rows.length > 1) {
             String[] header = parseHeader(rows[0]);
             for (int i = 1; i < rows.length; i++) {
+                addLine(commands, header, rows[i], i, commandMatcher);
+            }
+        }
+        return commands;
+    }
+
+    /**
+     * Loads the rewrites from a string of tab-separated values.
+     * The header is given by a separate argument, the table must not
+     * contain the header.
+     */
+    private static List<Command> loadRewrites(String str, String[] header, CommandMatcher commandMatcher) {
+        assert str != null;
+        List<Command> commands = new ArrayList<>();
+        String[] rows = str.split("\n");
+        if (rows.length > 0) {
+            for (int i = 0; i < rows.length; i++) {
                 addLine(commands, header, rows[i], i, commandMatcher);
             }
         }
