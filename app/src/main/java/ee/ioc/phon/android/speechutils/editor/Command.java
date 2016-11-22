@@ -7,6 +7,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Command {
+
+    private static final String[] EMPTY_ARRAY = new String[0];
+
     private final static String SEPARATOR = "<___>";
     private final String mComment;
     private final Pattern mLocale;
@@ -88,8 +91,12 @@ public class Command {
         Matcher m = mUtt.matcher(str);
         String[] argsEvaluated = null;
         // If the entire region matches then we evaluate the arguments as well
-        if (!mArgsAsStr.isEmpty() && m.matches()) {
-            argsEvaluated = TextUtils.split(m.replaceAll(mArgsAsStr), SEPARATOR);
+        if (m.matches()) {
+            if (mArgsAsStr.isEmpty()) {
+                argsEvaluated = EMPTY_ARRAY;
+            } else {
+                argsEvaluated = TextUtils.split(m.replaceAll(mArgsAsStr), SEPARATOR);
+            }
         }
         try {
             return new Pair<>(m.replaceAll(mReplacement), argsEvaluated);
