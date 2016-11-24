@@ -22,6 +22,10 @@ public class UtteranceRewriterTest {
     static {
         List<Command> list = new ArrayList<>();
         list.add(new Command("s/(.*)/(.*)/", "X", "replace", new String[]{"$1", "$2"}));
+        // Map <1><2><3> into 1, 2, 3
+        // TODO: is there a better way
+        list.add(new Command("<([^>]+)>", "$1, "));
+        list.add(new Command(", K6_STOP, ", "<K6_STOP>"));
         COMMANDS = Collections.unmodifiableList(list);
     }
 
@@ -45,6 +49,11 @@ public class UtteranceRewriterTest {
     @Test
     public void test02() {
         rewrite("s/_/a/", "replace(_,a)", "X");
+    }
+
+    @Test
+    public void test03() {
+        rewrite("<1><2><3><K6_STOP>", "null()", "1, 2, 3<K6_STOP>");
     }
 
     private void rewrite(String str1, String str2) {

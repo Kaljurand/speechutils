@@ -93,6 +93,7 @@ public class TtsProvider {
                 @Override
                 public void onUtteranceCompleted(String utteranceId) {
                     mAudioPauser.resume();
+                    listener.onDone();
                 }
             });
         }
