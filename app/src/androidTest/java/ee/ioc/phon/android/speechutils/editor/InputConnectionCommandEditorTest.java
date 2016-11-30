@@ -32,6 +32,8 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("DELETE ME", ""));
         list.add(new Command("old_word", "new_word"));
         list.add(new Command("r2_old", "r2_new"));
+        list.add(new Command("insert (.+)", "<>", "replace", new String[]{"<>", "$1"}));
+        list.add(new Command("double (.+)", "<> <>", "replaceAll", new String[]{"<>", "$1"})); // TODO: replaceAll is not available
         list.add(new Command("s/(.*)/(.*)/", "", "replace", new String[]{"$1", "$2"}));
         list.add(new Command("connect (.*) and (.*)", "", "replace", new String[]{"$1 $2", "$1-$2"}));
         list.add(new Command("delete (.+)", "", "delete", new String[]{"$1"}));
@@ -43,7 +45,9 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("selection_replace (.*)", "", "replaceSel", new String[]{"$1"}));
         list.add(new Command("selection_underscore", "", "replaceSel", new String[]{"_{}_"}));
         list.add(new Command("replaceSelRe_noletters", "", "replaceSelRe", new String[]{"[a-z]", ""}));
-        list.add(new Command("replaceSelRe_underscore", "", "replaceSelRe", new String[]{"(.*)", "_$1_"}));
+        list.add(new Command("replaceSelRe_underscore", "", "replaceSelRe", new String[]{"(.+)", "_\\$1_"}));
+        //list.add(new Command("replaceSelRe (.+?) .+ (.+)", "", "replaceSelRe", new String[]{"$1 (.+) $2", "$1 \\$1 $2"}));
+        list.add(new Command("replaceSelRe ([^ ]+) .+ ([^ ]+)", "", "replaceSelRe", new String[]{"$1 ([^ ]+) $2", "$1 \\$1 $2"}));
         list.add(new Command("selection_quote", "", "replaceSel", new String[]{"\"{}\""}));
         list.add(new Command("selection_double", "", "replaceSel", new String[]{"{}{}"}));
         list.add(new Command("selection_inc", "", "incSel"));
@@ -1041,7 +1045,7 @@ public class InputConnectionCommandEditorTest {
     }
 
     /**
-     * TODO: backreference is ambiguous: referring to Utterance group vs to Arg1 group?
+     * Put underscores around the selection.
      */
     @Test
     public void test91() {
@@ -1049,6 +1053,24 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("There are _word1 and word2_...");
         undo();
         assertThatTextIs("There are word1 and word2...");
+    }
+
+    /**
+     * Replace middle words in the match.
+     * TODO: fails
+     */
+    @Test
+    public void test92() {
+        add("there are word1 and word2 word3...", "select are word1 and word2");
+        assertThatTextIs("There are word1 and word2 word3...");
+        add("replaceSelRe word1 whatever1 whatever2 word2");
+        assertThatTextIs("There are word1 whatever1 whatever2 word2 word3...");
+    }
+
+    @Test
+    public void test93() {
+        add("insert 1");
+        assertThatTextIs("1");
     }
 
     // Can't create handler inside thread that has not called Looper.prepare()

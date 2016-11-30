@@ -85,6 +85,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     @Override
     public boolean runOp(Op op) {
+        // TODO: why does this happen
+        //if (op == null) {
+        //    return false;
+        //}
         Op undo = op.run();
         if (undo == null) {
             // Operation failed;
