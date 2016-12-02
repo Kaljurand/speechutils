@@ -24,7 +24,6 @@ public class CommandEditorManager {
     public static final String GO_TO_CHARACTER_POSITION = "goToCharacterPosition";
     public static final String GO_FORWARD = "goForward";
     public static final String GO_BACKWARD = "goBackward";
-    public static final String GO_TO_END = "goToEnd";
     public static final String SELECT = "select";
     public static final String SELECT_RE_BEFORE = "selectReBefore";
     public static final String SELECT_RE_AFTER = "selectReAfter";
@@ -154,14 +153,6 @@ public class CommandEditorManager {
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
                 return ce.goToNextField();
-            }
-        });
-
-        aMap.put(GO_TO_END, new EditorCommand() {
-
-            @Override
-            public Op getOp(CommandEditor ce, String[] args) {
-                return ce.goToEnd();
             }
         });
 

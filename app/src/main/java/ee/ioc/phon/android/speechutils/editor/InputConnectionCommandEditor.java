@@ -344,7 +344,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 mInputConnection.beginBatchEdit();
                 ExtractedText et = getExtractedText();
                 if (et != null) {
-                    undo = getOpSetSelection(pos, pos, et.selectionStart, et.selectionEnd).run();
+                    int charPos = pos;
+                    if (pos < 0) {
+                        //-1 == end of text
+                        charPos = et.text.length() + pos + 1;
+                    }
+                    undo = getOpSetSelection(charPos, charPos, et.selectionStart, et.selectionEnd).run();
                 }
                 mInputConnection.endBatchEdit();
                 return undo;
@@ -361,24 +366,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public Op goBackward(final int numberOfChars) {
         return move(-1 * numberOfChars);
-    }
-
-    @Override
-    public Op goToEnd() {
-        return new Op("goToEnd") {
-            @Override
-            public Op run() {
-                Op undo = null;
-                mInputConnection.beginBatchEdit();
-                ExtractedText et = getExtractedText();
-                if (et != null && et.text != null) {
-                    int pos = et.text.length();
-                    undo = getOpSetSelection(pos, pos, et.selectionStart, et.selectionEnd).run();
-                }
-                mInputConnection.endBatchEdit();
-                return undo;
-            }
-        };
     }
 
     @Override

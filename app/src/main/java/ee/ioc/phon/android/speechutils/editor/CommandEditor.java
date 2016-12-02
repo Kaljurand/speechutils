@@ -38,7 +38,9 @@ public interface CommandEditor {
 
     // Moving around in the string
 
-    // Go to the character at the given position
+    // Go to the character at the given position.
+    // Negative positions start counting from the end of the text, e.g.
+    // -1 == end of text
     Op goToCharacterPosition(int pos);
 
     // Move the cursor forward by the given number of characters
@@ -46,9 +48,6 @@ public interface CommandEditor {
 
     // Move the cursor backward by the given number of characters
     Op goBackward(int numOfChars);
-
-    // Go to the end of the text
-    Op goToEnd();
 
     // Add the key with the given code
     Op keyCode(int code);

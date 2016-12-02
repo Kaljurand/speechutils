@@ -227,7 +227,7 @@ public class InputConnectionCommandEditorTest {
     public void test17() {
         add("there are word1 and word2...");
         add("select word1 and word2");
-        runOp(mEditor.goToEnd());
+        runOp(mEditor.goToCharacterPosition(-100));
         assertThatTextIs("There are word1 and word2...");
     }
 
@@ -248,7 +248,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test20() {
         add("a", "select a", "selection_double", "selection_double");
-        runOp(mEditor.goToEnd());
+        runOp(mEditor.goToCharacterPosition(-1));
         assertThat(getTextBeforeCursor(5), is("AA"));
     }
 
@@ -680,7 +680,7 @@ public class InputConnectionCommandEditorTest {
         add("select word1 and word2");
         add("selection_uc");
         assertThatTextIs("There are WORD1 AND WORD2...");
-        runOp(mEditor.goToEnd());
+        runOp(mEditor.goToCharacterPosition(-1));
         add("select word1 and word2");
         add("selection_quote");
         assertThatTextIs("There are \"WORD1 AND WORD2\"...");
