@@ -46,6 +46,8 @@ public class CommandEditorManager {
     public static final String INC_SEL = "incSel";
     public static final String SAVE_SEL = "saveSel";
     public static final String LOAD_SEL = "loadSel";
+    public static final String SHOW_CLIPBOARD = "showClipboard";
+    public static final String CLEAR_CLIPBOARD = "clearClipboard";
     public static final String KEY_CODE = "keyCode";
     public static final String KEY_CODE_STR = "keyCodeStr";
     public static final String IME_ACTION_DONE = "imeActionDone";
@@ -349,6 +351,22 @@ public class CommandEditorManager {
                     return null;
                 }
                 return ce.loadSel(args[0]);
+            }
+        });
+
+        aMap.put(SHOW_CLIPBOARD, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.showClipboard();
+            }
+        });
+
+        aMap.put(CLEAR_CLIPBOARD, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.clearClipboard();
             }
         });
 

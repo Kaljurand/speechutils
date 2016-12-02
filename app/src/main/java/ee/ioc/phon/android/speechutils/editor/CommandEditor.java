@@ -88,12 +88,18 @@ public interface CommandEditor {
 
     // Preference actions
 
-    // Save the current selection under the given key in the app preferences
+    // Save the current selection under the given key into clipboard
     Op saveSel(String key);
 
-    // Load the string saved under the given key from the app preferences,
+    // Load the string saved under the given key from the clipboard,
     // and replace the current selection with the string.
     Op loadSel(String key);
+
+    // Replace the current selection with the pretty-printed clipboard
+    Op showClipboard();
+
+    // Clear the clipboard
+    Op clearClipboard();
 
     // Editing
 

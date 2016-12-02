@@ -5,8 +5,10 @@ import android.content.res.Resources;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -76,6 +78,57 @@ public class PreferenceUtils {
     public static void putPrefStringSet(SharedPreferences prefs, Resources res, int key, Set<String> value) {
         SharedPreferences.Editor editor = prefs.edit();
         editor.putStringSet(res.getString(key), value);
+        editor.apply();
+    }
+
+    /**
+     * Stores the given key-value pair into a map with the given name.
+     * If value is null, then delete the entry from the preferences.
+     */
+    public static void putPrefMapEntry(SharedPreferences prefs, Resources res, int nameId, String key, String value) {
+        String name = res.getString(nameId);
+        Set<String> keys = prefs.getStringSet(name, new HashSet<String>());
+        SharedPreferences.Editor editor = prefs.edit();
+        if (value == null) {
+            editor.remove(name + key);
+            if (keys.contains(key)) {
+                keys.remove(key);
+                editor.putStringSet(name, keys);
+            }
+        } else {
+            editor.putString(name + key, value);
+            if (!keys.contains(key)) {
+                keys.add(key);
+                editor.putStringSet(name, keys);
+            }
+        }
+        editor.apply();
+    }
+
+    public static String getPrefMapEntry(SharedPreferences prefs, Resources res, int nameId, String key) {
+        return prefs.getString(res.getString(nameId) + key, null);
+    }
+
+    public static Map<String, String> getPrefMap(SharedPreferences prefs, Resources res, int nameId) {
+        String name = res.getString(nameId);
+        Set<String> keys = prefs.getStringSet(name, Collections.<String>emptySet());
+        Map<String, String> map = new HashMap<>();
+        for (String key : keys) {
+            map.put(key, prefs.getString(name + key, null));
+        }
+        return map;
+    }
+
+    public static void clearPrefMap(SharedPreferences prefs, Resources res, int nameId) {
+        String name = res.getString(nameId);
+        Set<String> keys = prefs.getStringSet(name, null);
+        SharedPreferences.Editor editor = prefs.edit();
+        if (keys != null) {
+            for (String key : keys) {
+                editor.remove(name + key);
+            }
+        }
+        editor.remove(name);
         editor.apply();
     }
 }

@@ -2,6 +2,7 @@ package ee.ioc.phon.android.speechutils.editor;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.Pair;
@@ -16,11 +17,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import ee.ioc.phon.android.speechutils.Log;
+import ee.ioc.phon.android.speechutils.R;
 import ee.ioc.phon.android.speechutils.utils.PreferenceUtils;
 
 /**
@@ -39,9 +42,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private static final Pattern SELREF = Pattern.compile("\\{\\}");
     private static final Pattern ALL = Pattern.compile("^(.*)$");
 
-    private static final String PREFIX_REWRITE = "RW";
-
     private SharedPreferences mPreferences;
+    private Resources mRes;
 
     private String mPrevText = "";
     private int mAddedLength = 0;
@@ -61,6 +63,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     public InputConnectionCommandEditor(Context context) {
         mPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        mRes = context.getResources();
     }
 
     public void setInputConnection(InputConnection inputConnection) {
@@ -770,7 +773,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 mInputConnection.beginBatchEdit();
                 String selectedText = getSelectedText();
                 mInputConnection.endBatchEdit();
-                PreferenceUtils.putPrefString(mPreferences, PREFIX_REWRITE + key, selectedText);
+                PreferenceUtils.putPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, key, selectedText);
                 return Op.NO_OP;
             }
         };
@@ -782,13 +785,50 @@ public class InputConnectionCommandEditor implements CommandEditor {
             @Override
             public Op run() {
                 Op undo = null;
-                String savedText = PreferenceUtils.getPrefString(mPreferences, PREFIX_REWRITE + key, null);
+                String savedText = PreferenceUtils.getPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, key);
                 if (savedText != null) {
                     mInputConnection.beginBatchEdit();
                     undo = getCommitTextOp(getSelectedText(), savedText).run();
                     mInputConnection.endBatchEdit();
                 }
                 return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op showClipboard() {
+        return new Op("showClipboard") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                Map<String, String> clipboard = PreferenceUtils.getPrefMap(mPreferences, mRes, R.string.keyClipboardMap);
+                if (clipboard != null && !clipboard.isEmpty()) {
+                    StringBuilder sb = new StringBuilder();
+                    for (Map.Entry entry : clipboard.entrySet()) {
+                        sb.append('<');
+                        sb.append(entry.getKey());
+                        sb.append('|');
+                        sb.append(entry.getValue());
+                        sb.append('>');
+                        sb.append('\n');
+                    }
+                    mInputConnection.beginBatchEdit();
+                    undo = getCommitTextOp(getSelectedText(), sb.toString()).run();
+                    mInputConnection.endBatchEdit();
+                }
+                return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op clearClipboard() {
+        return new Op("clearClipboard") {
+            @Override
+            public Op run() {
+                PreferenceUtils.clearPrefMap(mPreferences, mRes, R.string.keyClipboardMap);
+                return Op.NO_OP;
             }
         };
     }

@@ -1073,6 +1073,18 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("1");
     }
 
+    @Test
+    public void test94() {
+        runOp(mEditor.clearClipboard());
+        add("123 456 789", "select 456");
+        runOp(mEditor.saveSel("number456"));
+        add("select 123");
+        runOp(mEditor.saveSel("number123"));
+        runOp(mEditor.selectAll());
+        runOp(mEditor.showClipboard());
+        assertThatTextIs("<number123|123>\n<number456|456>\n");
+    }
+
     // Can't create handler inside thread that has not called Looper.prepare()
     //@Test
     public void test201() {
