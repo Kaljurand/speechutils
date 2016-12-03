@@ -132,11 +132,14 @@ public class RecognitionServiceManager {
         try {
             PackageManager pm = context.getPackageManager();
             ServiceInfo si = pm.getServiceInfo(recognizerComponentName, 0);
-            return si.getIconResource();
+            return si.icon;
+            // This tries to load application icon if service icon does not exist, leading to a crash
+            // with some services.
+            //return si.getIconResource();
         } catch (PackageManager.NameNotFoundException e) {
             // ignored
         }
-        return R.drawable.ic_service;
+        return 0;
     }
 
     public void setCombosExcluded(Set<String> set) {
