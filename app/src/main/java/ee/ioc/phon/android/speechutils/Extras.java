@@ -120,6 +120,9 @@ public class Extras {
     public static final String EXTRA_RESULT_UTTERANCE = "ee.ioc.phon.android.extra.RESULT_UTTERANCE";
     public static final String EXTRA_RESULT_REPLACEMENT = "ee.ioc.phon.android.extra.RESULT_REPLACEMENT";
 
+    // String[]. List of names of rewrite tables
+    public static final String EXTRA_RESULT_REWRITES = "ee.ioc.phon.android.extra.RESULT_REWRITES";
+
     public static final String EXTRA_RESULT_REWRITES_AS_STR = "ee.ioc.phon.android.extra.RESULT_REWRITES_AS_STR";
 
     public static final String EXTRA_LAUNCH_RECOGNIZER = "ee.ioc.phon.android.extra.LAUNCH_RECOGNIZER";

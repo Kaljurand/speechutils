@@ -89,14 +89,15 @@ public class PreferenceUtils {
         String name = res.getString(nameId);
         Set<String> keys = prefs.getStringSet(name, new HashSet<String>());
         SharedPreferences.Editor editor = prefs.edit();
+        String nameKey = name + '/' + key;
         if (value == null) {
-            editor.remove(name + key);
+            editor.remove(nameKey);
             if (keys.contains(key)) {
                 keys.remove(key);
                 editor.putStringSet(name, keys);
             }
         } else {
-            editor.putString(name + key, value);
+            editor.putString(nameKey, value);
             if (!keys.contains(key)) {
                 keys.add(key);
                 editor.putStringSet(name, keys);
@@ -106,7 +107,11 @@ public class PreferenceUtils {
     }
 
     public static String getPrefMapEntry(SharedPreferences prefs, Resources res, int nameId, String key) {
-        return prefs.getString(res.getString(nameId) + key, null);
+        return prefs.getString(res.getString(nameId) + '/' + key, null);
+    }
+
+    public static Set<String> getPrefMapKeys(SharedPreferences prefs, Resources res, int nameId) {
+        return prefs.getStringSet(res.getString(nameId), Collections.<String>emptySet());
     }
 
     public static Map<String, String> getPrefMap(SharedPreferences prefs, Resources res, int nameId) {
@@ -114,7 +119,7 @@ public class PreferenceUtils {
         Set<String> keys = prefs.getStringSet(name, Collections.<String>emptySet());
         Map<String, String> map = new HashMap<>();
         for (String key : keys) {
-            map.put(key, prefs.getString(name + key, null));
+            map.put(key, prefs.getString(name + '/' + key, null));
         }
         return map;
     }
@@ -125,7 +130,7 @@ public class PreferenceUtils {
         SharedPreferences.Editor editor = prefs.edit();
         if (keys != null) {
             for (String key : keys) {
-                editor.remove(name + key);
+                editor.remove(name + '/' + key);
             }
         }
         editor.remove(name);
