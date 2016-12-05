@@ -753,22 +753,25 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public Op saveSel(final String key) {
-        return new Op("saveSel " + key) {
+    public Op saveClip(final String key, final String val) {
+        return new Op("saveClip " + key) {
             @Override
             public Op run() {
                 mInputConnection.beginBatchEdit();
+                // abc{}def -> abc$1def
+                String out = SELREF.matcher(val).replaceAll("\\$1");
                 String selectedText = getSelectedText();
                 mInputConnection.endBatchEdit();
-                PreferenceUtils.putPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, key, selectedText);
+                // 123 -> abc123def
+                PreferenceUtils.putPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, key, ALL.matcher(selectedText).replaceAll(out));
                 return Op.NO_OP;
             }
         };
     }
 
     @Override
-    public Op loadSel(final String key) {
-        return new Op("loadSel " + key) {
+    public Op loadClip(final String key) {
+        return new Op("loadClip " + key) {
             @Override
             public Op run() {
                 Op undo = null;

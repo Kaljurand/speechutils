@@ -43,8 +43,8 @@ public class CommandEditorManager {
     public static final String UC_SEL = "ucSel";
     public static final String LC_SEL = "lcSel";
     public static final String INC_SEL = "incSel";
-    public static final String SAVE_SEL = "saveSel";
-    public static final String LOAD_SEL = "loadSel";
+    public static final String SAVE_CLIP = "saveClip";
+    public static final String LOAD_CLIP = "loadClip";
     public static final String SHOW_CLIPBOARD = "showClipboard";
     public static final String CLEAR_CLIPBOARD = "clearClipboard";
     public static final String KEY_CODE = "keyCode";
@@ -323,25 +323,25 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put(SAVE_SEL, new EditorCommand() {
+        aMap.put(SAVE_CLIP, new EditorCommand() {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                if (args == null || args.length != 1) {
+                if (args == null || args.length != 2) {
                     return null;
                 }
-                return ce.saveSel(args[0]);
+                return ce.saveClip(args[0], args[1]);
             }
         });
 
-        aMap.put(LOAD_SEL, new EditorCommand() {
+        aMap.put(LOAD_CLIP, new EditorCommand() {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
                 if (args == null || args.length != 1) {
                     return null;
                 }
-                return ce.loadSel(args[0]);
+                return ce.loadClip(args[0]);
             }
         });
 

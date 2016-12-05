@@ -945,15 +945,19 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("0 [] word2 [] word4 [] word6");
     }
 
+    /**
+     * Select "word2", save it to clipboard, replace the selection,
+     * select "word1", replace it with the previously saved clip.
+     */
     @Test
     public void test81() {
         add("0 word1 word2 word3", "select word2");
-        runOp(mEditor.saveSel("key"));
+        runOp(mEditor.saveClip("key", "_{}_{}_"));
         runOp(mEditor.replaceSel("REPL"));
         assertThatTextIs("0 word1 REPL word3");
         add("select word1");
-        runOp(mEditor.loadSel("key"));
-        assertThatTextIs("0 word2 REPL word3");
+        runOp(mEditor.loadClip("key"));
+        assertThatTextIs("0 _word2_word2_ REPL word3");
     }
 
     @Test
@@ -1077,9 +1081,9 @@ public class InputConnectionCommandEditorTest {
     public void test94() {
         runOp(mEditor.clearClipboard());
         add("123 456 789", "select 456");
-        runOp(mEditor.saveSel("number456"));
+        runOp(mEditor.saveClip("number456", "{}"));
         add("select 123");
-        runOp(mEditor.saveSel("number123"));
+        runOp(mEditor.saveClip("number123", "{}"));
         runOp(mEditor.selectAll());
         runOp(mEditor.showClipboard());
         assertThatTextIs("<number123|123>\n<number456|456>\n");
