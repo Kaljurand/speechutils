@@ -150,8 +150,6 @@ public interface CommandEditor {
 
     Deque<Op> getUndoStack();
 
-    void reset();
-
     Op combineOps(Collection<Op> ops);
 
     Op getOpFromText(String text);

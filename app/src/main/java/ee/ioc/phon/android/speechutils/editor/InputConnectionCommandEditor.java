@@ -80,13 +80,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public void reset() {
-        mCommandPrefix.clear();
-        mPrevText = "";
-        mAddedLength = 0;
-    }
-
-    @Override
     public boolean runOp(Op op) {
         // TODO: why does this happen
         //if (op == null) {

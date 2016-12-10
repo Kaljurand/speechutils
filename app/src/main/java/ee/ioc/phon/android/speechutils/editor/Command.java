@@ -91,6 +91,8 @@ public class Command {
         Matcher m = mUtt.matcher(str);
         String[] argsEvaluated = null;
         // If the entire region matches then we evaluate the arguments as well
+        // TODO: rethink this: we could match a sub string and do something with the
+        // prefix and suffix
         if (m.matches()) {
             if (mArgsAsStr.isEmpty()) {
                 argsEvaluated = EMPTY_ARRAY;
