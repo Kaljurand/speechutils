@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2015, Institute of Cybernetics at Tallinn University of Technology
+ * Copyright 2011-2016, Institute of Cybernetics at Tallinn University of Technology
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,6 +70,12 @@ public class Extras {
     public static final String EXTRA_AUTO_START = "ee.ioc.phon.android.extra.AUTO_START";
 
     /**
+     * Boolean. (Default == true)
+     * Finish after launching the intent.
+     */
+    public static final String EXTRA_FINISH_AFTER_LAUNCH_INTENT = "ee.ioc.phon.android.extra.FINISH_AFTER_LAUNCH_INTENT";
+
+    /**
      * Boolean.
      * In case of an audio/network/etc. error, finish the RecognizerIntent activity with the error code,
      * allowing the caller to handle the error.
@@ -119,6 +125,9 @@ public class Extras {
 
     public static final String EXTRA_RESULT_UTTERANCE = "ee.ioc.phon.android.extra.RESULT_UTTERANCE";
     public static final String EXTRA_RESULT_REPLACEMENT = "ee.ioc.phon.android.extra.RESULT_REPLACEMENT";
+
+    // String[]. List of transcription results
+    public static final String EXTRA_RESULT_RESULTS = "ee.ioc.phon.android.extra.RESULT_RESULTS";
 
     // String[]. List of names of rewrite tables
     public static final String EXTRA_RESULT_REWRITES = "ee.ioc.phon.android.extra.RESULT_REWRITES";
