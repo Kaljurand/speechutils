@@ -122,8 +122,8 @@ public class AudioUtils {
                     continue;
                 }
                 String[] supportedTypes = info.getSupportedTypes();
-                for (int j = 0; j < supportedTypes.length; ++j) {
-                    if (supportedTypes[j].equalsIgnoreCase(mime)) {
+                for (String type : supportedTypes) {
+                    if (type.equalsIgnoreCase(mime)) {
                         names.push(info.getName());
                         break;
                     }

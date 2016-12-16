@@ -27,6 +27,7 @@ import ee.ioc.phon.android.speechutils.R;
 import ee.ioc.phon.android.speechutils.utils.PreferenceUtils;
 
 /**
+ * TODO: this is work in progress
  * TODO: keep track of added spaces
  * TODO: the returned Op should never be null, however, run can return a null Op
  */
@@ -987,9 +988,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * TODO: review
      * we should be able to review the last N ops and undo then if they can be interpreted as
      * a combined op.
-     *
-     * @param text
-     * @return
      */
     private Op getCommitWithOverwriteOp(final String text) {
         return new Op("add " + text) {

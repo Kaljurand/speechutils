@@ -17,50 +17,81 @@
 package ee.ioc.phon.android.speechutils;
 
 /**
- * <p>Set of non-standard extras that K6nele supports.</p>
+ * <p>EXTRAs that K6nele supports.</p>
  *
  * @author Kaarel Kaljurand
  */
 public class Extras {
 
-    // SERVER_URL should be a legal URL
+    /**
+     * String (must be a legal URL).
+     * URL of a speech recognition server.
+     */
     public static final String EXTRA_SERVER_URL = "ee.ioc.phon.android.extra.SERVER_URL";
 
-    // String that combines the recognizer component name with the locale label, e.g.
-    // ee.ioc.phon.android.speak/.service.WebSocketRecognitionService;et-EE
+    /**
+     * String that combines the recognizer component name with the locale label, e.g.
+     * ee.ioc.phon.android.speak/.service.WebSocketRecognitionService;et-EE
+     */
     public static final String EXTRA_SERVICE_COMPONENT = "ee.ioc.phon.android.extra.SERVICE_COMPONENT";
 
-    // GRAMMAR_URL should be a legal URL
+    /**
+     * String (must be a legal URL).
+     * URL of a PGF or JSGF grammar.
+     */
     public static final String EXTRA_GRAMMAR_URL = "ee.ioc.phon.android.extra.GRAMMAR_URL";
 
-    // Identifier of the target language (any string)
+    /**
+     * String.
+     * Identifier of the target language in the given PGF grammar (e.g. "Est", "Eng").
+     */
     public static final String EXTRA_GRAMMAR_TARGET_LANG = "ee.ioc.phon.android.extra.GRAMMAR_TARGET_LANG";
 
-    // Desired transcription.
-    // Using this extra, the user can specify to which string the enclosed audio
-    // should be transcribed.
+    /**
+     * String.
+     * Desired transcription.
+     * Using this extra, the user can specify to which string the enclosed audio should be transcribed.
+     */
     public static final String EXTRA_PHRASE = "ee.ioc.phon.android.extra.PHRASE";
 
-    // String.
-    // Optional text prompt to read out to the user when asking them to speak in the RecognizerIntent activity.
-    // See also "android.speech.extra.PROMPT"
+    /**
+     * String.
+     * Optional text prompt to read out to the user when asking them to speak in the RecognizerIntent activity.
+     * See also "android.speech.extra.PROMPT".
+     */
     public static final String EXTRA_VOICE_PROMPT = "ee.ioc.phon.android.extra.VOICE_PROMPT";
 
-    // Bundle with information about the editor in which the IME is running
+    /**
+     * Bundle.
+     * Information about the editor in which the IME is running.
+     */
     public static final String EXTRA_EDITOR_INFO = "ee.ioc.phon.android.extra.EDITOR_INFO";
 
-    // Boolean to indicate that the recognition service should not stop after delivering the first result
+    /**
+     * Boolean.
+     * True iff the recognition service should not stop after delivering the first result.
+     */
     public static final String EXTRA_UNLIMITED_DURATION = "ee.ioc.phon.android.extra.UNLIMITED_DURATION";
 
-    // Boolean to indicate that the server has sent final=true, i.e. the following hypotheses
-    // will not be transcriptions of the same audio anymore.
+    /**
+     * Boolean.
+     * True iff the server has sent final=true, i.e. the following hypotheses
+     * will not be transcriptions of the same audio anymore.
+     */
     public static final String EXTRA_SEMI_FINAL = "ee.ioc.phon.android.extra.SEMI_FINAL";
 
-    // Boolean. Iff true then the recognizer should play audio cues to indicate start and end of
-    // recording, as well as error conditions.
+    /**
+     * Boolean.
+     * True iff the recognizer should play audio cues to indicate start and end of
+     * recording, as well as error conditions.
+     */
     public static final String EXTRA_AUDIO_CUES = "ee.ioc.phon.android.extra.AUDIO_CUES";
 
-    // Boolean. Use another app to view/evaluate/execute the recognition result. (Arvutaja-specific)
+    /**
+     * Boolean.
+     * True iff another app should be used to view/evaluate/execute the recognition result.
+     * Used only by the app Arvutaja.
+     */
     public static final String EXTRA_USE_EXTERNAL_EVALUATOR = "ee.ioc.phon.android.extra.USE_EXTERNAL_EVALUATOR";
 
     /**
@@ -70,8 +101,8 @@ public class Extras {
     public static final String EXTRA_AUTO_START = "ee.ioc.phon.android.extra.AUTO_START";
 
     /**
-     * Boolean. (Default == true)
-     * Finish after launching the intent.
+     * Boolean. (Default: true in single window mode, false in multi-window mode)
+     * True iff voice search panel will be terminated after it launched the intent.
      */
     public static final String EXTRA_FINISH_AFTER_LAUNCH_INTENT = "ee.ioc.phon.android.extra.FINISH_AFTER_LAUNCH_INTENT";
 
@@ -85,16 +116,25 @@ public class Extras {
      */
     public static final String EXTRA_RETURN_ERRORS = "ee.ioc.phon.android.extra.RETURN_ERRORS";
 
-    // Caller is interested in the recorded audio data (boolean)
+    /**
+     * Boolean.
+     * True iff caller is interested in the recorded audio data.
+     */
     public static final String EXTRA_GET_AUDIO = "android.speech.extra.GET_AUDIO";
 
-    // Caller wants to have the audio data in a certain format (String)
+    /**
+     * String.
+     * Mime type of the returned audio data, if EXTRA_GET_AUDIO=true.
+     */
     public static final String EXTRA_GET_AUDIO_FORMAT = "android.speech.extra.GET_AUDIO_FORMAT";
 
-    // Switch on continuous recognition (boolean)
-    // Same as EXTRA_UNLIMITED_DURATION
-    // Used on Chrome to talk to Google's recognizer?
-    // (http://src.chromium.org/svn/trunk/src/content/public/android/java/src/org/chromium/content/browser/SpeechRecognition.java)
+    /**
+     * Boolean.
+     * True iff continuous recognition should be used.
+     * Same as EXTRA_UNLIMITED_DURATION.
+     * Used on Chrome to talk to Google's recognizer?
+     * (http://src.chromium.org/svn/trunk/src/content/public/android/java/src/org/chromium/content/browser/SpeechRecognition.java)
+     */
     public static final String EXTRA_DICTATION_MODE = "android.speech.extra.DICTATION_MODE";
 
     /**
@@ -120,26 +160,54 @@ public class Extras {
     public static final String RESULTS_RECOGNITION_LINEARIZATIONS = "ee.ioc.phon.android.extra.RESULTS_RECOGNITION_LINEARIZATIONS";
     public static final String RESULTS_RECOGNITION_LINEARIZATION_COUNTS = "ee.ioc.phon.android.extra.RESULTS_RECOGNITION_LINEARIZATION_COUNTS";
 
-    // Byte array. Currently not used.
+    /**
+     * Byte array. Currently not used.
+     */
     public static final String RESULTS_AUDIO_ENCODED = "ee.ioc.phon.android.extra.RESULTS_AUDIO_ENCODED";
 
+    /**
+     * String (must be a Java regular expression).
+     * Regular expression applied to the transcription result(s).
+     */
     public static final String EXTRA_RESULT_UTTERANCE = "ee.ioc.phon.android.extra.RESULT_UTTERANCE";
+
+    /**
+     * String (must be a Java regular expression replacement).
+     * Replacement applied to the transcription result(s) if EXTRA_RESULT_UTTERANCE matches.
+     */
     public static final String EXTRA_RESULT_REPLACEMENT = "ee.ioc.phon.android.extra.RESULT_REPLACEMENT";
 
-    // String[]. List of transcription results
+    /**
+     * String[].
+     * List of transcription results
+     */
     public static final String EXTRA_RESULT_RESULTS = "ee.ioc.phon.android.extra.RESULT_RESULTS";
 
-    // String[]. List of names of rewrite tables
+    /**
+     * String[].
+     * List of names of rewrite tables that should apply to the transcription results.
+     */
     public static final String EXTRA_RESULT_REWRITES = "ee.ioc.phon.android.extra.RESULT_REWRITES";
 
+    /**
+     * String.
+     * Rewrite table (in TSV-format and with a header) that should apply to the transcription results.
+     */
     public static final String EXTRA_RESULT_REWRITES_AS_STR = "ee.ioc.phon.android.extra.RESULT_REWRITES_AS_STR";
 
+    /**
+     * Used only by the app Arvutaja.
+     * TODO: deprecated in favour of EXTRA_AUTO_START
+     */
     public static final String EXTRA_LAUNCH_RECOGNIZER = "ee.ioc.phon.android.extra.LAUNCH_RECOGNIZER";
 
-    // API 14
+    /**
+     * android/speech/RecognizerIntent.html#ACTION_VOICE_SEARCH_HANDS_FREE (API 16)
+     */
     public static final String ACTION_VOICE_SEARCH_HANDS_FREE = "android.speech.action.VOICE_SEARCH_HANDS_FREE";
 
-    // A non-standard extra
+    /**
+     * A non-standard (undocumented) android.speech.extra
+     */
     public static final String EXTRA_ADDITIONAL_LANGUAGES = "android.speech.extra.EXTRA_ADDITIONAL_LANGUAGES";
-
 }

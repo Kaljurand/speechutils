@@ -18,7 +18,27 @@ public class UtteranceRewriter {
 
     private static final Pattern PATTERN_TRAILING_TABS = Pattern.compile("\t*$");
 
-    public static String[] HEADER = {"Comment", "Locale", "Service", "App", "Utterance", "Replacement", "Command", "Arg1", "Arg2"};
+    public static final String HEADER_COMMENT = "Comment";
+    public static final String HEADER_LOCALE = "Locale";
+    public static final String HEADER_SERVICE = "Service";
+    public static final String HEADER_APP = "App";
+    public static final String HEADER_UTTERANCE = "Utterance";
+    public static final String HEADER_REPLACEMENT = "Replacement";
+    public static final String HEADER_COMMAND = "Command";
+    public static final String HEADER_ARG1 = "Arg1";
+    public static final String HEADER_ARG2 = "Arg2";
+
+    public static final String[] HEADER = {
+            HEADER_COMMENT,
+            HEADER_LOCALE,
+            HEADER_SERVICE,
+            HEADER_APP,
+            HEADER_UTTERANCE,
+            HEADER_REPLACEMENT,
+            HEADER_COMMAND,
+            HEADER_ARG1,
+            HEADER_ARG2
+    };
 
     public static class Rewrite {
         public final String mId;
@@ -103,6 +123,10 @@ public class UtteranceRewriter {
             rewrittenResults.add(getRewrite(result).mStr);
         }
         return rewrittenResults;
+    }
+
+    public String rewrite(String result) {
+        return getRewrite(result).mStr;
     }
 
     /**
@@ -282,19 +306,19 @@ public class UtteranceRewriter {
         for (int i = 0; i < Math.min(header.length, fields.length); i++) {
             String split = fields[i];
             switch (header[i]) {
-                case "Comment":
+                case HEADER_COMMENT:
                     comment = split.trim();
                     break;
-                case "Locale":
+                case HEADER_LOCALE:
                     locale = Pattern.compile(split.trim());
                     break;
-                case "Service":
+                case HEADER_SERVICE:
                     service = Pattern.compile(split.trim());
                     break;
-                case "App":
+                case HEADER_APP:
                     app = Pattern.compile(split.trim());
                     break;
-                case "Utterance":
+                case HEADER_UTTERANCE:
                     split = split.trim();
                     // TODO: test if this works
                     if (split.isEmpty()) {
@@ -302,21 +326,20 @@ public class UtteranceRewriter {
                     }
                     utterance = Pattern.compile(split, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
                     break;
-                case "Replacement":
+                case HEADER_REPLACEMENT:
                     replacement = Command.unescape(split);
                     break;
-                case "Command":
+                case HEADER_COMMAND:
                     command = Command.unescape(split.trim());
                     break;
-                case "Arg1":
+                case HEADER_ARG1:
                     arg1 = Command.unescape(split);
                     break;
-                case "Arg2":
+                case HEADER_ARG2:
                     arg2 = Command.unescape(split);
                     break;
                 default:
                     // Columns with undefined names are ignored
-                    //throw new IllegalArgumentException(header[i]);
                     break;
             }
         }
