@@ -1,165 +1,490 @@
 package ee.ioc.phon.android.speechutils.editor;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import ee.ioc.phon.android.speechutils.Log;
-
 /**
  * utterance = "go to position 1"
- * pattern = ("goTo", "go to position (\d+)")
- * command = goToCharacterPosition(group(1).toInt())
- * <p/>
- * TODO: add a way to specify the order and content of the arguments
+ * pattern = ("go to position (\d+)", "goToCharacterPosition", "$1")
+ * command = goToCharacterPosition($1)
  */
 public class CommandEditorManager {
 
     public interface EditorCommand {
-        boolean execute(String[] args);
+        Op getOp(CommandEditor commandEditor, String[] args);
     }
 
-    private final CommandEditor mCommandEditor;
-    private final Map<String, EditorCommand> mEditorCommands = new HashMap<>();
+    public static final String GO_UP = "goUp";
+    public static final String GO_DOWN = "goDown";
+    public static final String GO_LEFT = "goLeft";
+    public static final String GO_RIGHT = "goRight";
+    public static final String GO_TO_PREVIOUS_FIELD = "goToPreviousField";
+    public static final String GO_TO_NEXT_FIELD = "goToNextField";
+    public static final String GO_TO_CHARACTER_POSITION = "goToCharacterPosition";
+    public static final String GO_FORWARD = "goForward";
+    public static final String GO_BACKWARD = "goBackward";
+    public static final String SELECT = "select";
+    public static final String SELECT_RE_BEFORE = "selectReBefore";
+    public static final String SELECT_RE_AFTER = "selectReAfter";
+    public static final String REPLACE_SEL_RE = "replaceSelRe";
+    public static final String RESET_SEL = "resetSel";
+    public static final String SELECT_ALL = "selectAll";
+    public static final String CUT = "cut";
+    public static final String COPY = "copy";
+    public static final String PASTE = "paste";
+    public static final String CUT_ALL = "cutAll";
+    public static final String DELETE_ALL = "deleteAll";
+    public static final String COPY_ALL = "copyAll";
+    public static final String DELETE_LEFT_WORD = "deleteLeftWord";
+    public static final String DELETE = "delete";
+    public static final String REPLACE = "replace";
+    public static final String REPLACE_SEL = "replaceSel";
+    public static final String UC_SEL = "ucSel";
+    public static final String LC_SEL = "lcSel";
+    public static final String INC_SEL = "incSel";
+    public static final String SAVE_CLIP = "saveClip";
+    public static final String LOAD_CLIP = "loadClip";
+    public static final String SHOW_CLIPBOARD = "showClipboard";
+    public static final String CLEAR_CLIPBOARD = "clearClipboard";
+    public static final String KEY_CODE = "keyCode";
+    public static final String KEY_CODE_STR = "keyCodeStr";
+    public static final String IME_ACTION_DONE = "imeActionDone";
+    public static final String IME_ACTION_GO = "imeActionGo";
+    public static final String IME_ACTION_SEARCH = "imeActionSearch";
+    public static final String IME_ACTION_SEND = "imeActionSend";
+    public static final String UNDO = "undo";
+    public static final String COMBINE = "combine";
+    public static final String APPLY = "apply";
 
-    public CommandEditorManager(CommandEditor commandEditor) {
-        mCommandEditor = commandEditor;
-        init();
-    }
+    public static final Map<String, EditorCommand> EDITOR_COMMANDS;
 
+    static {
 
-    public EditorCommand get(String id) {
-        return mEditorCommands.get(id);
-    }
+        Map<String, EditorCommand> aMap = new HashMap<>();
 
-    public boolean execute(String commandId, String[] args) {
-        EditorCommand editorCommand = get(commandId);
-        if (editorCommand == null) {
-            return false;
-        }
-        return editorCommand.execute(args);
-    }
-
-    private void init() {
-
-        mEditorCommands.put("goToPreviousField", new EditorCommand() {
+        aMap.put(GO_UP, new EditorCommand() {
 
             @Override
-            public boolean execute(String... args) {
-                return mCommandEditor.goToPreviousField();
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.goUp();
+            }
+        });
+        aMap.put(GO_DOWN, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.goDown();
+            }
+        });
+        aMap.put(GO_LEFT, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.goLeft();
+            }
+        });
+        aMap.put(GO_RIGHT, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.goRight();
             }
         });
 
-        mEditorCommands.put("goToNextField", new EditorCommand() {
+        aMap.put(UNDO, new EditorCommand() {
 
             @Override
-            public boolean execute(String... args) {
-                return mCommandEditor.goToNextField();
+            public Op getOp(CommandEditor ce, String[] args) {
+                int steps = 1;
+                if (args != null && args.length > 0) {
+                    try {
+                        steps = Integer.parseInt(args[0]);
+                    } catch (NumberFormatException e) {
+                        // Intentional
+                    }
+                }
+                return ce.undo(steps);
             }
         });
 
-        mEditorCommands.put("goToCharacterPosition", new EditorCommand() {
+        aMap.put(COMBINE, new EditorCommand() {
 
             @Override
-            public boolean execute(String[] args) {
+            public Op getOp(CommandEditor ce, String[] args) {
+                int numOfOps = 2;
+                if (args != null && args.length > 0) {
+                    try {
+                        numOfOps = Integer.parseInt(args[0]);
+                    } catch (NumberFormatException e) {
+                        // Intentional
+                    }
+                }
+                return ce.combine(numOfOps);
+            }
+        });
+
+        aMap.put(APPLY, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                int steps = 1;
+                if (args != null && args.length > 0) {
+                    try {
+                        steps = Integer.parseInt(args[0]);
+                    } catch (NumberFormatException e) {
+                        // Intentional
+                    }
+                }
+                return ce.apply(steps);
+            }
+        });
+
+        aMap.put(GO_TO_PREVIOUS_FIELD, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.goToPreviousField();
+            }
+        });
+
+        aMap.put(GO_TO_NEXT_FIELD, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.goToNextField();
+            }
+        });
+
+        aMap.put(GO_TO_CHARACTER_POSITION, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
                 int pos = 0;
-                if (args.length > 0) {
+                if (args != null && args.length > 0) {
                     try {
                         pos = Integer.parseInt(args[0]);
                     } catch (NumberFormatException e) {
+                        // Intentional
                     }
                 }
-                return mCommandEditor.goToCharacterPosition(pos);
+                return ce.goToCharacterPosition(pos);
             }
         });
 
-        mEditorCommands.put("select", new EditorCommand() {
+        aMap.put(GO_FORWARD, new EditorCommand() {
 
             @Override
-            public boolean execute(String[] args) {
-                if (args.length != 1) {
-                    return false;
+            public Op getOp(CommandEditor ce, String[] args) {
+                int pos = 1;
+                if (args != null && args.length > 0) {
+                    try {
+                        pos = Integer.parseInt(args[0]);
+                    } catch (NumberFormatException e) {
+                        // Intentional
+                    }
                 }
-                return mCommandEditor.select(args[0]);
+                return ce.goForward(pos);
             }
         });
 
-        mEditorCommands.put("delete", new EditorCommand() {
+        aMap.put(GO_BACKWARD, new EditorCommand() {
 
             @Override
-            public boolean execute(String[] args) {
-                if (args.length != 1) {
-                    return false;
+            public Op getOp(CommandEditor ce, String[] args) {
+                int pos = 1;
+                if (args != null && args.length > 0) {
+                    try {
+                        pos = Integer.parseInt(args[0]);
+                    } catch (NumberFormatException e) {
+                        // Intentional
+                    }
                 }
-                return mCommandEditor.delete(args[0]);
+                return ce.goBackward(pos);
             }
         });
 
-        mEditorCommands.put("replace", new EditorCommand() {
+        aMap.put(KEY_CODE, new EditorCommand() {
 
             @Override
-            public boolean execute(String[] args) {
-                if (args.length != 2) {
-                    return false;
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args != null && args.length > 0) {
+                    try {
+                        return ce.keyCode(Integer.parseInt(args[0]));
+                    } catch (NumberFormatException e) {
+                        // Intentional
+                    }
                 }
-                return mCommandEditor.replace(args[0], args[1]);
+                return null;
             }
         });
 
-        mEditorCommands.put("addSpace", new EditorCommand() {
+        aMap.put(KEY_CODE_STR, new EditorCommand() {
 
             @Override
-            public boolean execute(String[] args) {
-                return mCommandEditor.addSpace();
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length != 1) {
+                    return null;
+                }
+                return ce.keyCodeStr(args[0]);
             }
         });
 
-        mEditorCommands.put("addNewline", new EditorCommand() {
+        aMap.put(SELECT, new EditorCommand() {
 
             @Override
-            public boolean execute(String[] args) {
-                return mCommandEditor.addNewline();
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length != 1) {
+                    return null;
+                }
+                return ce.select(args[0]);
             }
         });
 
-        mEditorCommands.put("selectAll", new EditorCommand() {
+        aMap.put(SELECT_RE_BEFORE, new EditorCommand() {
 
             @Override
-            public boolean execute(String[] args) {
-                return mCommandEditor.selectAll();
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length != 1) {
+                    return null;
+                }
+                return ce.selectReBefore(args[0]);
             }
         });
 
-        mEditorCommands.put("cut", new EditorCommand() {
+        aMap.put(SELECT_RE_AFTER, new EditorCommand() {
 
             @Override
-            public boolean execute(String[] args) {
-                return mCommandEditor.cut();
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length == 0 || args.length > 2) {
+                    return null;
+                }
+                int n = 1;
+                if (args.length == 2) {
+                    try {
+                        n = Integer.parseInt(args[1]);
+                    } catch (NumberFormatException e) {
+                        // Intentional
+                    }
+                }
+                return ce.selectReAfter(args[0], n);
             }
         });
 
-        mEditorCommands.put("copy", new EditorCommand() {
+        aMap.put(REPLACE_SEL_RE, new EditorCommand() {
 
             @Override
-            public boolean execute(String[] args) {
-                return mCommandEditor.copy();
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length != 2) {
+                    return null;
+                }
+                return ce.replaceSelRe(args[0], args[1]);
             }
         });
 
-        mEditorCommands.put("paste", new EditorCommand() {
+        aMap.put(DELETE_LEFT_WORD, new EditorCommand() {
 
             @Override
-            public boolean execute(String[] args) {
-                return mCommandEditor.paste();
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.deleteLeftWord();
             }
         });
 
-        mEditorCommands.put("go", new EditorCommand() {
+        aMap.put(DELETE, new EditorCommand() {
 
             @Override
-            public boolean execute(String[] args) {
-                return mCommandEditor.go();
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length != 1) {
+                    return null;
+                }
+                return ce.delete(args[0]);
             }
         });
+
+        aMap.put(REPLACE, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length != 2) {
+                    return null;
+                }
+                return ce.replace(args[0], args[1]);
+            }
+        });
+
+        aMap.put(REPLACE_SEL, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length != 1) {
+                    return null;
+                }
+                return ce.replaceSel(args[0]);
+            }
+        });
+
+        aMap.put(SAVE_CLIP, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length != 2) {
+                    return null;
+                }
+                return ce.saveClip(args[0], args[1]);
+            }
+        });
+
+        aMap.put(LOAD_CLIP, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length != 1) {
+                    return null;
+                }
+                return ce.loadClip(args[0]);
+            }
+        });
+
+        aMap.put(SHOW_CLIPBOARD, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.showClipboard();
+            }
+        });
+
+        aMap.put(CLEAR_CLIPBOARD, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.clearClipboard();
+            }
+        });
+
+        aMap.put(RESET_SEL, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.resetSel();
+            }
+        });
+
+        aMap.put(UC_SEL, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.ucSel();
+            }
+        });
+
+        aMap.put(LC_SEL, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.lcSel();
+            }
+        });
+
+        aMap.put(INC_SEL, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.incSel();
+            }
+        });
+
+        aMap.put(SELECT_ALL, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.selectAll();
+            }
+        });
+
+        aMap.put(CUT, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.cut();
+            }
+        });
+
+        aMap.put(CUT_ALL, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.cutAll();
+            }
+        });
+
+        aMap.put(DELETE_ALL, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.deleteAll();
+            }
+        });
+
+        aMap.put(COPY, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.copy();
+            }
+        });
+
+        aMap.put(COPY_ALL, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.copyAll();
+            }
+        });
+
+        aMap.put(PASTE, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.paste();
+            }
+        });
+
+        aMap.put(IME_ACTION_DONE, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.imeActionDone();
+            }
+        });
+
+        aMap.put(IME_ACTION_GO, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.imeActionGo();
+            }
+        });
+
+        aMap.put(IME_ACTION_SEARCH, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.imeActionSearch();
+            }
+        });
+
+        aMap.put(IME_ACTION_SEND, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.imeActionSend();
+            }
+        });
+
+        EDITOR_COMMANDS = Collections.unmodifiableMap(aMap);
     }
 
+    public static EditorCommand get(String id) {
+        return EDITOR_COMMANDS.get(id);
+    }
 }

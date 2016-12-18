@@ -1,57 +1,156 @@
 package ee.ioc.phon.android.speechutils.editor;
 
+import android.view.inputmethod.ExtractedText;
+
+import java.util.Collection;
+import java.util.Deque;
+
 /**
- * TODO: work in progress
+ * Most methods return an operation (op), which when run returns an undo operation.
  */
 public interface CommandEditor {
 
-    boolean commitFinalResult(String str);
+    // Commit text
 
-    boolean commitPartialResult(String str);
+    CommandEditorResult commitFinalResult(String text);
 
-    // Moving between fields
+    boolean commitPartialResult(String text);
 
-    // Go to the previous field
-    boolean goToPreviousField();
+    boolean runOp(Op op);
 
-    // Go to the next field
-    boolean goToNextField();
+    // Commands
+
+    Op goUp();
+
+    Op goDown();
+
+    Op goLeft();
+
+    Op goRight();
+
+    Op undo(int steps);
+
+    // Combine the last N commands
+    Op combine(int steps);
+
+    // Apply the last command N times
+    Op apply(int steps);
 
     // Moving around in the string
 
-    // Go to the character at the given position
-    boolean goToCharacterPosition(int pos);
+    // Go to the character at the given position.
+    // Negative positions start counting from the end of the text, e.g.
+    // -1 == end of text
+    Op goToCharacterPosition(int pos);
 
-    boolean select(String str);
+    // Move the cursor forward by the given number of characters
+    Op goForward(int numOfChars);
+
+    // Move the cursor backward by the given number of characters
+    Op goBackward(int numOfChars);
+
+    // Add the key with the given code
+    Op keyCode(int code);
+
+    // Add the key with the given symbolic name
+    Op keyCodeStr(String codeAsStr);
+
+    // Selection commands
+
+    Op select(String str);
+
+    Op selectReBefore(String regex);
+
+    Op selectReAfter(String regex, int n);
+
+    Op selectAll();
+
+    // Apply a regular expression to the selection,
+    // and replace the matches with the given replacement string.
+    Op replaceSelRe(String regex, String repl);
 
     // Reset selection
-    boolean reset();
+    Op resetSel();
 
     // Context menu actions
-    boolean selectAll();
+    Op cut();
 
-    boolean cut();
+    Op copy();
 
-    boolean copy();
+    Op paste();
 
-    boolean paste();
+    Op cutAll();
+
+    Op copyAll();
+
+    Op deleteAll();
+
+    // Preference actions
+
+    // Save the value under the given key into clipboard
+    Op saveClip(String key, String val);
+
+    // Load the string saved under the given key from the clipboard,
+    // and replace the current selection with the string.
+    Op loadClip(String key);
+
+    // Replace the current selection with the pretty-printed clipboard
+    Op showClipboard();
+
+    // Clear the clipboard
+    Op clearClipboard();
 
     // Editing
 
-    boolean capitalize(String str);
+    Op deleteLeftWord();
 
-    boolean addSpace();
+    Op delete(String text);
 
-    boolean addNewline();
+    Op replace(String text1, String text2);
 
-    boolean deleteLeftWord();
+    // Commands applied to the current selection
 
-    boolean delete(String str);
+    // Replace selection
+    Op replaceSel(String str);
 
-    boolean replace(String str1, String str2);
+    // Uppercase selection
+    Op ucSel();
 
-    /**
-     * Performs the Search-action, e.g. to launch search on a searchbar.
-     */
-    boolean go();
+    // Lowercase selection
+    Op lcSel();
+
+    // Increment selection
+    Op incSel();
+
+    // IME actions
+
+    // Go to the previous field
+    Op goToPreviousField();
+
+    // Go to the next field
+    Op goToNextField();
+
+    Op imeActionDone();
+
+    Op imeActionGo();
+
+    Op imeActionSearch();
+
+    Op imeActionSend();
+
+    // Other
+
+    ExtractedText getExtractedText();
+
+    CharSequence getText();
+
+    void setUtteranceRewriter(UtteranceRewriter ur);
+
+    Deque<Op> getOpStack();
+
+    Deque<Op> getUndoStack();
+
+    Op combineOps(Collection<Op> ops);
+
+    Op getOpFromText(String text);
 }

@@ -1,30 +1,70 @@
 package ee.ioc.phon.android.speechutils.editor;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.res.Resources;
+import android.preference.PreferenceManager;
+import android.text.TextUtils;
+import android.util.Pair;
+import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import ee.ioc.phon.android.speechutils.Log;
+import ee.ioc.phon.android.speechutils.R;
+import ee.ioc.phon.android.speechutils.utils.PreferenceUtils;
 
-// TODO: return correct boolean
+/**
+ * TODO: this is work in progress
+ * TODO: keep track of added spaces
+ * TODO: the returned Op should never be null, however, run can return a null Op
+ */
 public class InputConnectionCommandEditor implements CommandEditor {
+
+    // Maximum number of previous utterances that a command can contain
+    private static final int MAX_UTT_IN_COMMAND = 3;
 
     // Maximum number of characters that left-swipe is willing to delete
     private static final int MAX_DELETABLE_CONTEXT = 100;
     // Token optionally preceded by whitespace
     private static final Pattern WHITESPACE_AND_TOKEN = Pattern.compile("\\s*\\w+");
+    private static final Pattern SELREF = Pattern.compile("\\{\\}");
+    private static final Pattern ALL = Pattern.compile("^(.*)$");
+
+    private SharedPreferences mPreferences;
+    private Resources mRes;
 
     private String mPrevText = "";
+    private int mAddedLength = 0;
 
-    private int mGlueCount = 0;
+    // TODO: Restrict the size of these stacks
+
+    // The command prefix is a list of consecutive final results whose concatenation can possibly
+    // form a command. An item is added to the list for every final result that is not a command.
+    // The list if cleared if a command is executed or if reset() is called.
+    private List<String> mCommandPrefix = new ArrayList<>();
+    private Deque<Op> mOpStack = new ArrayDeque<>();
+    private Deque<Op> mUndoStack = new ArrayDeque<>();
 
     private InputConnection mInputConnection;
 
-    public InputConnectionCommandEditor() {
+    private UtteranceRewriter mUtteranceRewriter;
+
+    public InputConnectionCommandEditor(Context context) {
+        mPreferences = PreferenceManager.getDefaultSharedPreferences(context);
+        mRes = context.getResources();
     }
 
     public void setInputConnection(InputConnection inputConnection) {
@@ -35,225 +75,1164 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return mInputConnection;
     }
 
-    /**
-     * Writes the text into the text field and forgets the previous entry.
-     */
-    public boolean commitFinalResult(String text) {
-        commitText(text);
-        mPrevText = "";
-        mGlueCount = 0;
+    @Override
+    public void setUtteranceRewriter(UtteranceRewriter ur) {
+        mUtteranceRewriter = ur;
+    }
+
+    @Override
+    public boolean runOp(Op op) {
+        // TODO: why does this happen
+        //if (op == null) {
+        //    return false;
+        //}
+        Op undo = op.run();
+        if (undo == null) {
+            // Operation failed;
+            return false;
+        }
+        if (!undo.isNoOp()) {
+            pushOp(op);
+            pushOpUndo(undo);
+        }
         return true;
+    }
+
+    @Override
+    public Op getOpFromText(final String text) {
+        List<Op> ops = new ArrayList<>();
+        UtteranceRewriter.Rewrite rewrite = mUtteranceRewriter.getRewrite(text);
+        ops.add(getCommitWithOverwriteOp(rewrite.mStr));
+        if (rewrite.isCommand()) {
+            CommandEditorManager.EditorCommand ec = CommandEditorManager.get(rewrite.mId);
+            if (ec != null) {
+                ops.add(ec.getOp(this, rewrite.mArgs));
+            }
+        }
+        return combineOps(ops);
+    }
+
+    @Override
+    public CommandEditorResult commitFinalResult(final String text) {
+        CommandEditorResult result = null;
+        if (mUtteranceRewriter == null) {
+            // If rewrites/commands are not defined (default), then selection can be dictated over.
+            commitWithOverwrite(text);
+        } else {
+            final ExtractedText et = getExtractedText();
+            final String selectedText = getSelectedText();
+            // Try to interpret the text as a command and if it is, then apply it.
+            // Otherwise write out the text as usual.
+            UtteranceRewriter.Rewrite rewrite = applyCommand(text);
+            String textRewritten = rewrite.mStr;
+            final int len = commitWithOverwrite(textRewritten);
+            // TODO: add undo for setSelection even if len==0
+            if (len > 0) {
+                pushOpUndo(new Op("delete " + len) {
+                    @Override
+                    public Op run() {
+                        mInputConnection.beginBatchEdit();
+                        boolean success = mInputConnection.deleteSurroundingText(len, 0);
+                        if (et != null && selectedText.length() > 0) {
+                            success = mInputConnection.commitText(selectedText, 1) &&
+                                    mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                        }
+                        mInputConnection.endBatchEdit();
+                        if (success) {
+                            return NO_OP;
+                        }
+                        return null;
+                    }
+                });
+            }
+            boolean success = false;
+            if (rewrite.isCommand()) {
+                mCommandPrefix.clear();
+                CommandEditorManager.EditorCommand ec = CommandEditorManager.get(rewrite.mId);
+                if (ec != null) {
+                    // TODO: dont call runOp from here
+                    success = runOp(ec.getOp(this, rewrite.mArgs));
+                }
+            } else {
+                mCommandPrefix.add(textRewritten);
+            }
+            result = new CommandEditorResult(success, rewrite);
+        }
+        mPrevText = "";
+        mAddedLength = 0;
+        return result;
     }
 
     /**
      * Writes the text into the text field and stores it for future reference.
+     * If there is a selection then partial results are not written out.
      */
+    @Override
     public boolean commitPartialResult(String text) {
-        commitText(text);
-        mPrevText = text;
-        return true;
-    }
-
-    @Override
-    public boolean goToPreviousField() {
-        return mInputConnection.performEditorAction(EditorInfo.IME_ACTION_PREVIOUS);
-    }
-
-    @Override
-    public boolean goToNextField() {
-        return mInputConnection.performEditorAction(EditorInfo.IME_ACTION_NEXT);
-    }
-
-    @Override
-    public boolean goToCharacterPosition(int pos) {
-        return mInputConnection.setSelection(pos, pos);
-    }
-
-    @Override
-    public boolean selectAll() {
-        return mInputConnection.performContextMenuAction(android.R.id.selectAll);
-    }
-
-    @Override
-    public boolean cut() {
-        return mInputConnection.performContextMenuAction(android.R.id.cut);
-    }
-
-    @Override
-    public boolean copy() {
-        return mInputConnection.performContextMenuAction(android.R.id.copy);
-    }
-
-    @Override
-    public boolean paste() {
-        return mInputConnection.performContextMenuAction(android.R.id.paste);
-    }
-
-    @Override
-    public boolean capitalize(String str) {
-        return false;
-    }
-
-    @Override
-    public boolean addSpace() {
-        mInputConnection.commitText(" ", 1);
-        return true;
-    }
-
-    @Override
-    public boolean addNewline() {
-        mInputConnection.commitText("\n", 1);
-        return true;
-    }
-
-    @Override
-    public boolean reset() {
-        boolean success = false;
-        mInputConnection.beginBatchEdit();
         CharSequence cs = mInputConnection.getSelectedText(0);
-        if (cs != null) {
-            int len = cs.length();
-            mInputConnection.setSelection(len, len);
-            success = true;
+        if (cs != null && cs.length() > 0) {
+            return false;
         }
-        mInputConnection.endBatchEdit();
-        return success;
+        String textRewritten = rewrite(text);
+        commitWithOverwrite(textRewritten);
+        mPrevText = textRewritten;
+        return true;
+    }
+
+    @Override
+    public CharSequence getText() {
+        ExtractedText et = getExtractedText();
+        if (et == null) {
+            return null;
+        }
+        return et.text;
+    }
+
+    @Override
+    public Op goUp() {
+        return new Op("goUp") {
+            @Override
+            public Op run() {
+                if (mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP))) {
+                    return goDown();
+                }
+                return null;
+            }
+        };
+    }
+
+    @Override
+    public Op goDown() {
+        return new Op("goDown") {
+            @Override
+            public Op run() {
+                if (mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN))) {
+                    return goUp();
+                }
+                return null;
+            }
+        };
+    }
+
+    @Override
+    public Op goLeft() {
+        return new Op("goLeft") {
+            @Override
+            public Op run() {
+                if (mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT))) {
+                    return goRight();
+                }
+                return null;
+            }
+        };
+    }
+
+    @Override
+    public Op goRight() {
+        return new Op("goRight") {
+            @Override
+            public Op run() {
+                if (mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))) {
+                    return goLeft();
+                }
+                return null;
+            }
+        };
+    }
+
+    /**
+     * Returns an operation that pops the undo stack the given number of times,
+     * executing each popped op. If the stack does not contain the given number of elements, or
+     * one of the ops fails, then returns null. Otherwise returns NO_OP.
+     */
+    @Override
+    public Op undo(final int steps) {
+        return new Op("undo") {
+            @Override
+            public Op run() {
+                Op undo = Op.NO_OP;
+                mInputConnection.beginBatchEdit();
+                for (int i = 0; i < steps; i++) {
+                    try {
+                        Op op = mUndoStack.pop().run();
+                        if (op == null) {
+                            undo = null;
+                            break;
+                        }
+                    } catch (NoSuchElementException ex) {
+                        undo = null;
+                        break;
+                    }
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    /**
+     * The combine operation modifies the stack by removing the top n elements and adding
+     * their combination instead.
+     * TODO: implement undo
+     */
+    @Override
+    public Op combine(final int steps) {
+        return new Op("combine " + steps) {
+            @Override
+            public Op run() {
+                final Deque<Op> combination = new ArrayDeque<>();
+                try {
+                    for (int i = 0; i < steps; i++) {
+                        combination.push(mOpStack.pop());
+                    }
+                } catch (NoSuchElementException e) {
+                    return null;
+                }
+                mOpStack.push(combineOps(combination));
+                return NO_OP;
+            }
+        };
+    }
+
+    @Override
+    public Op apply(final int steps) {
+        return new Op("apply") {
+            @Override
+            public Op run() {
+                Op op = mOpStack.peek();
+                if (op == null) {
+                    return null;
+                }
+                final Deque<Op> combination = new ArrayDeque<>();
+                mInputConnection.beginBatchEdit();
+                for (int i = 0; i < steps; i++) {
+                    Op undo = op.run();
+                    if (undo == null) {
+                        break;
+                    }
+                    combination.push(undo);
+                }
+                mInputConnection.endBatchEdit();
+                return new Op("undo apply", combination.size()) {
+
+                    @Override
+                    public Op run() {
+                        mInputConnection.beginBatchEdit();
+                        while (!combination.isEmpty()) {
+                            combination.pop().run();
+                        }
+                        mInputConnection.endBatchEdit();
+                        return NO_OP;
+                    }
+                };
+            }
+        };
+    }
+
+    @Override
+    public Op goToCharacterPosition(final int pos) {
+        return new Op("goto " + pos) {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                ExtractedText et = getExtractedText();
+                if (et != null) {
+                    int charPos = pos;
+                    if (pos < 0) {
+                        //-1 == end of text
+                        charPos = et.text.length() + pos + 1;
+                    }
+                    undo = getOpSetSelection(charPos, charPos, et.selectionStart, et.selectionEnd).run();
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+
+    @Override
+    public Op goForward(final int numberOfChars) {
+        return move(numberOfChars);
+    }
+
+    @Override
+    public Op goBackward(final int numberOfChars) {
+        return move(-1 * numberOfChars);
+    }
+
+    @Override
+    public Op cut() {
+        return getContextMenuActionOp(android.R.id.cut);
+    }
+
+    @Override
+    public Op copy() {
+        return getContextMenuActionOp(android.R.id.copy);
+    }
+
+    @Override
+    public Op paste() {
+        return getContextMenuActionOp(android.R.id.paste);
+    }
+
+    /**
+     * mInputConnection.performContextMenuAction(android.R.id.selectAll) does not create a selection
+     */
+    @Override
+    public Op selectAll() {
+        return new Op("selectAll") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                final ExtractedText et = getExtractedText();
+                if (et != null) {
+                    undo = getOpSetSelection(0, et.text.length(), et.selectionStart, et.selectionEnd).run();
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    // Not undoable
+    @Override
+    public Op cutAll() {
+        Collection<Op> collection = new ArrayList<>();
+        collection.add(selectAll());
+        collection.add(cut());
+        return combineOps(collection);
+    }
+
+    // Not undoable
+    @Override
+    public Op deleteAll() {
+        return new Op("deleteAll") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                Op op = selectAll().run();
+                if (op != null) {
+                    if (mInputConnection.commitText("", 0)) {
+                        undo = NO_OP;
+                    }
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    // TODO: test with failing ops
+    @Override
+    public Op combineOps(final Collection<Op> ops) {
+        return new Op(ops.toString(), ops.size()) {
+            @Override
+            public Op run() {
+                final Deque<Op> combination = new ArrayDeque<>();
+                mInputConnection.beginBatchEdit();
+                for (Op op : ops) {
+                    Op undo = op.run();
+                    if (undo == null) {
+                        break;
+                    }
+                    combination.push(undo);
+                }
+                mInputConnection.endBatchEdit();
+                return new Op(combination.toString(), combination.size()) {
+                    @Override
+                    public Op run() {
+                        mInputConnection.beginBatchEdit();
+                        while (!combination.isEmpty()) {
+                            Op undo1 = combination.pop().run();
+                            if (undo1 == null) {
+                                break;
+                            }
+                        }
+                        mInputConnection.endBatchEdit();
+                        return combineOps(ops);
+                    }
+                };
+            }
+        };
+    }
+
+    // Not undoable
+    @Override
+    public Op copyAll() {
+        Collection<Op> collection = new ArrayList<>();
+        collection.add(selectAll());
+        collection.add(copy());
+        return combineOps(collection);
+    }
+
+    @Override
+    public Op resetSel() {
+        return new Op("resetSel") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                final ExtractedText et = getExtractedText();
+                if (et != null) {
+                    undo = getOpSetSelection(et.selectionEnd, et.selectionEnd, et.selectionStart, et.selectionEnd).run();
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
     }
 
     /**
      * Deletes all characters up to the leftmost whitespace from the cursor (including the whitespace).
      * If something is selected then delete the selection.
-     * TODO: maybe expensive?
      */
     @Override
-    public boolean deleteLeftWord() {
-        mInputConnection.beginBatchEdit();
-        // If something is selected then delete the selection and return
-        if (mInputConnection.getSelectedText(0) != null) {
-            mInputConnection.commitText("", 0);
-        } else {
-            CharSequence beforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
-            if (beforeCursor != null) {
-                int beforeCursorLength = beforeCursor.length();
-                Matcher m = WHITESPACE_AND_TOKEN.matcher(beforeCursor);
-                int lastIndex = 0;
-                while (m.find()) {
-                    // If the cursor is immediately left from WHITESPACE_AND_TOKEN, then
-                    // delete the WHITESPACE_AND_TOKEN, otherwise delete whatever is in between.
-                    lastIndex = beforeCursorLength == m.end() ? m.start() : m.end();
+    public Op deleteLeftWord() {
+        return new Op("deleteLeftWord") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                boolean success = false;
+                mInputConnection.beginBatchEdit();
+                // If something is selected then delete the selection and return
+                final String oldText = getSelectedText();
+                if (oldText.length() > 0) {
+                    undo = getCommitTextOp(oldText, "").run();
+                } else {
+                    final CharSequence beforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
+                    if (beforeCursor != null) {
+                        final int beforeCursorLength = beforeCursor.length();
+                        Matcher m = WHITESPACE_AND_TOKEN.matcher(beforeCursor);
+                        int lastIndex = 0;
+                        while (m.find()) {
+                            // If the cursor is immediately left from WHITESPACE_AND_TOKEN, then
+                            // delete the WHITESPACE_AND_TOKEN, otherwise delete whatever is in between.
+                            lastIndex = beforeCursorLength == m.end() ? m.start() : m.end();
+                        }
+                        if (lastIndex > 0) {
+                            success = mInputConnection.deleteSurroundingText(beforeCursorLength - lastIndex, 0);
+                        } else if (beforeCursorLength < MAX_DELETABLE_CONTEXT) {
+                            success = mInputConnection.deleteSurroundingText(beforeCursorLength, 0);
+                        }
+                        if (success) {
+                            mInputConnection.endBatchEdit();
+                            final CharSequence cs = lastIndex > 0 ? beforeCursor.subSequence(lastIndex, beforeCursorLength) : beforeCursor;
+                            undo = new Op("commitText: " + cs) {
+                                @Override
+                                public Op run() {
+                                    if (mInputConnection.commitText(cs, 0)) {
+                                        return NO_OP;
+                                    }
+                                    return null;
+                                }
+                            };
+                        }
+                    }
                 }
-                if (lastIndex > 0) {
-                    mInputConnection.deleteSurroundingText(beforeCursorLength - lastIndex, 0);
-                } else if (beforeCursorLength < MAX_DELETABLE_CONTEXT) {
-                    mInputConnection.deleteSurroundingText(beforeCursorLength, 0);
-                }
+                mInputConnection.endBatchEdit();
+                return undo;
             }
-        }
-        mInputConnection.endBatchEdit();
-        return true;
+        };
     }
 
     @Override
-    public boolean select(String str) {
-        boolean success = false;
-        mInputConnection.beginBatchEdit();
-        ExtractedText extractedText = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
-        CharSequence beforeCursor = extractedText.text;
-        int index = beforeCursor.toString().lastIndexOf(str);
-        if (index > 0) {
-            mInputConnection.setSelection(index, index + str.length());
-            success = true;
-        }
-        mInputConnection.endBatchEdit();
-        return success;
+    public Op select(final String query) {
+        return new Op("select " + query) {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                ExtractedText et = getExtractedText();
+                if (et != null) {
+                    Pair<Integer, CharSequence> queryResult = lastIndexOf(query, et);
+                    if (queryResult.first >= 0) {
+                        undo = getOpSetSelection(queryResult.first, queryResult.first + queryResult.second.length(), et.selectionStart, et.selectionEnd).run();
+                    }
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
     }
 
     @Override
-    public boolean delete(String str) {
+    public Op selectReBefore(final String regex) {
+        return new Op("selectReBefore") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                final ExtractedText et = getExtractedText();
+                if (et != null) {
+                    CharSequence input = et.text.subSequence(0, et.selectionStart);
+                    // 0 == last match
+                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex), input, 0);
+                    if (pos != null) {
+                        undo = getOpSetSelection(pos.first, pos.second, et.selectionStart, et.selectionEnd).run();
+                    }
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op selectReAfter(final String regex, final int n) {
+        return new Op("selectReAfter") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                final ExtractedText et = getExtractedText();
+                if (et != null) {
+                    CharSequence input = et.text.subSequence(et.selectionEnd, et.text.length());
+                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex), input, n);
+                    if (pos != null) {
+                        undo = getOpSetSelection(et.selectionEnd + pos.first, et.selectionEnd + pos.second, et.selectionStart, et.selectionEnd).run();
+                    }
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op delete(String str) {
         return replace(str, "");
     }
 
     @Override
-    public boolean replace(String str1, String str2) {
-        boolean success = false;
-        mInputConnection.beginBatchEdit();
-        ExtractedText extractedText = mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
-        if (extractedText != null) {
-            CharSequence beforeCursor = extractedText.text;
-            //CharSequence beforeCursor = mInputConnection.getTextBeforeCursor(MAX_SELECTABLE_CONTEXT, 0);
-            Log.i("replace: " + beforeCursor);
-            int index = beforeCursor.toString().lastIndexOf(str1);
-            Log.i("replace: " + index);
-            if (index > 0) {
-                mInputConnection.setSelection(index, index);
-                mInputConnection.deleteSurroundingText(0, str1.length());
-                if (!str2.isEmpty()) {
-                    mInputConnection.commitText(str2, 0);
+    public Op replace(final String query, final String replacement) {
+        return new Op("replace") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                final ExtractedText et = getExtractedText();
+                if (et != null) {
+                    Pair<Integer, CharSequence> queryResult = lastIndexOf(query, et);
+                    final CharSequence match = queryResult.second;
+                    if (queryResult.first >= 0) {
+                        boolean success = mInputConnection.setSelection(queryResult.first, queryResult.first);
+                        if (success) {
+                            // Delete existing text
+                            success = mInputConnection.deleteSurroundingText(0, match.length());
+                            if (replacement.isEmpty()) {
+                                if (success) {
+                                    undo = new Op("undo replace1") {
+                                        @Override
+                                        public Op run() {
+                                            mInputConnection.beginBatchEdit();
+                                            boolean success2 = mInputConnection.commitText(match, 1) &&
+                                                    mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                                            mInputConnection.endBatchEdit();
+                                            if (success2) {
+                                                return NO_OP;
+                                            }
+                                            return null;
+                                        }
+                                    };
+                                }
+                            } else {
+                                success = mInputConnection.commitText(replacement, 1);
+                                if (success) {
+                                    undo = new Op("undo replace2") {
+                                        @Override
+                                        public Op run() {
+                                            mInputConnection.beginBatchEdit();
+                                            boolean success2 = mInputConnection.deleteSurroundingText(replacement.length(), 0) &&
+                                                    mInputConnection.commitText(match, 1) &&
+                                                    mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                                            mInputConnection.endBatchEdit();
+                                            if (success2) {
+                                                return NO_OP;
+                                            }
+                                            return null;
+                                        }
+                                    };
+                                }
+                            }
+                        }
+                    }
                 }
-                success = true;
+                mInputConnection.endBatchEdit();
+                return undo;
             }
-            mInputConnection.endBatchEdit();
-        }
-        return success;
+        };
     }
 
     @Override
-    public boolean go() {
+    public Op replaceSel(final String str) {
+        return new Op("replaceSel") {
+            @Override
+            public Op run() {
+                // Replace mentions of selection with a back-reference
+                String out = SELREF.matcher(str).replaceAll("\\$1");
+                mInputConnection.beginBatchEdit();
+                // Change the current selection with the input argument, possibly embedding the selection.
+                String selectedText = getSelectedText();
+                Op undo = getCommitTextOp(selectedText, ALL.matcher(selectedText).replaceAll(out)).run();
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op replaceSelRe(final String regex, final String repl) {
+        return new Op("replaceSelRe") {
+            @Override
+            public Op run() {
+                mInputConnection.beginBatchEdit();
+                String selectedText = getSelectedText();
+                String newText = selectedText.replaceAll(regex, repl);
+                Op undo = getCommitTextOp(selectedText, newText).run();
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op ucSel() {
+        return new Op("ucSel") {
+            @Override
+            public Op run() {
+                mInputConnection.beginBatchEdit();
+                String oldText = getSelectedText();
+                Op undo = getCommitTextOp(oldText, oldText.toUpperCase()).run();
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op lcSel() {
+        return new Op("lcSel") {
+            @Override
+            public Op run() {
+                mInputConnection.beginBatchEdit();
+                String oldText = getSelectedText();
+                Op undo = getCommitTextOp(oldText, oldText.toLowerCase()).run();
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op incSel() {
+        return new Op("incSel") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                String oldText = getSelectedText();
+                try {
+                    undo = getCommitTextOp(oldText, String.valueOf(Integer.parseInt(oldText) + 1)).run();
+                } catch (NumberFormatException e) {
+                    // Intentional
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op saveClip(final String key, final String val) {
+        return new Op("saveClip " + key) {
+            @Override
+            public Op run() {
+                mInputConnection.beginBatchEdit();
+                // abc{}def -> abc$1def
+                String out = SELREF.matcher(val).replaceAll("\\$1");
+                String selectedText = getSelectedText();
+                mInputConnection.endBatchEdit();
+                // 123 -> abc123def
+                PreferenceUtils.putPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, key, ALL.matcher(selectedText).replaceAll(out));
+                return Op.NO_OP;
+            }
+        };
+    }
+
+    @Override
+    public Op loadClip(final String key) {
+        return new Op("loadClip " + key) {
+            @Override
+            public Op run() {
+                Op undo = null;
+                String savedText = PreferenceUtils.getPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, key);
+                if (savedText != null) {
+                    mInputConnection.beginBatchEdit();
+                    undo = getCommitTextOp(getSelectedText(), savedText).run();
+                    mInputConnection.endBatchEdit();
+                }
+                return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op showClipboard() {
+        return new Op("showClipboard") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                Map<String, String> clipboard = PreferenceUtils.getPrefMap(mPreferences, mRes, R.string.keyClipboardMap);
+                if (clipboard != null && !clipboard.isEmpty()) {
+                    StringBuilder sb = new StringBuilder();
+                    for (Map.Entry entry : clipboard.entrySet()) {
+                        sb.append('<');
+                        sb.append(entry.getKey());
+                        sb.append('|');
+                        sb.append(entry.getValue());
+                        sb.append('>');
+                        sb.append('\n');
+                    }
+                    mInputConnection.beginBatchEdit();
+                    undo = getCommitTextOp(getSelectedText(), sb.toString()).run();
+                    mInputConnection.endBatchEdit();
+                }
+                return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op clearClipboard() {
+        return new Op("clearClipboard") {
+            @Override
+            public Op run() {
+                PreferenceUtils.clearPrefMap(mPreferences, mRes, R.string.keyClipboardMap);
+                return Op.NO_OP;
+            }
+        };
+    }
+
+    /**
+     * Not undoable
+     *
+     * @param code key code
+     * @return op that sends the given code
+     */
+    @Override
+    public Op keyCode(final int code) {
+        return new Op("keyCode") {
+            @Override
+            public Op run() {
+                if (mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, code))) {
+                    return Op.NO_OP;
+                }
+                return null;
+            }
+        };
+    }
+
+    /**
+     * Not undoable
+     *
+     * @param symbolicName key code's symbolic name
+     * @return op that sends the given code
+     */
+    @Override
+    public Op keyCodeStr(String symbolicName) {
+        int code = KeyEvent.keyCodeFromString("KEYCODE_" + symbolicName);
+        if (code != KeyEvent.KEYCODE_UNKNOWN) {
+            return keyCode(code);
+        }
+        return null;
+    }
+
+    /**
+     * There is no undo, because the undo-stack does not survive the jump to another field.
+     */
+    @Override
+    public Op goToPreviousField() {
+        return getEditorActionOp(EditorInfo.IME_ACTION_PREVIOUS);
+    }
+
+    /**
+     * There is no undo, because the undo-stack does not survive the jump to another field.
+     */
+    @Override
+    public Op goToNextField() {
+        return getEditorActionOp(EditorInfo.IME_ACTION_NEXT);
+    }
+
+    @Override
+    public Op imeActionDone() {
         // Does not work on Google Searchbar
-        // mInputConnection.performEditorAction(EditorInfo.IME_ACTION_DONE);
+        return getEditorActionOp(EditorInfo.IME_ACTION_DONE);
+    }
 
+    @Override
+    public Op imeActionGo() {
         // Works in Google Searchbar, GF Translator, but NOT in the Firefox search widget
-        //mInputConnection.performEditorAction(EditorInfo.IME_ACTION_GO);
+        return getEditorActionOp(EditorInfo.IME_ACTION_GO);
+    }
 
-        mInputConnection.performEditorAction(EditorInfo.IME_ACTION_SEARCH);
-        return true;
+    @Override
+    public Op imeActionSearch() {
+        return getEditorActionOp(EditorInfo.IME_ACTION_SEARCH);
+    }
+
+    @Override
+    public Op imeActionSend() {
+        return getEditorActionOp(EditorInfo.IME_ACTION_SEND);
+    }
+
+    @Override
+    public Deque<Op> getOpStack() {
+        return mOpStack;
+    }
+
+    @Override
+    public Deque<Op> getUndoStack() {
+        return mUndoStack;
+    }
+
+    @Override
+    public ExtractedText getExtractedText() {
+        return mInputConnection.getExtractedText(new ExtractedTextRequest(), 0);
+    }
+
+    private void pushOp(Op op) {
+        mOpStack.push(op);
+        Log.i("undo: push op: " + mOpStack.toString());
+    }
+
+    private void pushOpUndo(Op op) {
+        mUndoStack.push(op);
+        Log.i("undo: push undo: " + mUndoStack.toString());
+    }
+
+    private Op getEditorActionOp(final int editorAction) {
+        return new Op("editorAction " + editorAction) {
+            @Override
+            public Op run() {
+                if (mInputConnection.performEditorAction(editorAction)) {
+                    return Op.NO_OP;
+                }
+                return null;
+            }
+        };
+    }
+
+    private Op getContextMenuActionOp(final int contextMenuAction) {
+        return new Op("contextMenuAction " + contextMenuAction) {
+            @Override
+            public Op run() {
+                if (mInputConnection.performContextMenuAction(contextMenuAction)) {
+                    return Op.NO_OP;
+                }
+                return null;
+            }
+        };
     }
 
     /**
      * Updates the text field, modifying only the parts that have changed.
+     * Adds text at the cursor, possibly overwriting a selection.
+     * Returns the number of characters added.
      */
-    private void commitText(String text) {
-        mInputConnection.beginBatchEdit();
+    private int commitWithOverwrite(String text) {
         // Calculate the length of the text that has changed
         String commonPrefix = greatestCommonPrefix(mPrevText, text);
         int commonPrefixLength = commonPrefix.length();
-        int prevLength = mPrevText.length();
-        int deletableLength = prevLength - commonPrefixLength;
 
-        // Delete the glue symbol if present
-        if (text.isEmpty()) {
-            deletableLength += mGlueCount;
-        }
-
+        mInputConnection.beginBatchEdit();
+        // Delete the part that changed compared to the partial text added earlier.
+        int deletableLength = mPrevText.length() - commonPrefixLength;
         if (deletableLength > 0) {
             mInputConnection.deleteSurroundingText(deletableLength, 0);
         }
 
+        // Finish if there is nothing to add
         if (text.isEmpty() || commonPrefixLength == text.length()) {
-            return;
-        }
-
-        // We look at the left context of the cursor
-        // to decide which glue symbol to use and whether to capitalize the text.
-        CharSequence leftContext = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
-        // In some error situation, null is returned
-        if (leftContext == null) {
-            leftContext = "";
-        }
-        String glue = "";
-        if (commonPrefixLength == 0) {
-            glue = getGlue(text, leftContext);
+            mAddedLength -= deletableLength;
         } else {
-            text = text.substring(commonPrefixLength);
+            CharSequence leftContext = "";
+            String glue = "";
+            // If the prev text and the current text share no prefix then recalculate the glue.
+            if (commonPrefixLength == 0) {
+                // We look at the left context of the cursor
+                // to decide which glue symbol to use and whether to capitalize the text.
+                CharSequence textBeforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
+                // In some error situations, null is returned
+                if (textBeforeCursor != null) {
+                    leftContext = textBeforeCursor;
+                }
+                glue = getGlue(text, leftContext);
+                mAddedLength = glue.length() + text.length();
+            } else {
+                text = text.substring(commonPrefixLength);
+                leftContext = commonPrefix;
+                mAddedLength = mAddedLength - deletableLength + text.length();
+            }
+            text = capitalizeIfNeeded(text, leftContext);
+            mInputConnection.commitText(glue + text, 1);
         }
-
-        if (" ".equals(glue)) {
-            mGlueCount = 1;
-        }
-
-        text = capitalizeIfNeeded(text, leftContext);
-        mInputConnection.commitText(glue + text, 1);
         mInputConnection.endBatchEdit();
+        return mAddedLength;
+    }
+
+    /**
+     * TODO: review
+     * we should be able to review the last N ops and undo then if they can be interpreted as
+     * a combined op.
+     */
+    private Op getCommitWithOverwriteOp(final String text) {
+        return new Op("add " + text) {
+            @Override
+            public Op run() {
+                // Calculate the length of the text that has changed
+                String commonPrefix = greatestCommonPrefix(mPrevText, text);
+                int commonPrefixLength = commonPrefix.length();
+
+                mInputConnection.beginBatchEdit();
+                final ExtractedText et = getExtractedText();
+                final String selectedText = getSelectedText();
+                // Delete the part that changed compared to the partial text added earlier.
+                int deletableLength = mPrevText.length() - commonPrefixLength;
+                if (deletableLength > 0) {
+                    mInputConnection.deleteSurroundingText(deletableLength, 0);
+                }
+
+                // Finish if there is nothing to add
+                if (text.isEmpty() || commonPrefixLength == text.length()) {
+                    mAddedLength -= deletableLength;
+                } else {
+                    CharSequence leftContext = "";
+                    String glue = "";
+                    String text1 = text;
+                    // If the prev text and the current text share no prefix then recalculate the glue.
+                    if (commonPrefixLength == 0) {
+                        // We look at the left context of the cursor
+                        // to decide which glue symbol to use and whether to capitalize the text.
+                        CharSequence textBeforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
+                        // In some error situations, null is returned
+                        if (textBeforeCursor != null) {
+                            leftContext = textBeforeCursor;
+                        }
+                        glue = getGlue(text, leftContext);
+                        mAddedLength = glue.length() + text.length();
+                    } else {
+                        text1 = text.substring(commonPrefixLength);
+                        leftContext = commonPrefix;
+                        mAddedLength = mAddedLength - deletableLength + text1.length();
+                    }
+                    text1 = capitalizeIfNeeded(text1, leftContext);
+                    mInputConnection.commitText(glue + text1, 1);
+                }
+                mInputConnection.endBatchEdit();
+                return new Op("delete " + mAddedLength) {
+                    @Override
+                    public Op run() {
+                        mInputConnection.beginBatchEdit();
+                        boolean success = mInputConnection.deleteSurroundingText(mAddedLength, 0);
+                        if (et != null && selectedText.length() > 0) {
+                            success = mInputConnection.commitText(selectedText, 1) &&
+                                    mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                        }
+                        mInputConnection.endBatchEdit();
+                        if (success) {
+                            return NO_OP;
+                        }
+                        return null;
+                    }
+                };
+            }
+        };
+    }
+
+    /**
+     * Op that commits a text at the cursor. If successful then an undo is returned which deletes
+     * the text and restores the old selection.
+     */
+    private Op getCommitTextOp(final CharSequence oldText, final CharSequence newText) {
+        return new Op("commitText") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                // TODO: use getSelection
+                final ExtractedText et = getExtractedText();
+                if (mInputConnection.commitText(newText, 1)) {
+                    undo = new Op("deleteSurroundingText+commitText") {
+                        @Override
+                        public Op run() {
+                            mInputConnection.beginBatchEdit();
+                            boolean success = mInputConnection.deleteSurroundingText(newText.length(), 0);
+                            if (success && oldText != null) {
+                                success = mInputConnection.commitText(oldText, 1);
+                            }
+                            if (et != null && success) {
+                                success = mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
+                            }
+                            mInputConnection.endBatchEdit();
+                            if (success) {
+                                return NO_OP;
+                            }
+                            return null;
+                        }
+                    };
+                }
+                return undo;
+            }
+        };
+    }
+
+    private String rewrite(String str) {
+        if (mUtteranceRewriter == null) {
+            return str;
+        }
+        UtteranceRewriter.Rewrite triple = mUtteranceRewriter.getRewrite(str);
+        return triple.mStr;
+    }
+
+    private Op getOpSetSelection(final int i, final int j, final int oldSelectionStart, final int oldSelectionEnd) {
+        return new Op("setSelection") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                if (mInputConnection.setSelection(i, j)) {
+                    undo = new Op("setSelection") {
+                        @Override
+                        public Op run() {
+                            if (mInputConnection.setSelection(oldSelectionStart, oldSelectionEnd)) {
+                                return NO_OP;
+                            }
+                            return null;
+                        }
+                    };
+                }
+                return undo;
+            }
+        };
+    }
+
+
+    /**
+     * Tries to match a substring before the cursor, using case-insensitive matching.
+     * TODO: this might not work with some Unicode characters
+     *
+     * @param query search string
+     * @param et    text to search from
+     * @return pair index of the last occurrence of the match, and the matched string
+     */
+    private Pair<Integer, CharSequence> lastIndexOf(String query, ExtractedText et) {
+        int start = et.selectionStart;
+        query = query.toLowerCase();
+        CharSequence input = et.text.subSequence(0, start);
+        CharSequence match = null;
+        int index = input.toString().toLowerCase().lastIndexOf(query);
+        if (index >= 0) {
+            match = input.subSequence(index, index + query.length());
+        }
+        return new Pair<>(index, match);
+    }
+
+    /**
+     * Go to the Nth match and return the indices of the 1st group in the match if available.
+     * If not then return the indices of the whole match.
+     * If the match could not be made N times the return the last match (e.g. if n == 0).
+     * If no match was found then return {@code null}.
+     * TODO: if possible, support negative N to match from end to beginning.
+     */
+    private Pair<Integer, Integer> matchNth(Pattern pattern, CharSequence input, int n) {
+        Matcher matcher = pattern.matcher(input);
+        Pair<Integer, Integer> pos = null;
+        int end = 0;
+        int counter = 0;
+        while (matcher.find(end)) {
+            counter++;
+            int group = 0;
+            if (matcher.groupCount() > 0) {
+                group = 1;
+            }
+            pos = new Pair<>(matcher.start(group), matcher.end(group));
+            if (counter == n) {
+                break;
+            }
+            int newEnd = matcher.end(group);
+            // We require the end position to increase to avoid infinite loop when matching ^.
+            if (newEnd <= end) {
+                end++;
+                if (end >= input.length()) {
+                    break;
+                }
+            } else {
+                end = newEnd;
+            }
+        }
+        return pos;
+    }
+
+    private String getSelectedText() {
+        CharSequence cs = mInputConnection.getSelectedText(0);
+        if (cs == null || cs.length() == 0) {
+            return "";
+        }
+        return cs.toString();
+    }
+
+    /**
+     * Move either left (negative number of steps) or right (positive num of steps)
+     */
+    private Op move(final int numberOfChars) {
+        return new Op("move") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                ExtractedText extractedText = getExtractedText();
+                if (extractedText != null) {
+                    int pos;
+                    if (numberOfChars < 0) {
+                        pos = extractedText.selectionStart;
+                    } else {
+                        pos = extractedText.selectionEnd;
+                    }
+                    int newPos = pos + numberOfChars;
+                    undo = getOpSetSelection(newPos, newPos, extractedText.selectionStart, extractedText.selectionEnd).run();
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    /**
+     * Check the last committed texts if they can be combined into a command. If so, then undo
+     * these commits and return the constructed command.
+     */
+    private UtteranceRewriter.Rewrite applyCommand(String text) {
+        int len = mCommandPrefix.size();
+        for (int i = Math.min(MAX_UTT_IN_COMMAND, len); i > 0; i--) {
+            List sublist = mCommandPrefix.subList(len - i, len);
+            // TODO: sometimes sublist is empty?
+            String possibleCommand = TextUtils.join(" ", sublist);
+            if (possibleCommand.isEmpty()) {
+                possibleCommand = text;
+            } else {
+                possibleCommand += " " + text;
+            }
+            Log.i("applyCommand: testing: <" + possibleCommand + ">");
+            UtteranceRewriter.Rewrite rewrite = mUtteranceRewriter.getRewrite(possibleCommand);
+            if (rewrite.isCommand()) {
+                Log.i("applyCommand: isCommand: " + possibleCommand);
+                undo(i).run();
+                return rewrite;
+            }
+        }
+        return mUtteranceRewriter.getRewrite(text);
     }
 
     /**
@@ -285,13 +1264,26 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return text;
     }
 
+    /**
+     * Return a whitespace iff the 1st character of the text is not punctuation, or whitespace, etc.
+     */
     private static String getGlue(String text, CharSequence leftContext) {
         char firstChar = text.charAt(0);
 
+        // TODO: experimental: glue all 1-character strings (somewhat Estonian-specific)
+        if (text.length() == 1 && Character.isLetter(firstChar)) {
+            return "";
+        }
+
         if (leftContext.length() == 0
                 || Constants.CHARACTERS_WS.contains(firstChar)
-                || Constants.CHARACTERS_PUNCT.contains(firstChar)
-                || Constants.CHARACTERS_WS.contains(leftContext.charAt(leftContext.length() - 1))) {
+                || Constants.CHARACTERS_PUNCT.contains(firstChar)) {
+            return "";
+        }
+
+        char prevChar = leftContext.charAt(leftContext.length() - 1);
+        if (Constants.CHARACTERS_WS.contains(prevChar)
+                || Constants.CHARACTERS_STICKY.contains(prevChar)) {
             return "";
         }
         return " ";

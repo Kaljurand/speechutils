@@ -16,6 +16,10 @@ import java.util.Locale;
  */
 public class TtsProvider {
 
+    public interface Listener {
+        void onDone();
+    }
+
     private static final String UTT_COMPLETED_FEEDBACK = "UTT_COMPLETED_FEEDBACK";
 
     private final TextToSpeech mTts;
@@ -55,6 +59,41 @@ public class TtsProvider {
                 @Override
                 public void onUtteranceCompleted(String utteranceId) {
                     mAudioPauser.resume();
+                }
+            });
+        }
+        HashMap<String, String> params = new HashMap<String, String>();
+        params.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, UTT_COMPLETED_FEEDBACK);
+        mAudioPauser.pause();
+        mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params);
+    }
+
+    @SuppressLint("NewApi")
+    public void say(String text, final Listener listener) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
+            mTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+
+                @Override
+                public void onDone(String utteranceId) {
+                    mAudioPauser.resume();
+                    listener.onDone();
+                }
+
+                @Override
+                public void onError(String utteranceId) {
+                    mAudioPauser.resume();
+                }
+
+                @Override
+                public void onStart(String utteranceId) {
+                }
+            });
+        } else {
+            mTts.setOnUtteranceCompletedListener(new TextToSpeech.OnUtteranceCompletedListener() {
+                @Override
+                public void onUtteranceCompleted(String utteranceId) {
+                    mAudioPauser.resume();
+                    listener.onDone();
                 }
             });
         }
