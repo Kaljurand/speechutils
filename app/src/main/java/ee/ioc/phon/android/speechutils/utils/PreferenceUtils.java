@@ -127,13 +127,28 @@ public class PreferenceUtils {
     public static void clearPrefMap(SharedPreferences prefs, Resources res, int nameId) {
         String name = res.getString(nameId);
         Set<String> keys = prefs.getStringSet(name, null);
-        SharedPreferences.Editor editor = prefs.edit();
         if (keys != null) {
+            SharedPreferences.Editor editor = prefs.edit();
             for (String key : keys) {
                 editor.remove(name + '/' + key);
             }
+            editor.remove(name);
+            editor.apply();
         }
-        editor.remove(name);
-        editor.apply();
+    }
+
+    public static void clearPrefMap(SharedPreferences prefs, Resources res, int nameId, Set<String> deleteKeys) {
+        String name = res.getString(nameId);
+        Set<String> keys = prefs.getStringSet(name, null);
+        if (keys != null) {
+            SharedPreferences.Editor editor = prefs.edit();
+            for (String key : deleteKeys) {
+                editor.remove(name + '/' + key);
+            }
+            Set<String> newKeys = new HashSet<>(keys);
+            newKeys.removeAll(deleteKeys);
+            editor.putStringSet(name, newKeys);
+            editor.apply();
+        }
     }
 }
