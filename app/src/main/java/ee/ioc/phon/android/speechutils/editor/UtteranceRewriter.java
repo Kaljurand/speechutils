@@ -10,7 +10,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -28,19 +33,23 @@ public class UtteranceRewriter {
     public static final String HEADER_ARG1 = "Arg1";
     public static final String HEADER_ARG2 = "Arg2";
 
-    public static final String[] HEADER = {
-            HEADER_COMMENT,
-            HEADER_LOCALE,
-            HEADER_SERVICE,
-            HEADER_APP,
-            HEADER_UTTERANCE,
-            HEADER_REPLACEMENT,
-            HEADER_COMMAND,
-            HEADER_ARG1,
-            HEADER_ARG2
-    };
+    private static final Set<String> COLUMNS;
 
-    public static class Rewrite {
+    static {
+        Set<String> aSet = new HashSet<>();
+        aSet.add(HEADER_COMMENT);
+        aSet.add(HEADER_LOCALE);
+        aSet.add(HEADER_SERVICE);
+        aSet.add(HEADER_APP);
+        aSet.add(HEADER_UTTERANCE);
+        aSet.add(HEADER_REPLACEMENT);
+        aSet.add(HEADER_COMMAND);
+        aSet.add(HEADER_ARG1);
+        aSet.add(HEADER_ARG2);
+        COLUMNS = Collections.unmodifiableSet(aSet);
+    }
+
+    protected static class Rewrite {
         public final String mId;
         public final String mStr;
         public final String[] mArgs;
@@ -63,11 +72,55 @@ public class UtteranceRewriter {
         }
     }
 
-    private final List<Command> mCommands;
+    private static class CommandHolder {
+        private final List<Command> mCommands;
+        private final String[] mHeader;
+        private final Map<Integer, String> mErrors = new HashMap<>();
 
-    public UtteranceRewriter(List<Command> commands) {
-        assert commands != null;
-        mCommands = commands;
+        public CommandHolder(String[] header) {
+            this(header, new ArrayList<Command>());
+        }
+
+        public CommandHolder(String[] inputHeader, List<Command> commands) {
+            List<String> header = new ArrayList<>();
+            for (String columnName : inputHeader) {
+                if (COLUMNS.contains(columnName)) {
+                    header.add(columnName);
+                }
+            }
+            mHeader = header.toArray(new String[header.size()]);
+            mCommands = commands;
+        }
+
+        public String[] getHeader() {
+            return mHeader;
+        }
+
+        public List<Command> getCommands() {
+            return mCommands;
+        }
+
+        public Map<Integer, String> getErrors() {
+            return mErrors;
+        }
+
+        public boolean addCommand(Command command) {
+            return mCommands.add(command);
+        }
+
+        public String addError(int lineNumber, String message) {
+            return mErrors.put(lineNumber, message);
+        }
+
+        public int size() {
+            return mCommands.size();
+        }
+    }
+
+    private final CommandHolder mCommandHolder;
+
+    public UtteranceRewriter(CommandHolder commandHolder) {
+        mCommandHolder = commandHolder;
     }
 
     public UtteranceRewriter(String str, CommandMatcher commandMatcher) {
@@ -90,16 +143,12 @@ public class UtteranceRewriter {
         this(loadRewrites(contentResolver, uri));
     }
 
-    public int size() {
-        return mCommands.size();
-    }
-
     /**
      * Rewrites and returns the given string,
      * and the first matching command.
      */
     public Rewrite getRewrite(String str) {
-        for (Command command : mCommands) {
+        for (Command command : mCommandHolder.getCommands()) {
             Pair<String, String[]> pair = command.parse(str);
             String commandId = command.getId();
             if (commandId == null) {
@@ -134,19 +183,31 @@ public class UtteranceRewriter {
      */
     public String toTsv() {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(TextUtils.join("\t", HEADER));
-        for (Command command : mCommands) {
+        String[] header = mCommandHolder.getHeader();
+        stringBuilder.append(TextUtils.join("\t", header));
+        for (Command command : mCommandHolder.getCommands()) {
             stringBuilder.append('\n');
-            stringBuilder.append(command.toTsv());
+            stringBuilder.append(command.toTsv(header));
         }
         return stringBuilder.toString();
     }
 
     public String[] toStringArray() {
-        String[] array = new String[mCommands.size()];
+        String[] header = mCommandHolder.getHeader();
+        String[] array = new String[mCommandHolder.size()];
         int i = 0;
-        for (Command command : mCommands) {
-            array[i++] = command.toPp();
+        for (Command command : mCommandHolder.getCommands()) {
+            array[i++] = command.toPp(header);
+        }
+        return array;
+    }
+
+    public String[] getErrorsAsStringArray() {
+        Map<Integer, String> errors = mCommandHolder.getErrors();
+        String[] array = new String[errors.size()];
+        int i = 0;
+        for (Map.Entry<Integer, String> entry : errors.entrySet()) {
+            array[i++] = "line " + entry.getKey() + ": " + entry.getValue();
         }
         return array;
     }
@@ -212,17 +273,19 @@ public class UtteranceRewriter {
     /**
      * Loads the rewrites from a string of tab-separated values.
      */
-    private static List<Command> loadRewrites(String str, CommandMatcher commandMatcher) {
-        assert str != null;
-        List<Command> commands = new ArrayList<>();
+    private static CommandHolder loadRewrites(String str, CommandMatcher commandMatcher) {
         String[] rows = str.split("\n");
-        if (rows.length > 1) {
-            String[] header = parseHeader(rows[0]);
-            for (int i = 1; i < rows.length; i++) {
-                addLine(commands, header, rows[i], i, commandMatcher);
+        int length = rows.length;
+        if (length == 0) {
+            return new CommandHolder(new String[0]);
+        }
+        CommandHolder commandHolder = new CommandHolder(parseHeader(rows[0]));
+        if (length > 1) {
+            for (int i = 1; i < length; i++) {
+                addLine(commandHolder, rows[i], i, commandMatcher);
             }
         }
-        return commands;
+        return commandHolder;
     }
 
     /**
@@ -230,16 +293,15 @@ public class UtteranceRewriter {
      * The header is given by a separate argument, the table must not
      * contain the header.
      */
-    private static List<Command> loadRewrites(String str, String[] header, CommandMatcher commandMatcher) {
-        assert str != null;
-        List<Command> commands = new ArrayList<>();
+    private static CommandHolder loadRewrites(String str, String[] header, CommandMatcher commandMatcher) {
+        CommandHolder commandHolder = new CommandHolder(header);
         String[] rows = str.split("\n");
         if (rows.length > 0) {
             for (int i = 0; i < rows.length; i++) {
-                addLine(commands, header, rows[i], i, commandMatcher);
+                addLine(commandHolder, rows[i], i, commandMatcher);
             }
         }
-        return commands;
+        return commandHolder;
     }
 
     /**
@@ -247,39 +309,42 @@ public class UtteranceRewriter {
      * The first line is a header.
      * Non-header lines are ignored if they start with '#'.
      */
-    private static List<Command> loadRewrites(ContentResolver contentResolver, Uri uri) throws IOException {
+    private static CommandHolder loadRewrites(ContentResolver contentResolver, Uri uri) throws IOException {
+        CommandHolder commandHolder = null;
         InputStream inputStream = contentResolver.openInputStream(uri);
-        List<Command> commands = new ArrayList<>();
         if (inputStream != null) {
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
             String line = reader.readLine();
             if (line != null) {
                 int lineCounter = 0;
-                String[] header = parseHeader(line);
+                commandHolder = new CommandHolder(parseHeader(line));
                 while ((line = reader.readLine()) != null) {
                     lineCounter++;
-                    addLine(commands, header, line, lineCounter, null);
+                    addLine(commandHolder, line, lineCounter, null);
                 }
             }
             inputStream.close();
         }
-        return commands;
+        if (commandHolder == null) {
+            return new CommandHolder(new String[0]);
+        }
+        return commandHolder;
     }
 
-    private static void addLine(List<Command> commands, String[] header, String line, int lineCounter, CommandMatcher commandMatcher) {
+    private static void addLine(CommandHolder commandHolder, String line, int lineCounter, CommandMatcher commandMatcher) {
         // TODO: removing trailing tabs means that rewrite cannot delete a string
         String[] splits = PATTERN_TRAILING_TABS.matcher(line).replaceAll("").split("\t");
         if (splits.length > 1 && line.charAt(0) != '#') {
+            String[] header = commandHolder.getHeader();
             try {
                 Command command = getCommand(header, splits, commandMatcher);
                 if (command != null) {
-                    commands.add(command);
+                    commandHolder.addCommand(command);
                 }
             } catch (PatternSyntaxException e) {
-                commands.add(0, Command.createEmptyCommand("ERROR: line " + lineCounter + ": " + e.getLocalizedMessage()));
+                commandHolder.addError(lineCounter, e.getLocalizedMessage());
             } catch (IllegalArgumentException e) {
-                // Unsupported header field
-                commands.add(0, Command.createEmptyCommand("ERROR: line " + lineCounter + ": " + e.getLocalizedMessage()));
+                commandHolder.addError(lineCounter, e.getLocalizedMessage());
             }
         }
     }

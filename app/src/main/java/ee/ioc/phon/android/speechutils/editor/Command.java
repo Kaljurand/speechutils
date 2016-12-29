@@ -68,10 +68,6 @@ public class Command {
         return mCommand;
     }
 
-    public String[] getArgs() {
-        return mArgs;
-    }
-
     /**
      * Parses the given string.
      * If the entire string matches the utterance pattern, then extracts the arguments as well.
@@ -112,50 +108,104 @@ public class Command {
     /**
      * Pretty-prints the command by putting the components of the command onto separate lines,
      * and marks spaces with middot in every component except for the human-readable comment and the
-     * command ID (which does not contain spaces). The human-readable comment is only shown if it
-     * is non-empty.
+     * command ID (which does not contain spaces).
      *
      * @return pretty-printed command
      */
-    public String toPp() {
-        String str = pp(mLocale) + '\n' +
-                pp(mUtt) + '\n' +
-                pp(mReplacement);
-        if (mCommand != null) {
-            str += '\n' + mCommand;
+    public String toPp(String[] header) {
+        int length = header.length;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            if (i > 0) {
+                sb.append('\n');
+            }
+            switch (header[i]) {
+                case UtteranceRewriter.HEADER_COMMENT:
+                    if (mComment != null) {
+                        sb.append(mComment);
+                    }
+                    break;
+                case UtteranceRewriter.HEADER_LOCALE:
+                    sb.append(pp(mLocale));
+                    break;
+                case UtteranceRewriter.HEADER_SERVICE:
+                    sb.append(pp(mService));
+                    break;
+                case UtteranceRewriter.HEADER_APP:
+                    sb.append(pp(mApp));
+                    break;
+                case UtteranceRewriter.HEADER_UTTERANCE:
+                    sb.append(pp(mUtt));
+                    break;
+                case UtteranceRewriter.HEADER_REPLACEMENT:
+                    sb.append(pp(mReplacement));
+                    break;
+                case UtteranceRewriter.HEADER_COMMAND:
+                    if (mCommand != null) {
+                        sb.append(mCommand);
+                    }
+                    break;
+                case UtteranceRewriter.HEADER_ARG1:
+                    if (mArgs.length > 0) {
+                        sb.append(pp(mArgs[0]));
+                    }
+                    break;
+                case UtteranceRewriter.HEADER_ARG2:
+                    if (mArgs.length > 1) {
+                        sb.append(pp(mArgs[1]));
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
-        for (String arg : mArgs) {
-            str += '\n' + pp(arg);
-        }
-        str += '\n' + pp(mService) + '\n' + pp(mApp);
-        if (mComment != null && !mComment.isEmpty()) {
-            return str + '\n' + mComment;
-        }
-        return str;
+        return sb.toString();
     }
 
-    public String toTsv() {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(escape(mComment));
-        stringBuilder.append('\t');
-        stringBuilder.append(escape(mLocale));
-        stringBuilder.append('\t');
-        stringBuilder.append(escape(mService));
-        stringBuilder.append('\t');
-        stringBuilder.append(escape(mApp));
-        stringBuilder.append('\t');
-        stringBuilder.append(escape(mUtt));
-        stringBuilder.append('\t');
-        stringBuilder.append(escape(mReplacement));
-        if (getId() != null) {
-            stringBuilder.append('\t');
-            stringBuilder.append(escape(mCommand));
+    public String toTsv(String[] header) {
+        int length = header.length;
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < length; i++) {
+            if (i > 0) {
+                sb.append('\t');
+            }
+            switch (header[i]) {
+                case UtteranceRewriter.HEADER_COMMENT:
+                    sb.append(escape(mComment));
+                    break;
+                case UtteranceRewriter.HEADER_LOCALE:
+                    sb.append(escape(mLocale));
+                    break;
+                case UtteranceRewriter.HEADER_SERVICE:
+                    sb.append(escape(mService));
+                    break;
+                case UtteranceRewriter.HEADER_APP:
+                    sb.append(escape(mApp));
+                    break;
+                case UtteranceRewriter.HEADER_UTTERANCE:
+                    sb.append(escape(mUtt));
+                    break;
+                case UtteranceRewriter.HEADER_REPLACEMENT:
+                    sb.append(escape(mReplacement));
+                    break;
+                case UtteranceRewriter.HEADER_COMMAND:
+                    sb.append(escape(mCommand));
+                    break;
+                case UtteranceRewriter.HEADER_ARG1:
+                    if (mArgs.length > 0) {
+                        sb.append(escape(mArgs[0]));
+                    }
+                    break;
+                case UtteranceRewriter.HEADER_ARG2:
+                    if (mArgs.length > 1) {
+                        sb.append(escape(mArgs[1]));
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
-        for (String arg : getArgs()) {
-            stringBuilder.append('\t');
-            stringBuilder.append(escape(arg));
-        }
-        return stringBuilder.toString();
+        return sb.toString();
     }
 
     public String toString() {
@@ -184,9 +234,5 @@ public class Command {
             return "";
         }
         return str.replace("\\n", "\n").replace("\\t", "\t");
-    }
-
-    public static Command createEmptyCommand(String comment) {
-        return new Command(comment, null, null, null, null, null, null, null);
     }
 }
