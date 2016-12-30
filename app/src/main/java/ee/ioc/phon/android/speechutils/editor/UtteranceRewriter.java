@@ -385,9 +385,8 @@ public class UtteranceRewriter {
                     break;
                 case HEADER_UTTERANCE:
                     split = split.trim();
-                    // TODO: test if this works
                     if (split.isEmpty()) {
-                        throw new IllegalArgumentException("Utterance must not be empty");
+                        throw new IllegalArgumentException("Empty Utterance");
                     }
                     utterance = Pattern.compile(split, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
                     break;
