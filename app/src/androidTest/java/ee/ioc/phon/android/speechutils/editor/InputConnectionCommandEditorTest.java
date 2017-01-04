@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 
 @RunWith(AndroidJUnit4.class)
 public class InputConnectionCommandEditorTest {
-
     private static final List<Command> COMMANDS;
 
     static {

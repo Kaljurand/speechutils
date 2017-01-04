@@ -21,6 +21,8 @@ import java.util.regex.PatternSyntaxException;
 
 public class UtteranceRewriter {
 
+    private static final String[] EMPTY_LIST = {};
+
     private static final Pattern PATTERN_TRAILING_TABS = Pattern.compile("\t*$");
 
     public static final String HEADER_COMMENT = "Comment";
@@ -48,6 +50,11 @@ public class UtteranceRewriter {
         aSet.add(HEADER_ARG2);
         COLUMNS = Collections.unmodifiableSet(aSet);
     }
+
+    private static final String[] DEFAULT_HEADER = {
+            UtteranceRewriter.HEADER_UTTERANCE,
+            UtteranceRewriter.HEADER_REPLACEMENT
+    };
 
     protected static class Rewrite {
         public final String mId;
@@ -82,14 +89,29 @@ public class UtteranceRewriter {
         }
 
         public CommandHolder(String[] inputHeader, List<Command> commands) {
+            boolean hasColumnUtterance = false;
+            boolean hasColumnReplacement = false;
             List<String> header = new ArrayList<>();
             for (String columnName : inputHeader) {
                 if (COLUMNS.contains(columnName)) {
                     header.add(columnName);
+                    if (HEADER_UTTERANCE.equals(columnName)) {
+                        hasColumnUtterance = true;
+                    }
+                    if (HEADER_REPLACEMENT.equals(columnName)) {
+                        hasColumnReplacement = true;
+                    }
                 }
             }
-            mHeader = header.toArray(new String[header.size()]);
             mCommands = commands;
+            // If one of the required header names is missing then assume that the
+            // input was without a header and interpret it as a two column table.
+            if ((!hasColumnUtterance || !hasColumnReplacement) && inputHeader.length > 1) {
+                mHeader = DEFAULT_HEADER;
+                mCommands.add(0, new Command(inputHeader[0], inputHeader[1]));
+            } else {
+                mHeader = header.toArray(new String[header.size()]);
+            }
         }
 
         public String[] getHeader() {
@@ -119,8 +141,16 @@ public class UtteranceRewriter {
 
     private final CommandHolder mCommandHolder;
 
-    public UtteranceRewriter(CommandHolder commandHolder) {
+    private UtteranceRewriter(CommandHolder commandHolder) {
         mCommandHolder = commandHolder;
+    }
+
+    public UtteranceRewriter(List<Command> commands) {
+        this(new CommandHolder(EMPTY_LIST, commands));
+    }
+
+    public UtteranceRewriter(List<Command> commands, String[] header) {
+        this(new CommandHolder(header, commands));
     }
 
     public UtteranceRewriter(String str, CommandMatcher commandMatcher) {
@@ -274,6 +304,9 @@ public class UtteranceRewriter {
      * Loads the rewrites from a string of tab-separated values.
      */
     private static CommandHolder loadRewrites(String str, CommandMatcher commandMatcher) {
+        if (str == null) {
+            return new CommandHolder(new String[0]);
+        }
         String[] rows = str.split("\n");
         int length = rows.length;
         if (length == 0) {

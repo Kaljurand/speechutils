@@ -18,6 +18,13 @@ import static org.junit.Assert.assertThat;
 public class UtteranceRewriterTest {
 
     private static final List<Command> COMMANDS;
+    private static final String[] HEADER = {
+            UtteranceRewriter.HEADER_UTTERANCE,
+            UtteranceRewriter.HEADER_REPLACEMENT,
+            UtteranceRewriter.HEADER_COMMAND,
+            UtteranceRewriter.HEADER_ARG1,
+            UtteranceRewriter.HEADER_ARG2
+    };
 
     static {
         List<Command> list = new ArrayList<>();
@@ -33,13 +40,13 @@ public class UtteranceRewriterTest {
 
     @Before
     public void before() {
-        mUr = new UtteranceRewriter(COMMANDS);
+        mUr = new UtteranceRewriter(COMMANDS, HEADER);
     }
 
     @Test
     public void test01() {
         Command command = new Command("s/(.*)/(.*)/", "X", "replace", new String[]{"$1", "$2"});
-        assertThat(command.toTsv(), is("\t\t\t\ts/(.*)/(.*)/\tX\treplace\t$1\t$2"));
+        assertThat(command.toTsv(HEADER), is("s/(.*)/(.*)/\tX\treplace\t$1\t$2"));
         Pair<String, String[]> pair = command.parse("s/_/a/");
         assertThat(pair.first, is("X"));
         assertThat(pair.second[0], is("_"));
@@ -56,9 +63,10 @@ public class UtteranceRewriterTest {
         rewrite("<1><2><3><K6_STOP>", "null()", "1, 2, 3<K6_STOP>");
     }
 
-    private void rewrite(String str1, String str2) {
-        UtteranceRewriter.Rewrite rewrite = mUr.getRewrite(str1);
-        assertThat(rewrite.toString(), is(str2));
+    @Test
+    public void test04() {
+        UtteranceRewriter ur = new UtteranceRewriter("utt1\trepl1\tignored1\nutt2\trepl2\tignored2\n");
+        assertThat(ur.toTsv(), is("Utterance\tReplacement\nutt1\trepl1\nutt2\trepl2"));
     }
 
     private void rewrite(String str1, String str2, String str3) {
