@@ -6,6 +6,7 @@ import android.util.Pair;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.SortedMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -117,14 +118,16 @@ public class Command {
      *
      * @return pretty-printed command
      */
-    public String toPp(String[] header) {
-        int length = header.length;
+    public String toPp(SortedMap<Integer, String> header) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < length; i++) {
-            if (i > 0) {
+        boolean isFirst = true;
+        for (SortedMap.Entry<Integer, String> entry : header.entrySet()) {
+            if (isFirst) {
+                isFirst = false;
+            } else {
                 sb.append('\n');
             }
-            switch (header[i]) {
+            switch (entry.getValue()) {
                 case UtteranceRewriter.HEADER_COMMENT:
                     if (mComment != null) {
                         sb.append(mComment);
@@ -172,14 +175,16 @@ public class Command {
         return sb.toString();
     }
 
-    public String toTsv(String[] header) {
-        int length = header.length;
+    public String toTsv(SortedMap<Integer, String> header) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < length; i++) {
-            if (i > 0) {
+        boolean isFirst = true;
+        for (SortedMap.Entry<Integer, String> entry : header.entrySet()) {
+            if (isFirst) {
+                isFirst = false;
+            } else {
                 sb.append('\t');
             }
-            switch (header[i]) {
+            switch (entry.getValue()) {
                 case UtteranceRewriter.HEADER_COMMENT:
                     sb.append(escape(mComment));
                     break;

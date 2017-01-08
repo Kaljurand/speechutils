@@ -10,6 +10,8 @@ import org.junit.runner.RunWith;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -18,13 +20,18 @@ import static org.junit.Assert.assertThat;
 public class UtteranceRewriterTest {
 
     private static final List<Command> COMMANDS;
-    private static final String[] HEADER = {
-            UtteranceRewriter.HEADER_UTTERANCE,
-            UtteranceRewriter.HEADER_REPLACEMENT,
-            UtteranceRewriter.HEADER_COMMAND,
-            UtteranceRewriter.HEADER_ARG1,
-            UtteranceRewriter.HEADER_ARG2
-    };
+
+    private static final SortedMap<Integer, String> HEADER;
+
+    static {
+        SortedMap<Integer, String> aMap = new TreeMap<>();
+        aMap.put(0, UtteranceRewriter.HEADER_UTTERANCE);
+        aMap.put(1, UtteranceRewriter.HEADER_REPLACEMENT);
+        aMap.put(2, UtteranceRewriter.HEADER_COMMAND);
+        aMap.put(3, UtteranceRewriter.HEADER_ARG1);
+        aMap.put(4, UtteranceRewriter.HEADER_ARG2);
+        HEADER = Collections.unmodifiableSortedMap(aMap);
+    }
 
     static {
         List<Command> list = new ArrayList<>();
@@ -65,8 +72,44 @@ public class UtteranceRewriterTest {
 
     @Test
     public void test04() {
+        UtteranceRewriter ur = new UtteranceRewriter("");
+        assertThat(ur.toTsv(), is("Utterance"));
+    }
+
+    @Test
+    public void test05() {
+        UtteranceRewriter ur = new UtteranceRewriter("utt");
+        assertThat(ur.toTsv(), is("Utterance\nutt"));
+    }
+
+    @Test
+    public void test06() {
+        UtteranceRewriter ur = new UtteranceRewriter("utt1\nutt2");
+        assertThat(ur.toTsv(), is("Utterance\nutt1\nutt2"));
+    }
+
+    @Test
+    public void test07() {
+        UtteranceRewriter ur = new UtteranceRewriter("Utterance\nutt1\nutt2");
+        assertThat(ur.toTsv(), is("Utterance\nutt1\nutt2"));
+    }
+
+    @Test
+    public void test08() {
         UtteranceRewriter ur = new UtteranceRewriter("utt1\trepl1\tignored1\nutt2\trepl2\tignored2\n");
         assertThat(ur.toTsv(), is("Utterance\tReplacement\nutt1\trepl1\nutt2\trepl2"));
+    }
+
+    @Test
+    public void test09() {
+        UtteranceRewriter ur = new UtteranceRewriter("Utterance\tReplacement\nutt1\trepl1\tignored1\nutt2\trepl2\tignored2\n");
+        assertThat(ur.toTsv(), is("Utterance\tReplacement\nutt1\trepl1\nutt2\trepl2"));
+    }
+
+    @Test
+    public void test10() {
+        UtteranceRewriter ur = new UtteranceRewriter("Ignored\tUtterance\nignored\tutt1\nignored2\tutt2");
+        assertThat(ur.toTsv(), is("Utterance\nutt1\nutt2"));
     }
 
     private void rewrite(String str1, String str2, String str3) {

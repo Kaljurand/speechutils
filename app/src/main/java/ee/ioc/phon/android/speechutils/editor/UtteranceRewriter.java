@@ -11,19 +11,16 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+// TODO: do not use Java split
 public class UtteranceRewriter {
-
-    private static final String[] EMPTY_LIST = {};
-
-    private static final Pattern PATTERN_TRAILING_TABS = Pattern.compile("\t*$");
 
     public static final String HEADER_COMMENT = "Comment";
     public static final String HEADER_LOCALE = "Locale";
@@ -51,10 +48,22 @@ public class UtteranceRewriter {
         COLUMNS = Collections.unmodifiableSet(aSet);
     }
 
-    private static final String[] DEFAULT_HEADER = {
-            UtteranceRewriter.HEADER_UTTERANCE,
-            UtteranceRewriter.HEADER_REPLACEMENT
-    };
+    private static final SortedMap<Integer, String> DEFAULT_HEADER_1;
+
+    static {
+        SortedMap<Integer, String> aMap1 = new TreeMap<>();
+        aMap1.put(0, HEADER_UTTERANCE);
+        DEFAULT_HEADER_1 = Collections.unmodifiableSortedMap(aMap1);
+    }
+
+    private static final SortedMap<Integer, String> DEFAULT_HEADER_2;
+
+    static {
+        SortedMap<Integer, String> aMap2 = new TreeMap<>();
+        aMap2.put(0, HEADER_UTTERANCE);
+        aMap2.put(1, HEADER_REPLACEMENT);
+        DEFAULT_HEADER_2 = Collections.unmodifiableSortedMap(aMap2);
+    }
 
     protected static class Rewrite {
         public final String mId;
@@ -81,48 +90,72 @@ public class UtteranceRewriter {
 
     private static class CommandHolder {
         private final List<Command> mCommands;
-        private final String[] mHeader;
-        private final Map<Integer, String> mErrors = new HashMap<>();
+        private final SortedMap<Integer, String> mHeader;
+        private final SortedMap<Integer, String> mErrors = new TreeMap<>();
 
-        public CommandHolder(String[] header) {
-            this(header, new ArrayList<Command>());
+        public CommandHolder() {
+            this(DEFAULT_HEADER_1, new ArrayList<Command>());
         }
 
-        public CommandHolder(String[] inputHeader, List<Command> commands) {
+        public CommandHolder(String inputHeader) {
+            this(inputHeader, new ArrayList<Command>());
+        }
+
+        public CommandHolder(SortedMap<Integer, String> header, List<Command> commands) {
+            mCommands = commands;
+            mHeader = header;
+        }
+
+        public CommandHolder(String inputHeader, List<Command> commands) {
             boolean hasColumnUtterance = false;
-            boolean hasColumnReplacement = false;
-            List<String> header = new ArrayList<>();
-            for (String columnName : inputHeader) {
-                if (COLUMNS.contains(columnName)) {
-                    header.add(columnName);
-                    if (HEADER_UTTERANCE.equals(columnName)) {
-                        hasColumnUtterance = true;
+            SortedMap<Integer, String> header = new TreeMap<>();
+            List<String> fields = new ArrayList<>();
+            if (inputHeader != null && !inputHeader.isEmpty()) {
+                final TextUtils.StringSplitter COLUMN_SPLITTER = new TextUtils.SimpleStringSplitter('\t');
+                COLUMN_SPLITTER.setString(inputHeader);
+                int fieldCounter = 0;
+                for (String columnName : COLUMN_SPLITTER) {
+                    fields.add(columnName);
+                    if (COLUMNS.contains(columnName)) {
+                        header.put(fieldCounter, columnName);
+                        if (HEADER_UTTERANCE.equals(columnName)) {
+                            hasColumnUtterance = true;
+                        }
                     }
-                    if (HEADER_REPLACEMENT.equals(columnName)) {
-                        hasColumnReplacement = true;
-                    }
+                    fieldCounter++;
                 }
             }
             mCommands = commands;
-            // If one of the required header names is missing then assume that the
-            // input was without a header and interpret it as a two column table.
-            if ((!hasColumnUtterance || !hasColumnReplacement) && inputHeader.length > 1) {
-                mHeader = DEFAULT_HEADER;
-                mCommands.add(0, new Command(inputHeader[0], inputHeader[1]));
+            // If the Utterance column is missing then assume that the
+            // input was without a header and interpret it as a one or two column table.
+            if (!hasColumnUtterance) {
+                if (fields.size() > 1) {
+                    mHeader = DEFAULT_HEADER_2;
+                    mCommands.add(0, new Command(fields.get(0), fields.get(1)));
+                } else if (fields.size() > 0) {
+                    mHeader = DEFAULT_HEADER_1;
+                    mCommands.add(0, new Command(fields.get(0), ""));
+                } else {
+                    mHeader = DEFAULT_HEADER_1;
+                }
             } else {
-                mHeader = header.toArray(new String[header.size()]);
+                mHeader = header;
             }
         }
 
-        public String[] getHeader() {
+        public SortedMap<Integer, String> getHeader() {
             return mHeader;
+        }
+
+        public String getHeaderAsStr() {
+            return TextUtils.join("\t", mHeader.values());
         }
 
         public List<Command> getCommands() {
             return mCommands;
         }
 
-        public Map<Integer, String> getErrors() {
+        public SortedMap<Integer, String> getErrors() {
             return mErrors;
         }
 
@@ -137,31 +170,47 @@ public class UtteranceRewriter {
         public int size() {
             return mCommands.size();
         }
+
+        public void addLine(String line, int lineCounter, CommandMatcher commandMatcher) {
+            if (line.charAt(0) == '#') {
+                return;
+            }
+            try {
+                Command command = getCommand(getHeader(), line, commandMatcher);
+                if (command != null) {
+                    addCommand(command);
+                }
+            } catch (PatternSyntaxException e) {
+                addError(lineCounter, e.getLocalizedMessage());
+            } catch (IllegalArgumentException e) {
+                addError(lineCounter, e.getLocalizedMessage());
+            }
+        }
     }
 
     private final CommandHolder mCommandHolder;
 
-    private UtteranceRewriter(CommandHolder commandHolder) {
-        mCommandHolder = commandHolder;
-    }
-
     public UtteranceRewriter(List<Command> commands) {
-        this(new CommandHolder(EMPTY_LIST, commands));
+        mCommandHolder = new CommandHolder(DEFAULT_HEADER_2, commands);
     }
 
-    public UtteranceRewriter(List<Command> commands, String[] header) {
-        this(new CommandHolder(header, commands));
+    public UtteranceRewriter(List<Command> commands, String header) {
+        mCommandHolder = new CommandHolder(header, commands);
+    }
+
+    public UtteranceRewriter(List<Command> commands, SortedMap<Integer, String> header) {
+        mCommandHolder = new CommandHolder(header, commands);
     }
 
     public UtteranceRewriter(String str, CommandMatcher commandMatcher) {
-        this(loadRewrites(str, commandMatcher));
+        mCommandHolder = loadRewrites(str, commandMatcher);
     }
 
-    public UtteranceRewriter(String str, String[] header, CommandMatcher commandMatcher) {
-        this(loadRewrites(str, header, commandMatcher));
+    public UtteranceRewriter(String str, String header, CommandMatcher commandMatcher) {
+        mCommandHolder = loadRewrites(str, header, commandMatcher);
     }
 
-    public UtteranceRewriter(String str, String[] header) {
+    public UtteranceRewriter(String str, String header) {
         this(str, header, null);
     }
 
@@ -170,7 +219,7 @@ public class UtteranceRewriter {
     }
 
     public UtteranceRewriter(ContentResolver contentResolver, Uri uri) throws IOException {
-        this(loadRewrites(contentResolver, uri));
+        mCommandHolder = loadRewrites(contentResolver, uri);
     }
 
     /**
@@ -213,8 +262,8 @@ public class UtteranceRewriter {
      */
     public String toTsv() {
         StringBuilder stringBuilder = new StringBuilder();
-        String[] header = mCommandHolder.getHeader();
-        stringBuilder.append(TextUtils.join("\t", header));
+        SortedMap<Integer, String> header = mCommandHolder.getHeader();
+        stringBuilder.append(mCommandHolder.getHeaderAsStr());
         for (Command command : mCommandHolder.getCommands()) {
             stringBuilder.append('\n');
             stringBuilder.append(command.toTsv(header));
@@ -223,7 +272,7 @@ public class UtteranceRewriter {
     }
 
     public String[] toStringArray() {
-        String[] header = mCommandHolder.getHeader();
+        SortedMap<Integer, String> header = mCommandHolder.getHeader();
         String[] array = new String[mCommandHolder.size()];
         int i = 0;
         for (Command command : mCommandHolder.getCommands()) {
@@ -233,10 +282,10 @@ public class UtteranceRewriter {
     }
 
     public String[] getErrorsAsStringArray() {
-        Map<Integer, String> errors = mCommandHolder.getErrors();
+        SortedMap<Integer, String> errors = mCommandHolder.getErrors();
         String[] array = new String[errors.size()];
         int i = 0;
-        for (Map.Entry<Integer, String> entry : errors.entrySet()) {
+        for (SortedMap.Entry<Integer, String> entry : errors.entrySet()) {
             array[i++] = "line " + entry.getKey() + ": " + entry.getValue();
         }
         return array;
@@ -295,27 +344,23 @@ public class UtteranceRewriter {
         return text;
     }
 
-    private static String[] parseHeader(String line) {
-        return line.split("\t");
-    }
-
-
     /**
-     * Loads the rewrites from a string of tab-separated values.
+     * Loads the rewrites from a string of tab-separated values,
+     * guessing the header from the string itself.
      */
     private static CommandHolder loadRewrites(String str, CommandMatcher commandMatcher) {
         if (str == null) {
-            return new CommandHolder(new String[0]);
+            return new CommandHolder();
         }
         String[] rows = str.split("\n");
         int length = rows.length;
         if (length == 0) {
-            return new CommandHolder(new String[0]);
+            return new CommandHolder();
         }
-        CommandHolder commandHolder = new CommandHolder(parseHeader(rows[0]));
+        CommandHolder commandHolder = new CommandHolder(rows[0]);
         if (length > 1) {
             for (int i = 1; i < length; i++) {
-                addLine(commandHolder, rows[i], i, commandMatcher);
+                commandHolder.addLine(rows[i], i, commandMatcher);
             }
         }
         return commandHolder;
@@ -326,12 +371,12 @@ public class UtteranceRewriter {
      * The header is given by a separate argument, the table must not
      * contain the header.
      */
-    private static CommandHolder loadRewrites(String str, String[] header, CommandMatcher commandMatcher) {
+    private static CommandHolder loadRewrites(String str, String header, CommandMatcher commandMatcher) {
         CommandHolder commandHolder = new CommandHolder(header);
         String[] rows = str.split("\n");
         if (rows.length > 0) {
             for (int i = 0; i < rows.length; i++) {
-                addLine(commandHolder, rows[i], i, commandMatcher);
+                commandHolder.addLine(rows[i], i, commandMatcher);
             }
         }
         return commandHolder;
@@ -350,47 +395,29 @@ public class UtteranceRewriter {
             String line = reader.readLine();
             if (line != null) {
                 int lineCounter = 0;
-                commandHolder = new CommandHolder(parseHeader(line));
+                commandHolder = new CommandHolder(line);
                 while ((line = reader.readLine()) != null) {
                     lineCounter++;
-                    addLine(commandHolder, line, lineCounter, null);
+                    commandHolder.addLine(line, lineCounter, null);
                 }
             }
             inputStream.close();
         }
         if (commandHolder == null) {
-            return new CommandHolder(new String[0]);
+            return new CommandHolder();
         }
         return commandHolder;
-    }
-
-    private static void addLine(CommandHolder commandHolder, String line, int lineCounter, CommandMatcher commandMatcher) {
-        // TODO: removing trailing tabs means that rewrite cannot delete a string
-        String[] splits = PATTERN_TRAILING_TABS.matcher(line).replaceAll("").split("\t");
-        if (splits.length > 1 && line.charAt(0) != '#') {
-            String[] header = commandHolder.getHeader();
-            try {
-                Command command = getCommand(header, splits, commandMatcher);
-                if (command != null) {
-                    commandHolder.addCommand(command);
-                }
-            } catch (PatternSyntaxException e) {
-                commandHolder.addError(lineCounter, e.getLocalizedMessage());
-            } catch (IllegalArgumentException e) {
-                commandHolder.addError(lineCounter, e.getLocalizedMessage());
-            }
-        }
     }
 
     /**
      * Creates a command based on the given fields.
      *
-     * @param header         header row
-     * @param fields         fields of a single row
+     * @param header         parsed header
+     * @param line           single row
      * @param commandMatcher command matcher
      * @return command or null if commandMatcher rejects the command
      */
-    private static Command getCommand(String[] header, String[] fields, CommandMatcher commandMatcher) {
+    private static Command getCommand(SortedMap<Integer, String> header, String line, CommandMatcher commandMatcher) {
         String comment = null;
         Pattern locale = null;
         Pattern service = null;
@@ -401,9 +428,16 @@ public class UtteranceRewriter {
         String arg1 = null;
         String arg2 = null;
 
-        for (int i = 0; i < Math.min(header.length, fields.length); i++) {
-            String split = fields[i];
-            switch (header[i]) {
+        final TextUtils.StringSplitter columnSplitter = new TextUtils.SimpleStringSplitter('\t');
+        columnSplitter.setString(line);
+
+        int i = 0;
+        for (String split : columnSplitter) {
+            String colName = header.get(i++);
+            if (colName == null) {
+                continue;
+            }
+            switch (colName) {
                 case HEADER_COMMENT:
                     comment = split.trim();
                     break;
