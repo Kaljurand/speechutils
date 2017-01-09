@@ -223,7 +223,7 @@ public class CommandEditorManager {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                if (args == null || args.length != 1) {
+                if (args == null || args.length < 1) {
                     return null;
                 }
                 return ce.keyCodeStr(args[0]);
@@ -234,7 +234,7 @@ public class CommandEditorManager {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                if (args == null || args.length != 1) {
+                if (args == null || args.length < 1) {
                     return null;
                 }
                 return ce.select(args[0]);
@@ -245,7 +245,7 @@ public class CommandEditorManager {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                if (args == null || args.length != 1) {
+                if (args == null || args.length < 1) {
                     return null;
                 }
                 return ce.selectReBefore(args[0]);
@@ -256,11 +256,11 @@ public class CommandEditorManager {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                if (args == null || args.length == 0 || args.length > 2) {
+                if (args == null || args.length < 1) {
                     return null;
                 }
                 int n = 1;
-                if (args.length == 2) {
+                if (args.length > 1) {
                     try {
                         n = Integer.parseInt(args[1]);
                     } catch (NumberFormatException e) {
@@ -275,7 +275,7 @@ public class CommandEditorManager {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                if (args == null || args.length != 2) {
+                if (args == null || args.length < 2) {
                     return null;
                 }
                 return ce.replaceSelRe(args[0], args[1]);
@@ -294,7 +294,7 @@ public class CommandEditorManager {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                if (args == null || args.length != 1) {
+                if (args == null || args.length < 1) {
                     return null;
                 }
                 return ce.delete(args[0]);
@@ -305,7 +305,7 @@ public class CommandEditorManager {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                if (args == null || args.length != 2) {
+                if (args == null || args.length < 2) {
                     return null;
                 }
                 return ce.replace(args[0], args[1]);
@@ -316,7 +316,7 @@ public class CommandEditorManager {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                if (args == null || args.length != 1) {
+                if (args == null || args.length < 1) {
                     return null;
                 }
                 return ce.replaceSel(args[0]);
@@ -327,7 +327,7 @@ public class CommandEditorManager {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                if (args == null || args.length != 2) {
+                if (args == null || args.length < 2) {
                     return null;
                 }
                 return ce.saveClip(args[0], args[1]);
@@ -338,7 +338,7 @@ public class CommandEditorManager {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                if (args == null || args.length != 1) {
+                if (args == null || args.length < 1) {
                     return null;
                 }
                 return ce.loadClip(args[0]);
