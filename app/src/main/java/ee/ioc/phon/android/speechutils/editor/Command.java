@@ -43,10 +43,10 @@ public class Command {
         mService = service;
         mApp = app;
         mUtt = utt;
-        mReplacement = replacement;
+        mReplacement = replacement == null ? "" : replacement;
         mCommand = id;
         if (args == null) {
-            mArgs = new String[0];
+            mArgs = EMPTY_ARRAY;
         } else {
             mArgs = args;
         }

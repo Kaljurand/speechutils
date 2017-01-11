@@ -41,13 +41,10 @@ public interface CommandEditor {
     // Go to the character at the given position.
     // Negative positions start counting from the end of the text, e.g.
     // -1 == end of text
-    Op goToCharacterPosition(int pos);
+    Op moveAbs(int pos);
 
-    // Move the cursor forward by the given number of characters
-    Op goForward(int numOfChars);
-
-    // Move the cursor backward by the given number of characters
-    Op goBackward(int numOfChars);
+    // Move the cursor forward (+) or backwards (-) by the given number of characters
+    Op moveRel(int numOfChars);
 
     // Add the key with the given code
     Op keyCode(int code);
@@ -125,10 +122,10 @@ public interface CommandEditor {
     // IME actions
 
     // Go to the previous field
-    Op goToPreviousField();
+    Op imeActionPrevious();
 
     // Go to the next field
-    Op goToNextField();
+    Op imeActionNext();
 
     Op imeActionDone();
 

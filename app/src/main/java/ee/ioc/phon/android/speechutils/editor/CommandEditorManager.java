@@ -6,24 +6,18 @@ import java.util.Map;
 
 /**
  * utterance = "go to position 1"
- * pattern = ("go to position (\d+)", "goToCharacterPosition", "$1")
- * command = goToCharacterPosition($1)
+ * pattern = ("go to position (\d+)", "moveAbs", "$1")
+ * command = moveAbs($1)
  */
 public class CommandEditorManager {
 
-    public interface EditorCommand {
-        Op getOp(CommandEditor commandEditor, String[] args);
-    }
-
+    // TODO: rename GO_UP to KEY_UP etc.
     public static final String GO_UP = "goUp";
     public static final String GO_DOWN = "goDown";
     public static final String GO_LEFT = "goLeft";
     public static final String GO_RIGHT = "goRight";
-    public static final String GO_TO_PREVIOUS_FIELD = "goToPreviousField";
-    public static final String GO_TO_NEXT_FIELD = "goToNextField";
-    public static final String GO_TO_CHARACTER_POSITION = "goToCharacterPosition";
-    public static final String GO_FORWARD = "goForward";
-    public static final String GO_BACKWARD = "goBackward";
+    public static final String MOVE_ABS = "moveAbs";
+    public static final String MOVE_REL = "moveRel";
     public static final String SELECT = "select";
     public static final String SELECT_RE_BEFORE = "selectReBefore";
     public static final String SELECT_RE_AFTER = "selectReAfter";
@@ -49,6 +43,8 @@ public class CommandEditorManager {
     public static final String CLEAR_CLIPBOARD = "clearClipboard";
     public static final String KEY_CODE = "keyCode";
     public static final String KEY_CODE_STR = "keyCodeStr";
+    public static final String IME_ACTION_PREVIOUS = "imeActionPrevious";
+    public static final String IME_ACTION_NEXT = "imeActionNext";
     public static final String IME_ACTION_DONE = "imeActionDone";
     public static final String IME_ACTION_GO = "imeActionGo";
     public static final String IME_ACTION_SEARCH = "imeActionSearch";
@@ -140,23 +136,7 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put(GO_TO_PREVIOUS_FIELD, new EditorCommand() {
-
-            @Override
-            public Op getOp(CommandEditor ce, String[] args) {
-                return ce.goToPreviousField();
-            }
-        });
-
-        aMap.put(GO_TO_NEXT_FIELD, new EditorCommand() {
-
-            @Override
-            public Op getOp(CommandEditor ce, String[] args) {
-                return ce.goToNextField();
-            }
-        });
-
-        aMap.put(GO_TO_CHARACTER_POSITION, new EditorCommand() {
+        aMap.put(MOVE_ABS, new EditorCommand() {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
@@ -168,11 +148,11 @@ public class CommandEditorManager {
                         // Intentional
                     }
                 }
-                return ce.goToCharacterPosition(pos);
+                return ce.moveAbs(pos);
             }
         });
 
-        aMap.put(GO_FORWARD, new EditorCommand() {
+        aMap.put(MOVE_REL, new EditorCommand() {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
@@ -184,23 +164,7 @@ public class CommandEditorManager {
                         // Intentional
                     }
                 }
-                return ce.goForward(pos);
-            }
-        });
-
-        aMap.put(GO_BACKWARD, new EditorCommand() {
-
-            @Override
-            public Op getOp(CommandEditor ce, String[] args) {
-                int pos = 1;
-                if (args != null && args.length > 0) {
-                    try {
-                        pos = Integer.parseInt(args[0]);
-                    } catch (NumberFormatException e) {
-                        // Intentional
-                    }
-                }
-                return ce.goBackward(pos);
+                return ce.moveRel(pos);
             }
         });
 
@@ -449,6 +413,22 @@ public class CommandEditorManager {
             }
         });
 
+        aMap.put(IME_ACTION_PREVIOUS, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.imeActionPrevious();
+            }
+        });
+
+        aMap.put(IME_ACTION_NEXT, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                return ce.imeActionNext();
+            }
+        });
+
         aMap.put(IME_ACTION_DONE, new EditorCommand() {
 
             @Override
@@ -482,6 +462,10 @@ public class CommandEditorManager {
         });
 
         EDITOR_COMMANDS = Collections.unmodifiableMap(aMap);
+    }
+
+    public interface EditorCommand {
+        Op getOp(CommandEditor commandEditor, String[] args);
     }
 
     public static EditorCommand get(String id) {

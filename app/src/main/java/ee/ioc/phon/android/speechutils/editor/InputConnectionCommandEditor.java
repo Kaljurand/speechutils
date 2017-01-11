@@ -330,8 +330,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public Op goToCharacterPosition(final int pos) {
-        return new Op("goto " + pos) {
+    public Op moveAbs(final int pos) {
+        return new Op("moveAbs " + pos) {
             @Override
             public Op run() {
                 Op undo = null;
@@ -349,17 +349,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 return undo;
             }
         };
-    }
-
-
-    @Override
-    public Op goForward(final int numberOfChars) {
-        return move(numberOfChars);
-    }
-
-    @Override
-    public Op goBackward(final int numberOfChars) {
-        return move(-1 * numberOfChars);
     }
 
     @Override
@@ -855,7 +844,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * There is no undo, because the undo-stack does not survive the jump to another field.
      */
     @Override
-    public Op goToPreviousField() {
+    public Op imeActionPrevious() {
         return getEditorActionOp(EditorInfo.IME_ACTION_PREVIOUS);
     }
 
@@ -863,7 +852,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * There is no undo, because the undo-stack does not survive the jump to another field.
      */
     @Override
-    public Op goToNextField() {
+    public Op imeActionNext() {
         return getEditorActionOp(EditorInfo.IME_ACTION_NEXT);
     }
 
@@ -1186,8 +1175,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
     /**
      * Move either left (negative number of steps) or right (positive num of steps)
      */
-    private Op move(final int numberOfChars) {
-        return new Op("move") {
+    public Op moveRel(final int numberOfChars) {
+        return new Op("moveRel") {
             @Override
             public Op run() {
                 Op undo = null;

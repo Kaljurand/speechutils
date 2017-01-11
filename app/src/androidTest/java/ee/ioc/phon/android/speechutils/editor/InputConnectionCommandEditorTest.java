@@ -51,7 +51,7 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("selection_double", "", "replaceSel", new String[]{"{}{}"}));
         list.add(new Command("selection_inc", "", "incSel"));
         list.add(new Command("selection_uc", "", "ucSel"));
-        list.add(new Command("step back", "", "goBackward")); // no args means arg1 = 1
+        list.add(new Command("step back", "", "moveRel", new String[]{"-1"}));
         list.add(new Command("prev_sent", "", "selectReBefore", new String[]{"[.?!]()[^.?!]+[.?!][^.?!]+"}));
         list.add(new Command("first_number", "", "selectReAfter", new String[]{"(\\d)\\."}));
         list.add(new Command("second_number", "", "selectReAfter", new String[]{"(\\d)\\.", "2"}));
@@ -108,7 +108,7 @@ public class InputConnectionCommandEditorTest {
         addPartial("...123");
         addPartial("...124");
         add("...1245");
-        runOp(mEditor.goToCharacterPosition(4));
+        runOp(mEditor.moveAbs(4));
         assertThat(getTextBeforeCursor(10), is("...1"));
         add("-");
         assertThatTextIs("...1-245");
@@ -136,14 +136,14 @@ public class InputConnectionCommandEditorTest {
         assertThat(getTextBeforeCursor(2), is("BC"));
         runOp(mEditor.replaceSel("\n"));
         runOp(mEditor.replaceSel(" "));
-        runOp(mEditor.goToCharacterPosition(9));
+        runOp(mEditor.moveAbs(9));
         assertThat(getTextBeforeCursor(2), is("67"));
     }
 
     @Test
     public void test07() {
         add("123456789");
-        runOp(mEditor.goToCharacterPosition(2));
+        runOp(mEditor.moveAbs(2));
         assertThat(getTextBeforeCursor(2), is("12"));
         assertThatTextIs("123456789");
     }
@@ -226,7 +226,7 @@ public class InputConnectionCommandEditorTest {
     public void test17() {
         add("there are word1 and word2...");
         add("select word1 and word2");
-        runOp(mEditor.goToCharacterPosition(-100));
+        runOp(mEditor.moveAbs(-100));
         assertThatTextIs("There are word1 and word2...");
     }
 
@@ -247,14 +247,14 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test20() {
         add("a", "select a", "selection_double", "selection_double");
-        runOp(mEditor.goToCharacterPosition(-1));
+        runOp(mEditor.moveAbs(-1));
         assertThat(getTextBeforeCursor(5), is("AA"));
     }
 
     @Test
     public void test21() {
         add("123456789", "select 3", "selection_inc");
-        runOp(mEditor.goForward(3));
+        runOp(mEditor.moveRel(3));
         add("select 5", "selection_inc");
         assertThatTextIs("124466789");
     }
@@ -293,7 +293,7 @@ public class InputConnectionCommandEditorTest {
     public void test26() {
         add("1234567890");
         add("step back");
-        runOp(mEditor.goBackward(1));
+        runOp(mEditor.moveRel(-1));
         undo();
         runOp(mEditor.deleteLeftWord());
         assertThatTextIs("0");
@@ -306,10 +306,10 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test28() {
         add("1234567890");
-        runOp(mEditor.goBackward(5));
-        runOp(mEditor.goForward(2));
+        runOp(mEditor.moveRel(-5));
+        runOp(mEditor.moveRel(2));
         undo(2);
-        runOp(mEditor.goBackward(1));
+        runOp(mEditor.moveRel(-1));
         runOp(mEditor.deleteLeftWord());
         undo();
         assertThatTextIs("1234567890");
@@ -649,10 +649,10 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("0 a a a a b -A");
         undo();
         assertThatTextIs("0 a a a a b A");
-        assertThatOpStackIs("[move, ucSel, select a]");
+        assertThatOpStackIs("[moveRel, ucSel, select a]");
         add("combine 3");
         assertThatTextIs("0 a a a a b A");
-        assertThatOpStackIs("[[select a, ucSel, move] 3]");
+        assertThatOpStackIs("[[select a, ucSel, moveRel] 3]");
         add("apply 2");
         assertThatTextIs("0 a a A A b A");
     }
@@ -679,7 +679,7 @@ public class InputConnectionCommandEditorTest {
         add("select word1 and word2");
         add("selection_uc");
         assertThatTextIs("There are WORD1 AND WORD2...");
-        runOp(mEditor.goToCharacterPosition(-1));
+        runOp(mEditor.moveAbs(-1));
         add("select word1 and word2");
         add("selection_quote");
         assertThatTextIs("There are \"WORD1 AND WORD2\"...");
@@ -789,7 +789,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test70() {
         add("This is number 1. This is number 2. This is number 3.");
-        runOp(mEditor.goToCharacterPosition(0));
+        runOp(mEditor.moveAbs(0));
         //CommandEditorManager.EditorCommand ec = CommandEditorManager.EDITOR_COMMANDS.get(CommandEditorManager.SELECT_RE_AFTER);
         //runOp(ec.getOp(mEditor, new String[]{"(\\d)\\."}));
         runOp(mEditor.selectReAfter("(\\d)\\.", 1));
@@ -805,7 +805,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test71() {
         add("This is number 1. This is number 2. This is number 3.");
-        runOp(mEditor.goToCharacterPosition(0));
+        runOp(mEditor.moveAbs(0));
         runOp(mEditor.selectReAfter("(\\d)\\.", 2));
         // TODO: fails currently
         //add("second_number");
@@ -843,7 +843,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test75() {
         Collection<Op> collection = new ArrayList<>();
-        collection.add(mEditor.goBackward(1));
+        collection.add(mEditor.moveRel(-1));
         collection.add(mEditor.select("2"));
         collection.add(mEditor.replaceSel("_"));
         add("123 4562");
@@ -858,7 +858,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test76() {
         Collection<Op> collection = new ArrayList<>();
-        collection.add(mEditor.goBackward(1));
+        collection.add(mEditor.moveRel(-1));
         collection.add(mEditor.select("2"));
         collection.add(mEditor.replaceSel("_"));
         add("123 123 12");
@@ -868,14 +868,14 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("123 1_3 12");
         runOp(mEditor.combine(3));
         add("apply 1");
-        assertThatOpStackIs("[apply, [move, select 2, replaceSel] 3]");
+        assertThatOpStackIs("[apply, [moveRel, select 2, replaceSel] 3]");
         assertThatTextIs("1_3 1_3 12");
     }
 
     @Test
     public void test77() {
         Collection<Op> collection = new ArrayList<>();
-        collection.add(mEditor.goBackward(1));
+        collection.add(mEditor.moveRel(-1));
         collection.add(mEditor.select(" "));
         collection.add(mEditor.replaceSel("-"));
         collection.add(mEditor.select("2"));
@@ -900,10 +900,8 @@ public class InputConnectionCommandEditorTest {
         runOp(mEditor.getOpFromText("select 2"));
         runOp(mEditor.getOpFromText("selection_replace _"));
         assertThatTextIs("1_3");
-        // TODO: fix
-        assertThatUndoStackIs("[[deleteSurroundingText+commitText, ] 2, [setSelection, ] 2, [], [NO_OP, ] 2]");
-        //runOp(mEditor.getOpFromText("undo 1"));
-        //assertThatTextIs("123");
+        runOp(mEditor.getOpFromText("undo 1"));
+        assertThatTextIs("123");
     }
 
     /**
@@ -930,7 +928,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test80() {
         add("0 word1 word2 word3 word4 word5 word6");
-        runOp(mEditor.goToCharacterPosition(1));
+        runOp(mEditor.moveAbs(1));
         runOp(mEditor.selectReAfter("\\b(.+?)\\b", 1));
         runOp(mEditor.replaceSel("[]"));
         assertThatTextIs("0 [] word2 word3 word4 word5 word6");
@@ -1004,7 +1002,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test86() {
         add("Sent 1? Sent, 2.");
-        runOp(mEditor.goToCharacterPosition(0));
+        runOp(mEditor.moveAbs(0));
         runOp(mEditor.selectReAfter("(?:$|[.?!]\\s+)()", 1));
         add("more");
         assertThatTextIs("Sent 1? MoreSent, 2.");
@@ -1016,7 +1014,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test87() {
         add("Sent 1? Sent, 2.");
-        runOp(mEditor.goToCharacterPosition(0));
+        runOp(mEditor.moveAbs(0));
         runOp(mEditor.selectReAfter("(?:$|[.?!]\\s+)()", 2));
         add("more");
         assertThatTextIs("Sent 1? Sent, 2. More");
@@ -1025,7 +1023,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test88() {
         add("123456789");
-        runOp(mEditor.goToCharacterPosition(0));
+        runOp(mEditor.moveAbs(0));
         runOp(mEditor.selectReAfter("(.)|(\\d)", 5));
         add("_");
         assertThatTextIs("1234 _6789");

@@ -108,7 +108,7 @@ public class UtteranceRewriterTest {
 
     @Test
     public void test10() {
-        UtteranceRewriter ur = new UtteranceRewriter("Ignored\tUtterance\nignored\tutt1\nignored2\tutt2");
+        UtteranceRewriter ur = new UtteranceRewriter("Ignored\tUtterance\n\n#\t#\nignored\tutt1\n\t\t\nignored2\tutt2");
         assertThat(ur.toTsv(), is("Utterance\nutt1\nutt2"));
     }
 
