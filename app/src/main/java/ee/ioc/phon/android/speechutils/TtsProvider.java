@@ -138,20 +138,23 @@ public class TtsProvider {
      */
     public Locale chooseLanguage(String localeAsStr) {
         Locale locale = new Locale(localeAsStr);
+        Log.i("Choosing TTS for: " + localeAsStr + " -> " + locale);
+        // TODO: this can throw NPE in String.isEmpty in java.util.Locale.getISO3Language
+        // if garbage is given as input
         if (mTts.isLanguageAvailable(locale) >= 0) {
-            Log.i("Chose TTS: " + localeAsStr + " -> " + locale);
+            Log.i("Chose: " + locale);
             return locale;
         }
         List<Locale> similarLocales = TtsLocaleMapper.getSimilarLocales(locale);
         if (similarLocales != null) {
             for (Locale l : similarLocales) {
                 if (mTts.isLanguageAvailable(l) >= 0) {
-                    Log.i("Chose TTS: " + localeAsStr + " -> " + l + " from " + similarLocales);
+                    Log.i("Chose: " + l + " from " + similarLocales);
                     return l;
                 }
             }
         }
-        Log.i("Chose TTS: " + localeAsStr + " -> NULL from " + similarLocales);
+        Log.i("Chose: " + "NULL from " + similarLocales);
         return null;
     }
 

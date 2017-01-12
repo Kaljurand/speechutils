@@ -184,7 +184,7 @@ public class Extras {
     public static final String EXTRA_RESULT_RESULTS = "ee.ioc.phon.android.extra.RESULT_RESULTS";
 
     /**
-     * String[].
+     * String[] (String can also be used to denote a single element list)
      * List of names of rewrite tables that should apply to the transcription results.
      */
     public static final String EXTRA_RESULT_REWRITES = "ee.ioc.phon.android.extra.RESULT_REWRITES";
