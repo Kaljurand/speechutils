@@ -70,6 +70,10 @@ public class UtteranceRewriter {
         public final String mStr;
         public final String[] mArgs;
 
+        public Rewrite(String str) {
+            this(null, str, null);
+        }
+
         public Rewrite(String id, String str, String[] args) {
             mId = id;
             mStr = str;
@@ -253,7 +257,7 @@ public class UtteranceRewriter {
         for (Command command : mCommandHolder.getCommands()) {
             Pair<String, String[]> pair = command.parse(str);
             String commandId = command.getId();
-            if (commandId == null) {
+            if (commandId == null || commandId.isEmpty()) {
                 str = pair.first;
             } else if (pair.second != null) {
                 // If there is a full match (pair.second != null) and there is a command (commandId != null)
@@ -262,7 +266,7 @@ public class UtteranceRewriter {
                 return new Rewrite(commandId, str, pair.second);
             }
         }
-        return new Rewrite(null, str, null);
+        return new Rewrite(str);
     }
 
     /**
