@@ -18,7 +18,7 @@ public class CommandEditorResult {
         return mSuccess;
     }
 
-    public String toString() {
-        return mRewrite.toString();
+    public String ppCommand() {
+        return mRewrite.ppCommand();
     }
 }

@@ -62,12 +62,12 @@ public class UtteranceRewriterTest {
 
     @Test
     public void test02() {
-        rewrite("s/_/a/", "replace(_,a)", "X");
+        rewrite("s/_/a/", "replace (_) (a)", "X");
     }
 
     @Test
     public void test03() {
-        rewrite("<1><2><3><K6_STOP>", "null()", "1, 2, 3<K6_STOP>");
+        rewrite("<1><2><3><K6_STOP>", null, "1, 2, 3<K6_STOP>");
     }
 
     @Test
@@ -114,7 +114,7 @@ public class UtteranceRewriterTest {
 
     private void rewrite(String str1, String str2, String str3) {
         UtteranceRewriter.Rewrite rewrite = mUr.getRewrite(str1);
-        assertThat(rewrite.toString(), is(str2));
+        assertThat(rewrite.ppCommand(), is(str2));
         assertThat(rewrite.mStr, is(str3));
     }
 

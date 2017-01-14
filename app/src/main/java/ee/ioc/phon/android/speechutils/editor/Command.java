@@ -3,14 +3,9 @@ package ee.ioc.phon.android.speechutils.editor;
 import android.text.TextUtils;
 import android.util.Pair;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.util.SortedMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import ee.ioc.phon.android.speechutils.utils.JsonUtils;
 
 public class Command {
 
@@ -146,12 +141,7 @@ public class Command {
                     sb.append(pp(mUtt));
                     break;
                 case UtteranceRewriter.HEADER_REPLACEMENT:
-                    try {
-                        JSONObject json = JsonUtils.parseJson(mReplacement);
-                        sb.append(json.toString(2));
-                    } catch (JSONException e) {
-                        sb.append(pp(mReplacement));
-                    }
+                    sb.append(pp(mReplacement));
                     break;
                 case UtteranceRewriter.HEADER_COMMAND:
                     if (mCommand != null) {

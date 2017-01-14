@@ -80,11 +80,27 @@ public class UtteranceRewriter {
             return mId != null;
         }
 
-        public String toString() {
+        /**
+         * Returns the pretty-printed command, e.g.
+         * name (arg1) (arg2)
+         * Empty trailing arguments are dropped.
+         * TODO: do not drop the arguments (decide at parse time how many arguments a command has)
+         *
+         * @return pretty-printed command
+         */
+        public String ppCommand() {
             if (mArgs == null) {
-                return mId + "()";
+                return mId;
             }
-            return mId + "(" + TextUtils.join(",", mArgs) + ")";
+            int len = mArgs.length;
+            int last = len - 1;
+            // Search for the last non-empty argument position
+            for (; last >= 0 && mArgs[last].isEmpty(); last--) ;
+            String pp = mId;
+            for (int i = 0; i <= last; i++) {
+                pp += " (" + mArgs[i] + ")";
+            }
+            return pp;
         }
     }
 
@@ -293,7 +309,7 @@ public class UtteranceRewriter {
         String[] array = new String[errors.size()];
         int i = 0;
         for (SortedMap.Entry<Integer, String> entry : errors.entrySet()) {
-            array[i++] = "line " + entry.getKey() + ": " + entry.getValue();
+            array[i++] = "#" + entry.getKey() + ": " + entry.getValue();
         }
         return array;
     }
