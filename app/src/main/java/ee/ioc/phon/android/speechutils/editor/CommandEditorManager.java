@@ -11,18 +11,12 @@ import java.util.Map;
  */
 public class CommandEditorManager {
 
-    // TODO: rename GO_UP to KEY_UP etc.
-    public static final String GO_UP = "goUp";
-    public static final String GO_DOWN = "goDown";
-    public static final String GO_LEFT = "goLeft";
-    public static final String GO_RIGHT = "goRight";
     public static final String MOVE_ABS = "moveAbs";
     public static final String MOVE_REL = "moveRel";
     public static final String SELECT = "select";
     public static final String SELECT_RE_BEFORE = "selectReBefore";
     public static final String SELECT_RE_AFTER = "selectReAfter";
     public static final String REPLACE_SEL_RE = "replaceSelRe";
-    public static final String RESET_SEL = "resetSel";
     public static final String SELECT_ALL = "selectAll";
     public static final String CUT = "cut";
     public static final String COPY = "copy";
@@ -31,7 +25,6 @@ public class CommandEditorManager {
     public static final String DELETE_ALL = "deleteAll";
     public static final String COPY_ALL = "copyAll";
     public static final String DELETE_LEFT_WORD = "deleteLeftWord";
-    public static final String DELETE = "delete";
     public static final String REPLACE = "replace";
     public static final String REPLACE_SEL = "replaceSel";
     public static final String UC_SEL = "ucSel";
@@ -41,6 +34,10 @@ public class CommandEditorManager {
     public static final String LOAD_CLIP = "loadClip";
     public static final String SHOW_CLIPBOARD = "showClipboard";
     public static final String CLEAR_CLIPBOARD = "clearClipboard";
+    public static final String KEY_UP = "keyUp";
+    public static final String KEY_DOWN = "keyDown";
+    public static final String KEY_LEFT = "keyLeft";
+    public static final String KEY_RIGHT = "keyRight";
     public static final String KEY_CODE = "keyCode";
     public static final String KEY_CODE_STR = "keyCodeStr";
     public static final String IME_ACTION_PREVIOUS = "imeActionPrevious";
@@ -59,32 +56,32 @@ public class CommandEditorManager {
 
         Map<String, EditorCommand> aMap = new HashMap<>();
 
-        aMap.put(GO_UP, new EditorCommand() {
+        aMap.put(KEY_UP, new EditorCommand() {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                return ce.goUp();
+                return ce.keyUp();
             }
         });
-        aMap.put(GO_DOWN, new EditorCommand() {
+        aMap.put(KEY_DOWN, new EditorCommand() {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                return ce.goDown();
+                return ce.keyDown();
             }
         });
-        aMap.put(GO_LEFT, new EditorCommand() {
+        aMap.put(KEY_LEFT, new EditorCommand() {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                return ce.goLeft();
+                return ce.keyLeft();
             }
         });
-        aMap.put(GO_RIGHT, new EditorCommand() {
+        aMap.put(KEY_RIGHT, new EditorCommand() {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
-                return ce.goRight();
+                return ce.keyRight();
             }
         });
 
@@ -254,25 +251,16 @@ public class CommandEditorManager {
             }
         });
 
-        aMap.put(DELETE, new EditorCommand() {
+        aMap.put(REPLACE, new EditorCommand() {
 
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
                 if (args == null || args.length < 1) {
                     return null;
                 }
-                return ce.delete(args[0]);
-            }
-        });
-
-        aMap.put(REPLACE, new EditorCommand() {
-
-            @Override
-            public Op getOp(CommandEditor ce, String[] args) {
-                if (args == null || args.length < 2) {
-                    return null;
-                }
-                return ce.replace(args[0], args[1]);
+                String text1 = args[0];
+                String text2 = args.length > 1 ? args[1] : "";
+                return ce.replace(text1, text2);
             }
         });
 
@@ -322,14 +310,6 @@ public class CommandEditorManager {
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
                 return ce.clearClipboard();
-            }
-        });
-
-        aMap.put(RESET_SEL, new EditorCommand() {
-
-            @Override
-            public Op getOp(CommandEditor ce, String[] args) {
-                return ce.resetSel();
             }
         });
 

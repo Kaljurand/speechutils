@@ -35,12 +35,12 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("double (.+)", "<> <>", "replaceAll", new String[]{"<>", "$1"})); // TODO: replaceAll is not available
         list.add(new Command("s/(.*)/(.*)/", "", "replace", new String[]{"$1", "$2"}));
         list.add(new Command("connect (.*) and (.*)", "", "replace", new String[]{"$1 $2", "$1-$2"}));
-        list.add(new Command("delete (.+)", "", "delete", new String[]{"$1"}));
+        list.add(new Command("delete (.+)", "", "replace", new String[]{"$1"}));
         list.add(new Command("delete2 (.*)", "D2", "replace", new String[]{"$1", ""}));
         list.add(new Command("underscore (.*)", "", "replace", new String[]{"$1", "_$1_"}));
         list.add(new Command("select (.*)", "", "select", new String[]{"$1"}));
         list.add(new Command("selectAll", "", "selectAll"));
-        list.add(new Command("resetSel", "", "resetSel"));
+        list.add(new Command("resetSel", "", "moveAbs", new String[]{"-1"}));
         list.add(new Command("selection_replace (.*)", "", "replaceSel", new String[]{"$1"}));
         list.add(new Command("selection_underscore", "", "replaceSel", new String[]{"_{}_"}));
         list.add(new Command("replaceSelRe_noletters", "", "replaceSelRe", new String[]{"[a-z]", ""}));
@@ -94,7 +94,7 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("Start12345 67890");
         runOp(mEditor.deleteLeftWord());
         assertThatTextIs("Start12345");
-        runOp(mEditor.delete("12345"));
+        runOp(mEditor.replace("12345", ""));
         assertThatTextIs("Start");
     }
 
@@ -1097,8 +1097,8 @@ public class InputConnectionCommandEditorTest {
     //@Test
     public void test202() {
         add("1234567890");
-        runOp(mEditor.goLeft());
-        runOp(mEditor.goLeft());
+        runOp(mEditor.keyLeft());
+        runOp(mEditor.keyLeft());
         undo();
         runOp(mEditor.deleteLeftWord());
         assertThatTextIs("0");

@@ -189,12 +189,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public Op goUp() {
+    public Op keyUp() {
         return new Op("goUp") {
             @Override
             public Op run() {
                 if (mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_UP))) {
-                    return goDown();
+                    return keyDown();
                 }
                 return null;
             }
@@ -202,12 +202,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public Op goDown() {
+    public Op keyDown() {
         return new Op("goDown") {
             @Override
             public Op run() {
                 if (mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_DOWN))) {
-                    return goUp();
+                    return keyUp();
                 }
                 return null;
             }
@@ -215,12 +215,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public Op goLeft() {
+    public Op keyLeft() {
         return new Op("goLeft") {
             @Override
             public Op run() {
                 if (mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_LEFT))) {
-                    return goRight();
+                    return keyRight();
                 }
                 return null;
             }
@@ -228,12 +228,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public Op goRight() {
+    public Op keyRight() {
         return new Op("goRight") {
             @Override
             public Op run() {
                 if (mInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))) {
-                    return goLeft();
+                    return keyLeft();
                 }
                 return null;
             }
@@ -458,23 +458,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return combineOps(collection);
     }
 
-    @Override
-    public Op resetSel() {
-        return new Op("resetSel") {
-            @Override
-            public Op run() {
-                Op undo = null;
-                mInputConnection.beginBatchEdit();
-                final ExtractedText et = getExtractedText();
-                if (et != null) {
-                    undo = getOpSetSelection(et.selectionEnd, et.selectionEnd, et.selectionStart, et.selectionEnd).run();
-                }
-                mInputConnection.endBatchEdit();
-                return undo;
-            }
-        };
-    }
-
     /**
      * Deletes all characters up to the leftmost whitespace from the cursor (including the whitespace).
      * If something is selected then delete the selection.
@@ -589,11 +572,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 return undo;
             }
         };
-    }
-
-    @Override
-    public Op delete(String str) {
-        return replace(str, "");
     }
 
     @Override

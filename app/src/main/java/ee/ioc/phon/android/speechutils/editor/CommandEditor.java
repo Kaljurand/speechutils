@@ -6,37 +6,13 @@ import java.util.Collection;
 import java.util.Deque;
 
 /**
+ * Note that "cursor" is the same as "selection" in Android, i.e. a cursor has a start and end position
+ * which are not necessarily identical.
+ * Note that the meta commands (undo, etc.) cannot be applied to some commands,
+ * e.g. IME and context menu actions.
  * Most methods return an operation (op), which when run returns an undo operation.
  */
 public interface CommandEditor {
-
-    // Commit text
-
-    CommandEditorResult commitFinalResult(String text);
-
-    boolean commitPartialResult(String text);
-
-    boolean runOp(Op op);
-
-    // Commands
-
-    Op goUp();
-
-    Op goDown();
-
-    Op goLeft();
-
-    Op goRight();
-
-    Op undo(int steps);
-
-    // Combine the last N commands
-    Op combine(int steps);
-
-    // Apply the last command N times
-    Op apply(int steps);
-
-    // Moving around in the string
 
     // Go to the character at the given position.
     // Negative positions start counting from the end of the text, e.g.
@@ -46,96 +22,125 @@ public interface CommandEditor {
     // Move the cursor forward (+) or backwards (-) by the given number of characters
     Op moveRel(int numOfChars);
 
-    // Add the key with the given code
+    // Press Up-arrow key
+    Op keyUp();
+
+    // Press Down-arrow key
+    Op keyDown();
+
+    // Press Left-arrow key
+    Op keyLeft();
+
+    // Press Right-arrow key
+    Op keyRight();
+
+    // Press the key with the given code
     Op keyCode(int code);
 
-    // Add the key with the given symbolic name
+    // Press the key with the given symbolic name
     Op keyCodeStr(String codeAsStr);
 
-    // Selection commands
-
+    // Move cursor left to the matching string
     Op select(String str);
 
+    // Move cursor left to the matching regex
     Op selectReBefore(String regex);
 
+    // Move cursor right to the Nth matching regex
     Op selectReAfter(String regex, int n);
 
+    // Select all (note: not a context menu action)
     Op selectAll();
 
+    // selectAll + replace cursor with empty string
+    Op deleteAll();
+
+    // TODO: clarify
     // Apply a regular expression to the selection,
     // and replace the matches with the given replacement string.
     Op replaceSelRe(String regex, String repl);
 
-    // Reset selection
-    Op resetSel();
-
-    // Context menu actions
+    // Cut (Context menu action)
     Op cut();
 
+    // Copy (Context menu action)
     Op copy();
 
+    // Paste (Context menu action)
     Op paste();
 
+    // selectAll + cut
     Op cutAll();
 
+    // selectAll + copy
     Op copyAll();
 
-    Op deleteAll();
-
-    // Preference actions
-
-    // Save the value under the given key into clipboard
+    // Save the value under the given key into the app's key-value storage ("clipboard")
     Op saveClip(String key, String val);
 
-    // Load the string saved under the given key from the clipboard,
-    // and replace the current selection with the string.
+    // Load the string saved under the given key from the app's key-value storage,
+    // and replace the cursor with the string.
     Op loadClip(String key);
 
-    // Replace the current selection with the pretty-printed clipboard
+    // Replace the cursor with the pretty-printed clipboard
     Op showClipboard();
 
     // Clear the clipboard
     Op clearClipboard();
 
-    // Editing
-
+    // Delete the word immediately to the left
     Op deleteLeftWord();
 
-    Op delete(String text);
-
+    // Replace text1 (left of cursor) with text2.
+    // Deletion can be performed by setting text2 to be an empty string.
     Op replace(String text1, String text2);
 
-    // Commands applied to the current selection
+    // Replace cursor with the given text
+    Op replaceSel(String text);
 
-    // Replace selection
-    Op replaceSel(String str);
-
-    // Uppercase selection
+    // Uppercase the text under the cursor
     Op ucSel();
 
-    // Lowercase selection
+    // Lowercase the text under the cursor
     Op lcSel();
 
-    // Increment selection
+    // Interpret the text under the cursor as an integer and increase it by 1
     Op incSel();
 
-    // IME actions
-
-    // Go to the previous field
+    // Jump to the previous field (IME action)
     Op imeActionPrevious();
 
-    // Go to the next field
+    // Jump to the next field (IME action)
     Op imeActionNext();
 
+    // Done (IME action)
     Op imeActionDone();
 
+    // Go (IME action)
     Op imeActionGo();
 
+    // Search (IME action)
     Op imeActionSearch();
 
+    // Send (IME action)
     Op imeActionSend();
 
-    // Other
+    // Undo the last N commands (or text entries)
+    Op undo(int n);
+
+    // Combine the last N commands
+    Op combine(int n);
+
+    // Apply the last command N times
+    Op apply(int n);
+
+    // Commands that are not exposed to the end-user in CommandEditorManager
+
+    CommandEditorResult commitFinalResult(String text);
+
+    boolean commitPartialResult(String text);
+
+    boolean runOp(Op op);
 
     ExtractedText getExtractedText();
 
