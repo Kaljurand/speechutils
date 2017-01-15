@@ -1150,9 +1150,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return cs.toString();
     }
 
-    /**
-     * Move either left (negative number of steps) or right (positive num of steps)
-     */
     public Op moveRel(final int numberOfChars) {
         return new Op("moveRel") {
             @Override

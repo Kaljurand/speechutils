@@ -40,7 +40,7 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("underscore (.*)", "", "replace", new String[]{"$1", "_$1_"}));
         list.add(new Command("select (.*)", "", "select", new String[]{"$1"}));
         list.add(new Command("selectAll", "", "selectAll"));
-        list.add(new Command("resetSel", "", "moveAbs", new String[]{"-1"}));
+        list.add(new Command("resetSel", "", "moveRel", new String[]{"0"}));
         list.add(new Command("selection_replace (.*)", "", "replaceSel", new String[]{"$1"}));
         list.add(new Command("selection_underscore", "", "replaceSel", new String[]{"_{}_"}));
         list.add(new Command("replaceSelRe_noletters", "", "replaceSelRe", new String[]{"[a-z]", ""}));
@@ -1084,6 +1084,13 @@ public class InputConnectionCommandEditorTest {
         runOp(mEditor.selectAll());
         runOp(mEditor.showClipboard());
         assertThatTextIs("<number123|123>\n<number456|456>\n");
+    }
+
+    @Test
+    public void test95() {
+        add("123 456", "select 123", "resetSel");
+        add("selection_replace !");
+        assertThatTextIs("123! 456");
     }
 
     // Can't create handler inside thread that has not called Looper.prepare()

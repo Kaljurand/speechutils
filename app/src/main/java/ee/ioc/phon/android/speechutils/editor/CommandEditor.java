@@ -19,7 +19,14 @@ public interface CommandEditor {
     // -1 == end of text
     Op moveAbs(int pos);
 
-    // Move the cursor forward (+) or backwards (-) by the given number of characters
+    /**
+     * Move the cursor forward (+) or backwards (-) by the given number of characters.
+     * Forward movement starts from the end of the selection, backward movement from the beginning of
+     * the selection. In case of 0, the selection is reset to its end position.
+     *
+     * @param numOfChars number of character positions
+     * @return Op
+     */
     Op moveRel(int numOfChars);
 
     // Press Up-arrow key
@@ -75,7 +82,7 @@ public interface CommandEditor {
     // selectAll + copy
     Op copyAll();
 
-    // Save the value under the given key into the app's key-value storage ("clipboard")
+    // Save the given value under the given key into the app's key-value storage ("clipboard")
     Op saveClip(String key, String val);
 
     // Load the string saved under the given key from the app's key-value storage,
