@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="errorTtsLangNotAvailable">Spoken output not available for language \"%1$s\"</string>
-    <string name="errorTtsInitError">Spoken output initialization failed</string>
+    <string name="errorTtsLangNotAvailable">ERROR: Spoken output not available for language \"%1$s\"</string>
+    <string name="errorTtsInitError">ERROR: Spoken output initialization failed</string>
+    <string name="errorFailedLaunchIntent">ERROR: Intent is not serviced by any app</string>
 </resources>

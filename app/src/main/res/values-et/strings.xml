@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="errorTtsLangNotAvailable">Kõneväljund ei ole keele \"%1$s\" jaoks installeeritud</string>
-    <string name="errorTtsInitError">Kõneväljundi konfigureerimine luhtus</string>
+    <string name="errorTtsLangNotAvailable">VIGA: kõneväljund ei ole keele \"%1$s\" jaoks installeeritud</string>
+    <string name="errorTtsInitError">VIGA: kõneväljundi konfigureerimine luhtus</string>
+    <string name="errorFailedLaunchIntent">VIGA: Intent-päringule vastavat rakendust ei leitud</string>
 </resources>
