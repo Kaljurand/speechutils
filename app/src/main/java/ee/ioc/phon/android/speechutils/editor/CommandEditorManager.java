@@ -49,6 +49,7 @@ public class CommandEditorManager {
     public static final String UNDO = "undo";
     public static final String COMBINE = "combine";
     public static final String APPLY = "apply";
+    public static final String ACTIVITY = "activity";
 
     public static final Map<String, EditorCommand> EDITOR_COMMANDS;
 
@@ -438,6 +439,17 @@ public class CommandEditorManager {
             @Override
             public Op getOp(CommandEditor ce, String[] args) {
                 return ce.imeActionSend();
+            }
+        });
+
+        aMap.put(ACTIVITY, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length < 1) {
+                    return null;
+                }
+                return ce.activity(args[0]);
             }
         });
 

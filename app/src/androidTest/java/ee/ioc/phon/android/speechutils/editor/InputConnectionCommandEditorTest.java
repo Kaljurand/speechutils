@@ -1093,6 +1093,13 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("123! 456");
     }
 
+    @Test
+    public void test96() {
+        add("010010001", "select 1", "select {}", "select {}");
+        add("selection_replace !");
+        assertThatTextIs("0!0010001");
+    }
+
     // Can't create handler inside thread that has not called Looper.prepare()
     //@Test
     public void test201() {

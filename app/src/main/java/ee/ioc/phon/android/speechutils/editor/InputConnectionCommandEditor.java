@@ -12,6 +12,8 @@ import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 
+import org.json.JSONException;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,6 +26,8 @@ import java.util.regex.Pattern;
 
 import ee.ioc.phon.android.speechutils.Log;
 import ee.ioc.phon.android.speechutils.R;
+import ee.ioc.phon.android.speechutils.utils.IntentUtils;
+import ee.ioc.phon.android.speechutils.utils.JsonUtils;
 import ee.ioc.phon.android.speechutils.utils.PreferenceUtils;
 
 /**
@@ -40,9 +44,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private static final int MAX_DELETABLE_CONTEXT = 100;
     // Token optionally preceded by whitespace
     private static final Pattern WHITESPACE_AND_TOKEN = Pattern.compile("\\s*\\w+");
-    private static final Pattern SELREF = Pattern.compile("\\{\\}");
-    private static final Pattern ALL = Pattern.compile("^(.*)$");
+    private static final String F_SELECTION = "{}";
 
+    private Context mContext;
     private SharedPreferences mPreferences;
     private Resources mRes;
 
@@ -63,6 +67,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private UtteranceRewriter mUtteranceRewriter;
 
     public InputConnectionCommandEditor(Context context) {
+        mContext = context;
         mPreferences = PreferenceManager.getDefaultSharedPreferences(context);
         mRes = context.getResources();
     }
@@ -186,6 +191,24 @@ public class InputConnectionCommandEditor implements CommandEditor {
             return null;
         }
         return et.text;
+    }
+
+    @Override
+    public Op activity(final String json) {
+        return new Op("activity") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                try {
+                    if (IntentUtils.startActivityIfAvailable(mContext, JsonUtils.createIntent(json.replace(F_SELECTION, getSelectedText())))) {
+                        undo = NO_OP;
+                    }
+                } catch (JSONException e) {
+                    Log.i("startSearchActivity: JSON: " + e.getMessage());
+                }
+                return undo;
+            }
+        };
     }
 
     @Override
@@ -520,7 +543,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 mInputConnection.beginBatchEdit();
                 ExtractedText et = getExtractedText();
                 if (et != null) {
-                    Pair<Integer, CharSequence> queryResult = lastIndexOf(query, et);
+                    Pair<Integer, CharSequence> queryResult = lastIndexOf(query.replace(F_SELECTION, getSelectedText()), et);
                     if (queryResult.first >= 0) {
                         undo = getOpSetSelection(queryResult.first, queryResult.first + queryResult.second.length(), et.selectionStart, et.selectionEnd).run();
                     }
@@ -640,11 +663,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
             @Override
             public Op run() {
                 // Replace mentions of selection with a back-reference
-                String out = SELREF.matcher(str).replaceAll("\\$1");
                 mInputConnection.beginBatchEdit();
                 // Change the current selection with the input argument, possibly embedding the selection.
                 String selectedText = getSelectedText();
-                Op undo = getCommitTextOp(selectedText, ALL.matcher(selectedText).replaceAll(out)).run();
+                Op undo = getCommitTextOp(selectedText, str.replace(F_SELECTION, selectedText)).run();
                 mInputConnection.endBatchEdit();
                 return undo;
             }
@@ -718,13 +740,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return new Op("saveClip " + key) {
             @Override
             public Op run() {
-                mInputConnection.beginBatchEdit();
-                // abc{}def -> abc$1def
-                String out = SELREF.matcher(val).replaceAll("\\$1");
-                String selectedText = getSelectedText();
-                mInputConnection.endBatchEdit();
-                // 123 -> abc123def
-                PreferenceUtils.putPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, key, ALL.matcher(selectedText).replaceAll(out));
+                PreferenceUtils.putPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, key, val.replace(F_SELECTION, getSelectedText()));
                 return Op.NO_OP;
             }
         };
