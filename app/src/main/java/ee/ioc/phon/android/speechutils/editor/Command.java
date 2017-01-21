@@ -94,6 +94,7 @@ public class Command {
             if (mArgsAsStr.isEmpty()) {
                 argsEvaluated = EMPTY_ARRAY;
             } else {
+                // TODO: can throw: java.lang.ArrayIndexOutOfBoundsException in Matcher.group
                 argsEvaluated = TextUtils.split(m.replaceAll(mArgsAsStr), SEPARATOR);
             }
         }

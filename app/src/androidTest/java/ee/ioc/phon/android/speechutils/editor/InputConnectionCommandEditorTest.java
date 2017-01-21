@@ -31,6 +31,11 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("DELETE ME", ""));
         list.add(new Command("old_word", "new_word"));
         list.add(new Command("r2_old", "r2_new"));
+        list.add(new Command("(\\d+) times (\\d+)", "$1 * $2"));
+        // Positive lookbehind and lookahead
+        // Look-behind pattern matches must have a bounded maximum length
+        // list.add(new Command("(?<=\\d+) times_ (?=\\d+)", " * "));
+        list.add(new Command("(?<=\\d{0,8}) times_ (?=\\d+)", " * "));
         list.add(new Command("insert (.+)", "<>", "replace", new String[]{"<>", "$1"}));
         list.add(new Command("double (.+)", "<> <>", "replaceAll", new String[]{"<>", "$1"})); // TODO: replaceAll is not available
         list.add(new Command("s/(.*)/(.*)/", "", "replace", new String[]{"$1", "$2"}));
@@ -1098,6 +1103,26 @@ public class InputConnectionCommandEditorTest {
         add("010010001", "select 1", "select {}", "select {}");
         add("selection_replace !");
         assertThatTextIs("0!0010001");
+    }
+
+    /**
+     * "times" is replaced by "*" but only in the context of numbers.
+     * Unwanted implementation: consumes numbers, thus not all "times" are replaced.
+     */
+    @Test
+    public void test97() {
+        add("times 1 times 2 times 3 times 4 times");
+        assertThatTextIs("Times 1 * 2 times 3 * 4 times");
+    }
+
+    /**
+     * "times" is replaced by "*" but only in the context of numbers.
+     * Implementation with lookaround.
+     */
+    @Test
+    public void test98() {
+        add("times_ 1 times_ 2 times_ 3 times_ 4 times_");
+        assertThatTextIs("Times_ 1 * 2 * 3 * 4 times_");
     }
 
     // Can't create handler inside thread that has not called Looper.prepare()
