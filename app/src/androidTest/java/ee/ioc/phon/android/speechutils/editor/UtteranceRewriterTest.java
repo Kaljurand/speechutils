@@ -118,7 +118,7 @@ public class UtteranceRewriterTest {
                 "Utterance\tReplacement\tCommand\tArg1\tIgnored\n" +
                 "utt\trepl\t\t\tignored\n");
         assertThat(ur.toTsv(), is("Utterance\tReplacement\tCommand\tArg1\nutt\trepl\t\t"));
-        assertThat(ur.rewrite("p utt s"), is("p repl s"));
+        assertThat(ur.getRewrite("p utt s").mStr, is("p repl s"));
     }
 
     private void rewrite(String str1, String str2, String str3) {

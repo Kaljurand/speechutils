@@ -65,7 +65,7 @@ public class UtteranceRewriter {
         DEFAULT_HEADER_2 = Collections.unmodifiableSortedMap(aMap2);
     }
 
-    protected static class Rewrite {
+    public static class Rewrite {
         public final String mId;
         public final String mStr;
         public final String[] mArgs;
@@ -278,10 +278,6 @@ public class UtteranceRewriter {
             rewrittenResults.add(getRewrite(result).mStr);
         }
         return rewrittenResults;
-    }
-
-    public String rewrite(String result) {
-        return getRewrite(result).mStr;
     }
 
     /**

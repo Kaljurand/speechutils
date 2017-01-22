@@ -17,8 +17,6 @@ import android.speech.SpeechRecognizer;
 import android.util.SparseIntArray;
 import android.widget.Toast;
 
-import org.json.JSONException;
-
 import java.util.List;
 
 import ee.ioc.phon.android.speechutils.Log;
@@ -62,15 +60,6 @@ public final class IntentUtils {
         return pm.getLaunchIntentForPackage(packageName);
     }
 
-    public static void startActivityFromJson(Activity activity, CharSequence query) {
-        try {
-            startActivityIfAvailable(activity, JsonUtils.createIntent(query));
-        } catch (JSONException e) {
-            Log.i("startSearchActivity: JSON: " + e.getMessage());
-            startActivitySearch(activity, query);
-        }
-    }
-
     /**
      * Constructs a list of search intents.
      * The first one that can be handled by the device is launched.
@@ -81,7 +70,7 @@ public final class IntentUtils {
      * @param activity activity
      * @param query    search query
      */
-    private static void startActivitySearch(Activity activity, CharSequence query) {
+    public static void startActivitySearch(Activity activity, CharSequence query) {
         // TODO: how to pass the search query to ACTION_ASSIST
         // TODO: maybe use SearchManager instead
         //Intent intent0 = new Intent(Intent.ACTION_ASSIST);

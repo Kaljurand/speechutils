@@ -178,8 +178,26 @@ public class Extras {
     public static final String EXTRA_RESULT_REPLACEMENT = "ee.ioc.phon.android.extra.RESULT_REPLACEMENT";
 
     /**
+     * String.
+     * Name of a command.
+     */
+    public static final String EXTRA_RESULT_COMMAND = "ee.ioc.phon.android.extra.RESULT_COMMAND";
+
+    /**
+     * String.
+     * Content of the 1st argument of the command.
+     */
+    public static final String EXTRA_RESULT_ARG1 = "ee.ioc.phon.android.extra.RESULT_ARG1";
+
+    /**
+     * String.
+     * Content of the 2nd argument of the command.
+     */
+    public static final String EXTRA_RESULT_ARG2 = "ee.ioc.phon.android.extra.RESULT_ARG2";
+
+    /**
      * String[].
-     * List of transcription results
+     * List of transcription results.
      */
     public static final String EXTRA_RESULT_RESULTS = "ee.ioc.phon.android.extra.RESULT_RESULTS";
 
