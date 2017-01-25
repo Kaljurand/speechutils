@@ -17,10 +17,16 @@ import android.speech.SpeechRecognizer;
 import android.util.SparseIntArray;
 import android.widget.Toast;
 
+import org.json.JSONException;
+
+import java.util.ArrayList;
 import java.util.List;
 
+import ee.ioc.phon.android.speechutils.Extras;
 import ee.ioc.phon.android.speechutils.Log;
 import ee.ioc.phon.android.speechutils.R;
+import ee.ioc.phon.android.speechutils.editor.Command;
+import ee.ioc.phon.android.speechutils.editor.UtteranceRewriter;
 
 public final class IntentUtils {
 
@@ -105,6 +111,81 @@ public final class IntentUtils {
             Toast.makeText(context, e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
         }
         return false;
+    }
+
+    public static String rewriteResultWithExtras(Context context, Bundle extras, String result) {
+        String defaultResultUtterance = null;
+        String defaultResultCommand = null;
+        String defaultResultArg1 = null;
+        if (extras.getBoolean(Extras.EXTRA_RESULT_LAUNCH_AS_ACTIVITY)) {
+            defaultResultUtterance = "(.+)";
+            defaultResultCommand = "activity";
+            defaultResultArg1 = "$1";
+        }
+        String resultUtterance = extras.getString(Extras.EXTRA_RESULT_UTTERANCE, defaultResultUtterance);
+        if (resultUtterance != null) {
+            String resultReplacement = extras.getString(Extras.EXTRA_RESULT_REPLACEMENT, null);
+            String resultCommand = extras.getString(Extras.EXTRA_RESULT_COMMAND, defaultResultCommand);
+            String resultArg1 = extras.getString(Extras.EXTRA_RESULT_ARG1, defaultResultArg1);
+            String resultArg2 = extras.getString(Extras.EXTRA_RESULT_ARG2, null);
+
+            String[] resultArgs;
+
+            if (resultArg1 == null) {
+                resultArgs = null;
+            } else if (resultArg2 == null) {
+                resultArgs = new String[]{resultArg1};
+            } else {
+                resultArgs = new String[]{resultArg1, resultArg2};
+            }
+
+            List<Command> commands = new ArrayList<>();
+            commands.add(new Command(resultUtterance, resultReplacement, resultCommand, resultArgs));
+            result = launchIfIntent(context, new UtteranceRewriter(commands), result);
+        }
+        if (result != null) {
+            String rewritesAsStr = extras.getString(Extras.EXTRA_RESULT_REWRITES_AS_STR, null);
+            if (rewritesAsStr != null) {
+                result = launchIfIntent(context, new UtteranceRewriter(rewritesAsStr), result);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Rewrites the text. If the result is a command then executes it (only "activity" is currently
+     * supported). Otherwise returns the rewritten string.
+     * Errors that occur during the execution of "activity" are communicated via toasts.
+     * The possible errors are: syntax error in JSON, nobody responded to the intent, no permission to launch
+     * the intent.
+     */
+    public static String launchIfIntent(Context context, UtteranceRewriter utteranceRewriter, String text) {
+        UtteranceRewriter.Rewrite rewrite = utteranceRewriter.getRewrite(text);
+        if (rewrite.isCommand() && rewrite.mArgs != null && rewrite.mArgs.length > 0) {
+            // Commands that interpret their 1st arg as an intent in JSON.
+            // There can be other commands in the future.
+            try {
+                Intent intent = JsonUtils.createIntent(rewrite.mArgs[0]);
+                switch (rewrite.mId) {
+                    case "activity":
+                        IntentUtils.startActivityIfAvailable(context, intent);
+                        break;
+                    case "service":
+                        // TODO
+                        break;
+                    case "broadcast":
+                        // TODO
+                        break;
+                    default:
+                        break;
+                }
+            } catch (JSONException e) {
+                Log.i("launchIfIntent: JSON: " + e.getLocalizedMessage());
+                Toast.makeText(context, e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+            }
+            return null;
+        }
+        return rewrite.mStr;
     }
 
     /**

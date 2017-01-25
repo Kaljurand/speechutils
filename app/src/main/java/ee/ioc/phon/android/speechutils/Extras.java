@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2016, Institute of Cybernetics at Tallinn University of Technology
+ * Copyright 2011-2017, Institute of Cybernetics at Tallinn University of Technology
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -194,6 +194,15 @@ public class Extras {
      * Content of the 2nd argument of the command.
      */
     public static final String EXTRA_RESULT_ARG2 = "ee.ioc.phon.android.extra.RESULT_ARG2";
+
+    /**
+     * Boolean.
+     * If @code{true} then the following EXTRAs are set in the following way:
+     * EXTRA_RESULT_UTTERANCE = "(.+)"
+     * EXTRA_RESULT_COMMAND = "activity"
+     * EXTRA_RESULT_ARG1 = "$1"
+     */
+    public static final String EXTRA_RESULT_LAUNCH_AS_ACTIVITY = "ee.ioc.phon.android.extra.RESULT_LAUNCH_AS_ACTIVITY";
 
     /**
      * String[].
