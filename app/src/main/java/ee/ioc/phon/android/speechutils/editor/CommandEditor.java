@@ -48,7 +48,7 @@ public interface CommandEditor {
     Op keyCodeStr(String codeAsStr);
 
     // Move cursor left to the matching string
-    // Supports function "{}" to refer to the content of the current selection.
+    // Supports function @sel() to refer to the content of the current selection.
     Op select(String str);
 
     // Move cursor left to the matching regex
@@ -84,7 +84,7 @@ public interface CommandEditor {
     Op copyAll();
 
     // Save the given value under the given key into the app's key-value storage ("clipboard")
-    // Supports function "{}" to refer to the content of the current selection.
+    // Supports function @sel() to refer to the content of the current selection.
     Op saveClip(String key, String val);
 
     // Load the string saved under the given key from the app's key-value storage,
@@ -105,7 +105,7 @@ public interface CommandEditor {
     Op replace(String text1, String text2);
 
     // Replace cursor with the given text
-    // Supports function "{}" to refer to the content of the current selection.
+    // Supports function @sel() to refer to the content of the current selection.
     Op replaceSel(String text);
 
     // Uppercase the text under the cursor
@@ -145,7 +145,7 @@ public interface CommandEditor {
     Op apply(int n);
 
     // Start an activity from the given JSON-encoded Android Intent.
-    // Supports function "{}" to refer to the content of the current selection.
+    // Supports function @sel() to refer to the content of the current selection.
     Op activity(String json);
 
     // Replace cursor with the response of the given URL.

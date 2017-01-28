@@ -47,13 +47,13 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("selectAll", "", "selectAll"));
         list.add(new Command("resetSel", "", "moveRel", new String[]{"0"}));
         list.add(new Command("selection_replace (.*)", "", "replaceSel", new String[]{"$1"}));
-        list.add(new Command("selection_underscore", "", "replaceSel", new String[]{"_{}_"}));
+        list.add(new Command("selection_underscore", "", "replaceSel", new String[]{"_@sel()_"}));
         list.add(new Command("replaceSelRe_noletters", "", "replaceSelRe", new String[]{"[a-z]", ""}));
         list.add(new Command("replaceSelRe_underscore", "", "replaceSelRe", new String[]{"(.+)", "_\\$1_"}));
         //list.add(new Command("replaceSelRe (.+?) .+ (.+)", "", "replaceSelRe", new String[]{"$1 (.+) $2", "$1 \\$1 $2"}));
         list.add(new Command("replaceSelRe ([^ ]+) .+ ([^ ]+)", "", "replaceSelRe", new String[]{"$1 ([^ ]+) $2", "$1 \\$1 $2"}));
-        list.add(new Command("selection_quote", "", "replaceSel", new String[]{"\"{}\""}));
-        list.add(new Command("selection_double", "", "replaceSel", new String[]{"{}{}"}));
+        list.add(new Command("selection_quote", "", "replaceSel", new String[]{"\"@sel()\""}));
+        list.add(new Command("selection_double", "", "replaceSel", new String[]{"@sel()@sel()"}));
         list.add(new Command("selection_inc", "", "incSel"));
         list.add(new Command("selection_uc", "", "ucSel"));
         list.add(new Command("step back", "", "moveRel", new String[]{"-1"}));
@@ -954,7 +954,7 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test81() {
         add("0 word1 word2 word3", "select word2");
-        runOp(mEditor.saveClip("key", "_{}_{}_"));
+        runOp(mEditor.saveClip("key", "_@sel()_@sel()_"));
         runOp(mEditor.replaceSel("REPL"));
         assertThatTextIs("0 word1 REPL word3");
         add("select word1");
@@ -1083,9 +1083,9 @@ public class InputConnectionCommandEditorTest {
     public void test94() {
         runOp(mEditor.clearClipboard());
         add("123 456 789", "select 456");
-        runOp(mEditor.saveClip("number456", "{}"));
+        runOp(mEditor.saveClip("number456", "@sel()"));
         add("select 123");
-        runOp(mEditor.saveClip("number123", "{}"));
+        runOp(mEditor.saveClip("number123", "@sel()"));
         runOp(mEditor.selectAll());
         runOp(mEditor.showClipboard());
         assertThatTextIs("<number123|123>\n<number456|456>\n");
@@ -1100,7 +1100,7 @@ public class InputConnectionCommandEditorTest {
 
     @Test
     public void test96() {
-        add("010010001", "select 1", "select {}", "select {}");
+        add("010010001", "select 1", "select @sel()", "select @sel()");
         add("selection_replace !");
         assertThatTextIs("0!0010001");
     }

@@ -47,7 +47,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private static final int MAX_DELETABLE_CONTEXT = 100;
     // Token optionally preceded by whitespace
     private static final Pattern WHITESPACE_AND_TOKEN = Pattern.compile("\\s*\\w+");
-    private static final String F_SELECTION = "{}";
+    private static final String F_SELECTION = "@sel()";
 
     private Context mContext;
     private SharedPreferences mPreferences;
