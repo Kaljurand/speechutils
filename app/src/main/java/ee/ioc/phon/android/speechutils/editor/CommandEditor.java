@@ -148,6 +148,10 @@ public interface CommandEditor {
     // Supports function "{}" to refer to the content of the current selection.
     Op activity(String json);
 
+    // Replace cursor with the response of the given URL.
+    // Executed by AsyncTask.
+    Op getUrl(String url);
+
     // Commands that are not exposed to the end-user in CommandEditorManager
 
     CommandEditorResult commitFinalResult(String text);

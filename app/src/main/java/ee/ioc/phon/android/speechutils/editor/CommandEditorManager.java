@@ -50,6 +50,7 @@ public class CommandEditorManager {
     public static final String COMBINE = "combine";
     public static final String APPLY = "apply";
     public static final String ACTIVITY = "activity";
+    public static final String GET_URL = "getUrl";
 
     public static final Map<String, EditorCommand> EDITOR_COMMANDS;
 
@@ -450,6 +451,17 @@ public class CommandEditorManager {
                     return null;
                 }
                 return ce.activity(args[0]);
+            }
+        });
+
+        aMap.put(GET_URL, new EditorCommand() {
+
+            @Override
+            public Op getOp(CommandEditor ce, String[] args) {
+                if (args == null || args.length < 1) {
+                    return null;
+                }
+                return ce.getUrl(args[0]);
             }
         });
 

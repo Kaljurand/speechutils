@@ -3,6 +3,7 @@ package ee.ioc.phon.android.speechutils.editor;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.Pair;
@@ -14,6 +15,7 @@ import android.view.inputmethod.InputConnection;
 
 import org.json.JSONException;
 
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,6 +28,7 @@ import java.util.regex.Pattern;
 
 import ee.ioc.phon.android.speechutils.Log;
 import ee.ioc.phon.android.speechutils.R;
+import ee.ioc.phon.android.speechutils.utils.HttpUtils;
 import ee.ioc.phon.android.speechutils.utils.IntentUtils;
 import ee.ioc.phon.android.speechutils.utils.JsonUtils;
 import ee.ioc.phon.android.speechutils.utils.PreferenceUtils;
@@ -207,6 +210,32 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     Log.i("startSearchActivity: JSON: " + e.getMessage());
                 }
                 return undo;
+            }
+        };
+    }
+
+    @Override
+    public Op getUrl(final String url) {
+        return new Op("getUrl") {
+            @Override
+            public Op run() {
+                new AsyncTask<String, Void, String>() {
+
+                    @Override
+                    protected String doInBackground(String... urls) {
+                        try {
+                            return HttpUtils.getUrl(urls[0]);
+                        } catch (IOException e) {
+                            return "[ERROR: Unable to retrieve " + urls[0] + ": " + e.getLocalizedMessage() + "]";
+                        }
+                    }
+
+                    @Override
+                    protected void onPostExecute(String result) {
+                        runOp(replaceSel(result));
+                    }
+                }.execute(url);
+                return Op.NO_OP;
             }
         };
     }
