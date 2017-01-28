@@ -60,7 +60,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     // The command prefix is a list of consecutive final results whose concatenation can possibly
     // form a command. An item is added to the list for every final result that is not a command.
-    // The list if cleared if a command is executed or if reset() is called.
+    // The list if cleared if a command is executed.
     private List<String> mCommandPrefix = new ArrayList<>();
     private Deque<Op> mOpStack = new ArrayDeque<>();
     private Deque<Op> mUndoStack = new ArrayDeque<>();
@@ -79,13 +79,14 @@ public class InputConnectionCommandEditor implements CommandEditor {
         mInputConnection = inputConnection;
     }
 
-    public InputConnection getInputConnection() {
+    protected InputConnection getInputConnection() {
         return mInputConnection;
     }
 
     @Override
     public void setUtteranceRewriter(UtteranceRewriter ur) {
         mUtteranceRewriter = ur;
+        reset();
     }
 
     @Override
@@ -94,6 +95,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
         //if (op == null) {
         //    return false;
         //}
+        reset();
         Op undo = op.run();
         if (undo == null) {
             // Operation failed;
@@ -155,7 +157,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
             }
             boolean success = false;
             if (rewrite.isCommand()) {
-                mCommandPrefix.clear();
                 CommandEditorManager.EditorCommand ec = CommandEditorManager.get(rewrite.mId);
                 if (ec != null) {
                     // TODO: dont call runOp from here
@@ -194,6 +195,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
             return null;
         }
         return et.text;
+    }
+
+    @Override
+    public void reset() {
+        mCommandPrefix.clear();
+        mPrevText = "";
+        mAddedLength = 0;
     }
 
     @Override
@@ -1105,8 +1113,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
         if (mUtteranceRewriter == null) {
             return str;
         }
-        UtteranceRewriter.Rewrite triple = mUtteranceRewriter.getRewrite(str);
-        return triple.mStr;
+        return mUtteranceRewriter.getRewrite(str).mStr;
     }
 
     private Op getOpSetSelection(final int i, final int j, final int oldSelectionStart, final int oldSelectionEnd) {

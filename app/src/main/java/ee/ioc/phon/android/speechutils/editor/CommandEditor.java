@@ -173,4 +173,6 @@ public interface CommandEditor {
     Op combineOps(Collection<Op> ops);
 
     Op getOpFromText(String text);
+
+    void reset();
 }

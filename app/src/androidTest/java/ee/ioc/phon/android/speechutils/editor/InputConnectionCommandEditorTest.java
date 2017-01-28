@@ -46,6 +46,8 @@ public class InputConnectionCommandEditorTest {
         list.add(new Command("select (.*)", "", "select", new String[]{"$1"}));
         list.add(new Command("selectAll", "", "selectAll"));
         list.add(new Command("resetSel", "", "moveRel", new String[]{"0"}));
+        // Add some text and then move to the beginning of the doc
+        list.add(new Command("(.*)\\bmoveAbs0", "$1", "moveAbs", new String[]{"0"}));
         list.add(new Command("selection_replace (.*)", "", "replaceSel", new String[]{"$1"}));
         list.add(new Command("selection_underscore", "", "replaceSel", new String[]{"_@sel()_"}));
         list.add(new Command("replaceSelRe_noletters", "", "replaceSelRe", new String[]{"[a-z]", ""}));
@@ -1123,6 +1125,22 @@ public class InputConnectionCommandEditorTest {
     public void test98() {
         add("times_ 1 times_ 2 times_ 3 times_ 4 times_");
         assertThatTextIs("Times_ 1 * 2 * 3 * 4 times_");
+    }
+
+    /**
+     * Adds some text and then moves to the beginning of doc.
+     * TODO: not sure if the trailing space should be allowed.
+     */
+    @Test
+    public void test99() {
+        add("123 moveAbs0", "456");
+        assertThatTextIs("456123 ");
+    }
+
+    @Test
+    public void test100() {
+        add("123", "456 moveAbs0", "789");
+        assertThatTextIs("789123 456 ");
     }
 
     // Can't create handler inside thread that has not called Looper.prepare()
