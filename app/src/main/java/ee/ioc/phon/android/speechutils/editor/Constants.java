@@ -3,6 +3,7 @@ package ee.ioc.phon.android.speechutils.editor;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class Constants {
 
@@ -22,4 +23,10 @@ public class Constants {
     // following string.
     public static final Set<Character> CHARACTERS_STICKY =
             new HashSet<>(Arrays.asList(new Character[]{'(', '[', '{', '<'}));
+
+    // TODO: review these
+    public static final int REWRITE_PATTERN_FLAGS = Pattern.CASE_INSENSITIVE
+            | Pattern.UNICODE_CASE
+            | Pattern.MULTILINE
+            | Pattern.DOTALL;
 }

@@ -103,12 +103,12 @@ public final class IntentUtils {
                     Log.i("startActivityIfAvailable: not available: " + intent);
                 }
             }
-            Toast.makeText(context, R.string.errorFailedLaunchIntent, Toast.LENGTH_LONG).show();
+            showMessage(context, R.string.errorFailedLaunchIntent);
         } catch (SecurityException e) {
             // This happens if the user constructs an intent for which we do not have a
             // permission, e.g. the CALL intent.
             Log.i("startActivityIfAvailable: " + e.getMessage());
-            Toast.makeText(context, e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+            showMessage(context, e.getLocalizedMessage());
         }
         return false;
     }
@@ -159,8 +159,45 @@ public final class IntentUtils {
      * The possible errors are: syntax error in JSON, nobody responded to the intent, no permission to launch
      * the intent.
      */
-    public static String launchIfIntent(Context context, UtteranceRewriter utteranceRewriter, String text) {
-        UtteranceRewriter.Rewrite rewrite = utteranceRewriter.getRewrite(text);
+    public static String launchIfIntent(Context context, Iterable<UtteranceRewriter> urs, String text) {
+        String newText = text;
+        for (UtteranceRewriter ur : urs) {
+            // Skip null, i.e. a case where a rewrites name did not resolve to a table.
+            if (ur == null) {
+                continue;
+            }
+            UtteranceRewriter.Rewrite rewrite = ur.getRewrite(newText);
+            if (rewrite.isCommand() && rewrite.mArgs != null && rewrite.mArgs.length > 0) {
+                // Commands that interpret their 1st arg as an intent in JSON.
+                // There can be other commands in the future.
+                try {
+                    Intent intent = JsonUtils.createIntent(rewrite.mArgs[0]);
+                    switch (rewrite.mId) {
+                        case "activity":
+                            IntentUtils.startActivityIfAvailable(context, intent);
+                            break;
+                        case "service":
+                            // TODO
+                            break;
+                        case "broadcast":
+                            // TODO
+                            break;
+                        default:
+                            break;
+                    }
+                } catch (JSONException e) {
+                    Log.i("launchIfIntent: JSON: " + e.getMessage());
+                    showMessage(context, e.getLocalizedMessage());
+                }
+                return null;
+            }
+            newText = rewrite.mStr;
+        }
+        return newText;
+    }
+
+    public static String launchIfIntent(Context context, UtteranceRewriter ur, String text) {
+        UtteranceRewriter.Rewrite rewrite = ur.getRewrite(text);
         if (rewrite.isCommand() && rewrite.mArgs != null && rewrite.mArgs.length > 0) {
             // Commands that interpret their 1st arg as an intent in JSON.
             // There can be other commands in the future.
@@ -180,8 +217,8 @@ public final class IntentUtils {
                         break;
                 }
             } catch (JSONException e) {
-                Log.i("launchIfIntent: JSON: " + e.getLocalizedMessage());
-                Toast.makeText(context, e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                Log.i("launchIfIntent: JSON: " + e.getMessage());
+                showMessage(context, e.getLocalizedMessage());
             }
             return null;
         }
@@ -221,5 +258,13 @@ public final class IntentUtils {
             intent.addFlags(Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
         }
         return intent;
+    }
+
+    private static void showMessage(Context context, String message) {
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+    }
+
+    private static void showMessage(Context context, int message) {
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show();
     }
 }

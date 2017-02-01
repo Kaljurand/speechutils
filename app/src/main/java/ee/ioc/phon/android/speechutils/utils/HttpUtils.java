@@ -42,6 +42,7 @@ public class HttpUtils {
                 os.close();
             }
 
+            // TODO: improve handling of response code
             //int response = conn.getResponseCode();
             is = conn.getInputStream();
             return inputStreamToString(is, 1024);

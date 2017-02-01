@@ -22,6 +22,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
+// TODO: add tests for multiline input strings
+
 @RunWith(AndroidJUnit4.class)
 public class InputConnectionCommandEditorTest {
     private static final List<Command> COMMANDS;
@@ -86,7 +88,9 @@ public class InputConnectionCommandEditorTest {
         //InputConnection connection = new BaseInputConnection(view, true);
         mEditor = new InputConnectionCommandEditor(context);
         mEditor.setInputConnection(connection);
-        mEditor.setUtteranceRewriter(new UtteranceRewriter(COMMANDS));
+        List<UtteranceRewriter> urs = new ArrayList<>();
+        urs.add(new UtteranceRewriter(COMMANDS));
+        mEditor.setRewriters(urs);
     }
 
     @Test

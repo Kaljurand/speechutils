@@ -478,7 +478,7 @@ public class UtteranceRewriter {
                     if (split.isEmpty()) {
                         throw new IllegalArgumentException("Empty Utterance");
                     }
-                    utterance = Pattern.compile(split, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+                    utterance = Pattern.compile(split, Constants.REWRITE_PATTERN_FLAGS);
                     break;
                 case HEADER_REPLACEMENT:
                     replacement = Command.unescape(split);

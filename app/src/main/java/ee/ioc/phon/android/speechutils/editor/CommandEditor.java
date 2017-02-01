@@ -4,6 +4,7 @@ import android.view.inputmethod.ExtractedText;
 
 import java.util.Collection;
 import java.util.Deque;
+import java.util.List;
 
 /**
  * Note that "cursor" is the same as "selection" in Android, i.e. a cursor has a start and end position
@@ -164,7 +165,7 @@ public interface CommandEditor {
 
     CharSequence getText();
 
-    void setUtteranceRewriter(UtteranceRewriter ur);
+    void setRewriters(List<UtteranceRewriter> urs);
 
     Deque<Op> getOpStack();
 

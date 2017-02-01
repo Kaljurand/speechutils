@@ -54,15 +54,15 @@ public class Command {
 
 
     public Command(String utt, String replacement, String id, String[] args) {
-        this(null, null, null, null, Pattern.compile(utt, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), replacement, id, args);
+        this(null, null, null, null, Pattern.compile(utt, Constants.REWRITE_PATTERN_FLAGS), replacement, id, args);
     }
 
     public Command(String utt, String replacement, String id) {
-        this(null, null, null, null, Pattern.compile(utt, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), replacement, id, null);
+        this(null, null, null, null, Pattern.compile(utt, Constants.REWRITE_PATTERN_FLAGS), replacement, id, null);
     }
 
     public Command(String utt, String replacement) {
-        this(null, null, null, null, Pattern.compile(utt, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE), replacement, null, null);
+        this(null, null, null, null, Pattern.compile(utt, Constants.REWRITE_PATTERN_FLAGS), replacement, null, null);
     }
 
     public String getId() {

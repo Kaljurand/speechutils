@@ -133,6 +133,7 @@ public class MicButton extends ImageButton {
             public boolean onTouch(View v, MotionEvent event) {
                 if (event.getAction() == MotionEvent.ACTION_DOWN) {
                     // TODO: what is the diff between KEYBOARD_TAP and the other constants?
+                    // TODO: does not seem to work on Android 7.1
                     v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
                 }
                 return false;

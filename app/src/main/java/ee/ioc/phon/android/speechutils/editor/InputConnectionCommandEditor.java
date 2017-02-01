@@ -67,7 +67,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     private InputConnection mInputConnection;
 
-    private UtteranceRewriter mUtteranceRewriter;
+    private List<UtteranceRewriter> mRewriters;
 
     public InputConnectionCommandEditor(Context context) {
         mContext = context;
@@ -84,8 +84,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public void setUtteranceRewriter(UtteranceRewriter ur) {
-        mUtteranceRewriter = ur;
+    public void setRewriters(List<UtteranceRewriter> urs) {
+        mRewriters = urs;
         reset();
     }
 
@@ -111,13 +111,26 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public Op getOpFromText(final String text) {
         List<Op> ops = new ArrayList<>();
-        UtteranceRewriter.Rewrite rewrite = mUtteranceRewriter.getRewrite(text);
-        ops.add(getCommitWithOverwriteOp(rewrite.mStr));
-        if (rewrite.isCommand()) {
-            CommandEditorManager.EditorCommand ec = CommandEditorManager.get(rewrite.mId);
-            if (ec != null) {
-                ops.add(ec.getOp(this, rewrite.mArgs));
+        boolean isCommand = false;
+        String newText = text;
+        for (UtteranceRewriter ur : mRewriters) {
+            if (ur == null) {
+                continue;
             }
+            UtteranceRewriter.Rewrite rewrite = ur.getRewrite(text);
+            newText = rewrite.mStr;
+            if (rewrite.isCommand()) {
+                isCommand = true;
+                ops.add(getCommitWithOverwriteOp(newText));
+                CommandEditorManager.EditorCommand ec = CommandEditorManager.get(rewrite.mId);
+                if (ec != null) {
+                    ops.add(ec.getOp(this, rewrite.mArgs));
+                }
+                break;
+            }
+        }
+        if (!isCommand) {
+            ops.add(getCommitWithOverwriteOp(newText));
         }
         return combineOps(ops);
     }
@@ -125,7 +138,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public CommandEditorResult commitFinalResult(final String text) {
         CommandEditorResult result = null;
-        if (mUtteranceRewriter == null) {
+        if (mRewriters == null || mRewriters.isEmpty()) {
             // If rewrites/commands are not defined (default), then selection can be dictated over.
             commitWithOverwrite(text);
         } else {
@@ -1109,11 +1122,19 @@ public class InputConnectionCommandEditor implements CommandEditor {
         };
     }
 
+    // TODO: should be check for commands here (who calls this?)
     private String rewrite(String str) {
-        if (mUtteranceRewriter == null) {
+        if (mRewriters == null || mRewriters.isEmpty()) {
             return str;
         }
-        return mUtteranceRewriter.getRewrite(str).mStr;
+        String newText = str;
+        for (UtteranceRewriter ur : mRewriters) {
+            if (ur == null) {
+                continue;
+            }
+            newText = ur.getRewrite(newText).mStr;
+        }
+        return newText;
     }
 
     private Op getOpSetSelection(final int i, final int j, final int oldSelectionStart, final int oldSelectionEnd) {
@@ -1241,14 +1262,26 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 possibleCommand += " " + text;
             }
             Log.i("applyCommand: testing: <" + possibleCommand + ">");
-            UtteranceRewriter.Rewrite rewrite = mUtteranceRewriter.getRewrite(possibleCommand);
-            if (rewrite.isCommand()) {
-                Log.i("applyCommand: isCommand: " + possibleCommand);
-                undo(i).run();
-                return rewrite;
+            for (UtteranceRewriter ur : mRewriters) {
+                UtteranceRewriter.Rewrite rewrite = ur.getRewrite(possibleCommand);
+                if (rewrite.isCommand()) {
+                    Log.i("applyCommand: isCommand: " + possibleCommand);
+                    undo(i).run();
+                    return rewrite;
+                }
             }
         }
-        return mUtteranceRewriter.getRewrite(text);
+        // TODO: review this
+        String newText = text;
+        UtteranceRewriter.Rewrite rewrite = null;
+        for (UtteranceRewriter ur : mRewriters) {
+            if (ur == null) {
+                continue;
+            }
+            rewrite = ur.getRewrite(newText);
+            newText = rewrite.mStr;
+        }
+        return rewrite;
     }
 
     /**
