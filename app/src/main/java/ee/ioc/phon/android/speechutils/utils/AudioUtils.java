@@ -19,6 +19,9 @@ import ee.ioc.phon.android.speechutils.MediaFormatFactory;
 
 public class AudioUtils {
 
+    private AudioUtils() {
+    }
+
     public static byte[] getRecordingAsWav(byte[] pcm, int sampleRate, short resolutionInBytes, short channels) {
         int headerLen = 44;
         int byteRate = sampleRate * resolutionInBytes; // sampleRate*(16/8)*1 ???

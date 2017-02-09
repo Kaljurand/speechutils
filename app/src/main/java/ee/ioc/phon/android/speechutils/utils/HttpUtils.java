@@ -12,6 +12,9 @@ import ee.ioc.phon.android.speechutils.Log;
 
 public class HttpUtils {
 
+    private HttpUtils() {
+    }
+
     public static String getUrl(String url) throws IOException {
         return fetchUrl(url, "GET", null);
     }

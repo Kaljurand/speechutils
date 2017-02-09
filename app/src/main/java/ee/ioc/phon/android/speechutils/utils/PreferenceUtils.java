@@ -14,6 +14,9 @@ import java.util.UUID;
 
 public class PreferenceUtils {
 
+    private PreferenceUtils() {
+    }
+
     public static String getPrefString(SharedPreferences prefs, String key, String defaultValue) {
         return prefs.getString(key, defaultValue);
     }
