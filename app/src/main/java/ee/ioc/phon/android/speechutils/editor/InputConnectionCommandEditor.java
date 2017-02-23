@@ -195,9 +195,23 @@ public class InputConnectionCommandEditor implements CommandEditor {
         if (cs != null && cs.length() > 0) {
             return false;
         }
-        String textRewritten = rewrite(text);
-        commitWithOverwrite(textRewritten);
-        mPrevText = textRewritten;
+
+        String newText = text;
+        if (mRewriters != null && !mRewriters.isEmpty()) {
+            for (UtteranceRewriter ur : mRewriters) {
+                if (ur == null) {
+                    continue;
+                }
+                UtteranceRewriter.Rewrite rewrite = ur.getRewrite(newText);
+                newText = rewrite.mStr;
+                if (rewrite.isCommand()) {
+                    break;
+                }
+            }
+        }
+
+        commitWithOverwrite(newText);
+        mPrevText = newText;
         return true;
     }
 
@@ -1122,21 +1136,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
         };
     }
 
-    // TODO: should be check for commands here (who calls this?)
-    private String rewrite(String str) {
-        if (mRewriters == null || mRewriters.isEmpty()) {
-            return str;
-        }
-        String newText = str;
-        for (UtteranceRewriter ur : mRewriters) {
-            if (ur == null) {
-                continue;
-            }
-            newText = ur.getRewrite(newText).mStr;
-        }
-        return newText;
-    }
-
     private Op getOpSetSelection(final int i, final int j, final int oldSelectionStart, final int oldSelectionEnd) {
         return new Op("setSelection") {
             @Override
@@ -1279,6 +1278,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 continue;
             }
             rewrite = ur.getRewrite(newText);
+            if (rewrite.isCommand()) {
+                return rewrite;
+            }
             newText = rewrite.mStr;
         }
         return rewrite;

@@ -26,52 +26,65 @@ import static org.junit.Assert.assertTrue;
 
 @RunWith(AndroidJUnit4.class)
 public class InputConnectionCommandEditorTest {
-    private static final List<Command> COMMANDS;
+    private static final List<UtteranceRewriter> URS;
 
     static {
-        List<Command> list = new ArrayList<>();
-        list.add(new Command("DELETE ME", ""));
-        list.add(new Command("old_word", "new_word"));
-        list.add(new Command("r2_old", "r2_new"));
-        list.add(new Command("(\\d+) times (\\d+)", "$1 * $2"));
+        // Simple replacements
+        List<Command> list1 = new ArrayList<>();
+        list1.add(new Command("DELETE ME", ""));
+        list1.add(new Command("old_word", "new_word"));
+        list1.add(new Command("dollar sign", "\\$"));
+        list1.add(new Command("double backslash", "\\\\\\\\"));
+
+        // Editor commands
+        List<Command> list2 = new ArrayList<>();
+        list2.add(new Command("insert (.+)", "<>", "replace", new String[]{"<>", "$1"}));
+        list2.add(new Command("double (.+)", "<> <>", "replaceAll", new String[]{"<>", "$1"})); // TODO: replaceAll is not available
+        list2.add(new Command("s/(.*)/(.*)/", "", "replace", new String[]{"$1", "$2"}));
+        list2.add(new Command("connect (.*) and (.*)", "", "replace", new String[]{"$1 $2", "$1-$2"}));
+        list2.add(new Command("delete (.+)", "", "replace", new String[]{"$1"}));
+        list2.add(new Command("delete2 (.*)", "D2", "replace", new String[]{"$1", ""}));
+        list2.add(new Command("underscore (.*)", "", "replace", new String[]{"$1", "_$1_"}));
+        list2.add(new Command("select (.*)", "", "select", new String[]{"$1"}));
+        list2.add(new Command("selectAll", "", "selectAll"));
+        list2.add(new Command("resetSel", "", "moveRel", new String[]{"0"}));
+        // Add some text and then move to the beginning of the doc
+        list2.add(new Command("(.*)\\bmoveAbs0", "$1", "moveAbs", new String[]{"0"}));
+        list2.add(new Command("selection_replace (.*)", "", "replaceSel", new String[]{"$1"}));
+        list2.add(new Command("selection_underscore", "", "replaceSel", new String[]{"_@sel()_"}));
+        list2.add(new Command("replaceSelRe_noletters", "", "replaceSelRe", new String[]{"[a-z]", ""}));
+        list2.add(new Command("replaceSelRe_underscore", "", "replaceSelRe", new String[]{"(.+)", "_\\$1_"}));
+        //list2.add(new Command("replaceSelRe (.+?) .+ (.+)", "", "replaceSelRe", new String[]{"$1 (.+) $2", "$1 \\$1 $2"}));
+        list2.add(new Command("replaceSelRe ([^ ]+) .+ ([^ ]+)", "", "replaceSelRe", new String[]{"$1 ([^ ]+) $2", "$1 \\$1 $2"}));
+        list2.add(new Command("selection_quote", "", "replaceSel", new String[]{"\"@sel()\""}));
+        list2.add(new Command("selection_double", "", "replaceSel", new String[]{"@sel()@sel()"}));
+        list2.add(new Command("selection_inc", "", "incSel"));
+        list2.add(new Command("selection_uc", "", "ucSel"));
+        list2.add(new Command("step back", "", "moveRel", new String[]{"-1"}));
+        list2.add(new Command("prev_sent", "", "selectReBefore", new String[]{"[.?!]()[^.?!]+[.?!][^.?!]+"}));
+        list2.add(new Command("first_number", "", "selectReAfter", new String[]{"(\\d)\\."}));
+        list2.add(new Command("second_number", "", "selectReAfter", new String[]{"(\\d)\\.", "2"}));
+        list2.add(new Command("next_word", "", "selectReAfter", new String[]{"\\b(.+?)\\b"}));
+        list2.add(new Command("next_next_word", "", "selectReAfter", new String[]{"\\b(.+?)\\b", "2"}));
+        list2.add(new Command("code (\\d+)", "", "keyCode", new String[]{"$1"}));
+        list2.add(new Command("code letter (.)", "", "keyCodeStr", new String[]{"$1"}));
+        list2.add(new Command("undo (\\d+)", "", "undo", new String[]{"$1"}));
+        list2.add(new Command("combine (\\d+)", "", "combine", new String[]{"$1"}));
+        list2.add(new Command("apply (\\d+)", "", "apply", new String[]{"$1"}));
+
+        // More simple replacements
+        List<Command> list3 = new ArrayList<>();
+        list3.add(new Command("connect word1 and word2", "THIS SHOULD NOT MATCH"));
+        list3.add(new Command("(\\d+) times (\\d+)", "$1 * $2"));
         // Positive lookbehind and lookahead
         // Look-behind pattern matches must have a bounded maximum length
         // list.add(new Command("(?<=\\d+) times_ (?=\\d+)", " * "));
-        list.add(new Command("(?<=\\d{0,8}) times_ (?=\\d+)", " * "));
-        list.add(new Command("insert (.+)", "<>", "replace", new String[]{"<>", "$1"}));
-        list.add(new Command("double (.+)", "<> <>", "replaceAll", new String[]{"<>", "$1"})); // TODO: replaceAll is not available
-        list.add(new Command("s/(.*)/(.*)/", "", "replace", new String[]{"$1", "$2"}));
-        list.add(new Command("connect (.*) and (.*)", "", "replace", new String[]{"$1 $2", "$1-$2"}));
-        list.add(new Command("delete (.+)", "", "replace", new String[]{"$1"}));
-        list.add(new Command("delete2 (.*)", "D2", "replace", new String[]{"$1", ""}));
-        list.add(new Command("underscore (.*)", "", "replace", new String[]{"$1", "_$1_"}));
-        list.add(new Command("select (.*)", "", "select", new String[]{"$1"}));
-        list.add(new Command("selectAll", "", "selectAll"));
-        list.add(new Command("resetSel", "", "moveRel", new String[]{"0"}));
-        // Add some text and then move to the beginning of the doc
-        list.add(new Command("(.*)\\bmoveAbs0", "$1", "moveAbs", new String[]{"0"}));
-        list.add(new Command("selection_replace (.*)", "", "replaceSel", new String[]{"$1"}));
-        list.add(new Command("selection_underscore", "", "replaceSel", new String[]{"_@sel()_"}));
-        list.add(new Command("replaceSelRe_noletters", "", "replaceSelRe", new String[]{"[a-z]", ""}));
-        list.add(new Command("replaceSelRe_underscore", "", "replaceSelRe", new String[]{"(.+)", "_\\$1_"}));
-        //list.add(new Command("replaceSelRe (.+?) .+ (.+)", "", "replaceSelRe", new String[]{"$1 (.+) $2", "$1 \\$1 $2"}));
-        list.add(new Command("replaceSelRe ([^ ]+) .+ ([^ ]+)", "", "replaceSelRe", new String[]{"$1 ([^ ]+) $2", "$1 \\$1 $2"}));
-        list.add(new Command("selection_quote", "", "replaceSel", new String[]{"\"@sel()\""}));
-        list.add(new Command("selection_double", "", "replaceSel", new String[]{"@sel()@sel()"}));
-        list.add(new Command("selection_inc", "", "incSel"));
-        list.add(new Command("selection_uc", "", "ucSel"));
-        list.add(new Command("step back", "", "moveRel", new String[]{"-1"}));
-        list.add(new Command("prev_sent", "", "selectReBefore", new String[]{"[.?!]()[^.?!]+[.?!][^.?!]+"}));
-        list.add(new Command("first_number", "", "selectReAfter", new String[]{"(\\d)\\."}));
-        list.add(new Command("second_number", "", "selectReAfter", new String[]{"(\\d)\\.", "2"}));
-        list.add(new Command("next_word", "", "selectReAfter", new String[]{"\\b(.+?)\\b"}));
-        list.add(new Command("next_next_word", "", "selectReAfter", new String[]{"\\b(.+?)\\b", "2"}));
-        list.add(new Command("code (\\d+)", "", "keyCode", new String[]{"$1"}));
-        list.add(new Command("code letter (.)", "", "keyCodeStr", new String[]{"$1"}));
-        list.add(new Command("undo (\\d+)", "", "undo", new String[]{"$1"}));
-        list.add(new Command("combine (\\d+)", "", "combine", new String[]{"$1"}));
-        list.add(new Command("apply (\\d+)", "", "apply", new String[]{"$1"}));
-        COMMANDS = Collections.unmodifiableList(list);
+        list3.add(new Command("(?<=\\d{0,8}) times_ (?=\\d+)", " * "));
+
+        URS = new ArrayList<>();
+        URS.add(new UtteranceRewriter(Collections.unmodifiableList(list1)));
+        URS.add(new UtteranceRewriter(Collections.unmodifiableList(list2)));
+        URS.add(new UtteranceRewriter(Collections.unmodifiableList(list3)));
     }
 
     private InputConnectionCommandEditor mEditor;
@@ -88,9 +101,7 @@ public class InputConnectionCommandEditorTest {
         //InputConnection connection = new BaseInputConnection(view, true);
         mEditor = new InputConnectionCommandEditor(context);
         mEditor.setInputConnection(connection);
-        List<UtteranceRewriter> urs = new ArrayList<>();
-        urs.add(new UtteranceRewriter(COMMANDS));
-        mEditor.setRewriters(urs);
+        mEditor.setRewriters(URS);
     }
 
     @Test
@@ -160,15 +171,15 @@ public class InputConnectionCommandEditorTest {
     }
 
     @Test
-    public void test08() {
-        add("old_word");
-        assertThatTextIs("New_word");
+    public void test008() {
+        add("double backslash");
+        assertThatTextIs("\\\\");
     }
 
     @Test
-    public void test09() {
-        add("r2_old");
-        assertThatTextIs("R2_new");
+    public void test009() {
+        add("dollar sign");
+        assertThatTextIs("$");
     }
 
     @Test
