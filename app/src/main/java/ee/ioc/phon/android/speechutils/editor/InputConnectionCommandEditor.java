@@ -1262,6 +1262,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
             }
             Log.i("applyCommand: testing: <" + possibleCommand + ">");
             for (UtteranceRewriter ur : mRewriters) {
+                if (ur == null) {
+                    continue;
+                }
                 UtteranceRewriter.Rewrite rewrite = ur.getRewrite(possibleCommand);
                 if (rewrite.isCommand()) {
                     Log.i("applyCommand: isCommand: " + possibleCommand);

@@ -12,6 +12,11 @@ import ee.ioc.phon.android.speechutils.Log;
 
 public class HttpUtils {
 
+    // Timeouts in milliseconds
+    // TODO: make settable
+    private static final int DEFAULT_READ_TIMEOUT = 3000;
+    private static final int DEFAULT_CONNECT_TIMEOUT = 4000;
+
     private HttpUtils() {
     }
 
@@ -31,8 +36,8 @@ public class HttpUtils {
         try {
             URL url = new URL(myurl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setReadTimeout(5000 /* milliseconds */);
-            conn.setConnectTimeout(5000 /* milliseconds */);
+            conn.setReadTimeout(DEFAULT_READ_TIMEOUT);
+            conn.setConnectTimeout(DEFAULT_CONNECT_TIMEOUT);
             conn.setRequestMethod(method);
             conn.setDoInput(true);
 
