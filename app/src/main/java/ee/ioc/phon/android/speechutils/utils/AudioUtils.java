@@ -8,7 +8,11 @@ import android.media.MediaFormat;
 import android.os.Build;
 import android.text.TextUtils;
 
+import org.apache.commons.io.FileUtils;
+
+import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -22,10 +26,30 @@ public class AudioUtils {
     private AudioUtils() {
     }
 
-    public static byte[] getRecordingAsWav(byte[] pcm, int sampleRate, short resolutionInBytes, short channels) {
+    public static void saveWavToFile(String wavFileFullPath, byte[] wav, boolean append) {
+        try {
+            FileUtils.writeByteArrayToFile(new File(wavFileFullPath), wav, append);
+        }
+        catch (IOException e) {
+            Log.e("Could not save a recording to " + wavFileFullPath + " due to: " + e.getMessage());
+        }
+    }
+
+    public static void saveWavHeaderToFile(String wavFileFullPath, byte[] wavHeader) {
+        try {
+            RandomAccessFile file = new RandomAccessFile(wavFileFullPath, "rw");
+            file.seek(0L);
+            file.write(wavHeader);
+            file.close();
+        }
+        catch(Throwable t) {
+            Log.e("Could not write/rewrite the wav header to " + wavFileFullPath + " due to: " + t.getMessage());
+        }
+    }
+
+    public static byte[] getWavHeader(int totalAudioLen, int sampleRate, short resolutionInBytes, short channels) {
         int headerLen = 44;
         int byteRate = sampleRate * resolutionInBytes; // sampleRate*(16/8)*1 ???
-        int totalAudioLen = pcm.length;
         int totalDataLen = totalAudioLen + headerLen;
 
         byte[] header = new byte[headerLen];
@@ -75,6 +99,11 @@ public class AudioUtils {
         header[42] = (byte) ((totalAudioLen >> 16) & 0xff);
         header[43] = (byte) ((totalAudioLen >> 24) & 0xff);
 
+        return header;
+    }
+
+    public static byte[] getRecordingAsWav(byte[] pcm, int sampleRate, short resolutionInBytes, short channels) {
+        byte[] header = getWavHeader(pcm.length, sampleRate, resolutionInBytes, channels);
         byte[] wav = new byte[header.length + pcm.length];
         System.arraycopy(header, 0, wav, 0, header.length);
         System.arraycopy(pcm, 0, wav, header.length, pcm.length);

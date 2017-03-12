@@ -18,19 +18,24 @@ package ee.ioc.phon.android.speechutils;
 
 import android.media.AudioFormat;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import ee.ioc.phon.android.speechutils.utils.AudioUtils;
 
 public abstract class AbstractAudioRecorder implements AudioRecorder {
 
     private static final int RESOLUTION = AudioFormat.ENCODING_PCM_16BIT;
-    private static final int BUFFER_SIZE_MUTLIPLIER = 4; // was: 2
+    private static final int BUFFER_SIZE_MULTIPLIER = 4; // was: 2
+    private static final int DEFAULT_BUFFER_LENGTH_IN_MILLIS = 35000;
 
     private SpeechRecord mRecorder = null;
 
     private double mAvgEnergy = 0;
 
     private final int mSampleRate;
-    private final int mOneSec;
+    private final int mSamplesInOneSec;
+    private final int mSamplesInOneMilliSec;
+    private final boolean mAlwaysListen;
 
     // Recorder state
     private State mState;
@@ -40,25 +45,34 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
     // 2 (bytes) * 1 (channels) * 30 (max rec time in seconds) * 44100 (times per second) = 2 646 000 bytes
     // but typically is:
     // 2 (bytes) * 1 (channels) * 20 (max rec time in seconds) * 16000 (times per second) = 640 000 bytes
-    private final byte[] mRecording;
+    final byte[] mRecording;
 
     // TODO: use: mRecording.length instead
     private int mRecordedLength = 0;
+    private AtomicLong mRecordedSessionId = new AtomicLong(0L);
+    boolean mRecordingBufferIsFullWithData = false;
+    private final int mRecordingBufferLengthMillis;
 
     // The number of bytes the client has already consumed
     private int mConsumedLength = 0;
+    private AtomicLong mConsumedSessionId = new AtomicLong(0L);
 
     // Buffer for output
     private byte[] mBuffer;
 
-    protected AbstractAudioRecorder(int audioSource, int sampleRate) {
+    protected AbstractAudioRecorder(int audioSource, int sampleRate, int recordingBufferLengthMillis, boolean alwaysListen) {
         mSampleRate = sampleRate;
         // E.g. 1 second of 16kHz 16-bit mono audio takes 32000 bytes.
-        mOneSec = RESOLUTION_IN_BYTES * CHANNELS * mSampleRate;
-        // TODO: replace 35 with the max length of the recording
-        mRecording = new byte[mOneSec * 35];
+        mSamplesInOneSec = RESOLUTION_IN_BYTES * CHANNELS * mSampleRate;
+        mSamplesInOneMilliSec = (int)((double) mSamplesInOneSec / 1000.0);
+        mRecordingBufferLengthMillis = recordingBufferLengthMillis;
+        mRecording = new byte[mSamplesInOneMilliSec * mRecordingBufferLengthMillis];
+        mAlwaysListen = alwaysListen;
     }
 
+    protected AbstractAudioRecorder(int audioSource, int sampleRate) {
+        this(audioSource, sampleRate, DEFAULT_BUFFER_LENGTH_IN_MILLIS, false);
+    }
 
     protected void createRecorder(int audioSource, int sampleRate, int bufferSize) {
         mRecorder = new SpeechRecord(audioSource, sampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, bufferSize, false, false, false);
@@ -80,7 +94,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
             Log.e("SpeechRecord.getMinBufferSize: unable to query hardware for output properties");
             minBufferSizeInBytes = mSampleRate * (120 / 1000) * RESOLUTION_IN_BYTES * CHANNELS;
         }
-        int bufferSize = BUFFER_SIZE_MUTLIPLIER * minBufferSizeInBytes;
+        int bufferSize = BUFFER_SIZE_MULTIPLIER * minBufferSizeInBytes;
         Log.i("SpeechRecord buffer size: " + bufferSize + ", min size = " + minBufferSizeInBytes);
         return bufferSize;
     }
@@ -102,6 +116,16 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         return mSampleRate;
     }
 
+    protected int getNumOfSamplesIn(int millis) {
+        return millis * mSamplesInOneMilliSec;
+    }
+
+    protected boolean isRecordedSessionSameAsConsumedSession() {
+        if (!mAlwaysListen)
+            return true;
+
+        return mRecordedSessionId.get() == mConsumedSessionId.get();
+    }
 
     /**
      * Checking of the read status.
@@ -128,6 +152,30 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
     }
 
     /**
+     * Check if the consume pointer was crossed by the recorded pointer. As long as the consume
+     * pointer was not crossed, the consumption of the buffer may continue as usual and no sound gap
+     * will occur. Once the consume pointer was crossed (e.g. it was on sample 1000 and prior to this
+     * read the recorder was on sample 750 and now that it read the new sample it's on 1500), there's
+     * an audio gap between the consumer and the recorder that can not be filled (data is lost with
+     * no ability to get it back). Whenever this kind of cross occurs, the calling code changed the
+     * session id of the recorder so that if consume is called (from ContinuousRawAudioRecorder),
+     * it will not assume that the data is complete and could be fetched but it will act according to
+     * the SessionStartPointer configured (e.g. read the buffer from the beginning, from now, or from
+     * now - X millis)
+     * @param reachedTheEndOfRecordingBuffer - in case that in the read before the call to this method the recorder
+     *                       passed the end of the buffer and returned to the beginning
+     * @param numOfBytesRead - in the reading process
+     * @return true/false according to the above logic
+     */
+    private boolean isConsumePointerCrossed(boolean reachedTheEndOfRecordingBuffer, int numOfBytesRead) {
+        return numOfBytesRead > 0 &&
+               mRecordingBufferIsFullWithData &&
+               isRecordedSessionSameAsConsumedSession() &&
+               ((mRecordedLength - numOfBytesRead < mConsumedLength && mRecordedLength >= mConsumedLength) ||
+                (reachedTheEndOfRecordingBuffer && mConsumedLength < mRecordedLength));
+    }
+
+    /**
      * Copy data from the given recorder into the given buffer, and append to the complete recording.
      * public int read (byte[] audioData, int offsetInBytes, int sizeInBytes)
      */
@@ -135,13 +183,40 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         int len = buffer.length;
         int numOfBytes = recorder.read(buffer, 0, len);
         int status = getStatus(numOfBytes, len);
-        if (status == 0) {
-            // arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
-            // numOfBytes <= len, typically == len, but at the end of the recording can be < len.
-            System.arraycopy(buffer, 0, mRecording, mRecordedLength, numOfBytes);
-            mRecordedLength += len;
+        boolean reachedTheEndOfRecordingBuffer = false;
+        // if we need to keep on listening, when reaching the end of the recorded buffer,
+        // continue to write from the beginning. thus, we have a cyclic buffer
+        if (mAlwaysListen && status == -300) {
+            reachedTheEndOfRecordingBuffer = true;
+            status = 0;
+            // for use when consuming the recorded buffer, the buffer is now in it's cyclic phase
+            if (!mRecordingBufferIsFullWithData)
+                mRecordingBufferIsFullWithData = true;
         }
-        return status;
+
+        if (status == 0 && numOfBytes >= 0) {
+            if (!reachedTheEndOfRecordingBuffer) {
+                // arraycopy(Object src, int srcPos, Object dest, int destPos, int length)
+                // numOfBytes <= len, typically == len, but at the end of the recording can be < len.
+                System.arraycopy(buffer, 0, mRecording, mRecordedLength, numOfBytes);
+                mRecordedLength += numOfBytes;
+            }
+            else {
+                int numOfBytesBeforeCyclic = mRecording.length - mRecordedLength;
+                System.arraycopy(buffer, 0, mRecording, mRecordedLength, numOfBytesBeforeCyclic);
+                System.arraycopy(buffer, numOfBytesBeforeCyclic, mRecording, 0, numOfBytes - numOfBytesBeforeCyclic);
+
+                mRecordedLength = numOfBytes - numOfBytesBeforeCyclic;
+            }
+
+            // increment the recorded session id in case that the consume pointer was crossed
+            if (isConsumePointerCrossed(reachedTheEndOfRecordingBuffer, numOfBytes)) {
+                Log.i("recorder session changed. mRecordedLength was: " + (mRecordedLength - numOfBytes) + " and now it is: " + mRecordedLength + " while the mConsumedLength is: " + mConsumedLength);
+                mRecordedSessionId.incrementAndGet();
+            }
+        }
+
+        return mAlwaysListen ? 0 : status;
     }
 
 
@@ -182,7 +257,15 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
      */
     public synchronized byte[] consumeRecording() {
         byte[] bytes = getCurrentRecording(mConsumedLength);
+        // this is to avoid race (set the consumed length to be the recorded length though
+        // the last recording was empty while recorded length moved on - thus we always miss
+        // a part of the recording)
+        if (bytes == null)
+            return null;
+
         mConsumedLength = mRecordedLength;
+        if (mAlwaysListen)
+            mConsumedSessionId.set(mRecordedSessionId.get());
         return bytes;
     }
 
@@ -210,7 +293,6 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         return mRecordedLength;
     }
 
-
     /**
      * @return <code>true</code> iff a speech-ending pause has occurred at the end of the recorded data
      */
@@ -219,7 +301,6 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         Log.i("Pause score: " + pauseScore);
         return pauseScore > 7;
     }
-
 
     /**
      * @return volume indicator that shows the average volume of the last read buffer
@@ -234,7 +315,6 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         return 0;
     }
 
-
     /**
      * <p>In order to calculate if the user has stopped speaking we take the
      * data from the last second of the recording, map it to a number
@@ -247,7 +327,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
      * @return positive value which the caller can use to determine if there is a pause
      */
     private double getPauseScore() {
-        long t2 = getRms(mRecordedLength, mOneSec);
+        long t2 = getRms(mRecordedLength, mSamplesInOneSec);
         if (t2 == 0) {
             return 0;
         }
@@ -255,7 +335,6 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         mAvgEnergy = (2 * mAvgEnergy + t2) / 3;
         return t;
     }
-
 
     /**
      * <p>Stops the recording (if needed) and releases the resources.
