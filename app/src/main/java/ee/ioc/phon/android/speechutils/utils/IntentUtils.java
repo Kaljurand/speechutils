@@ -96,7 +96,13 @@ public final class IntentUtils {
                 if (isActivityAvailable(mgr, intent)) {
                     // TODO: is it sensible to always start activity for result,
                     // even if the activity is not designed to return a result
-                    context.startActivity(intent);
+                    if (context instanceof Activity) {
+                        context.startActivity(intent);
+                    } else {
+                        // Calling startActivity() from outside of an Activity context requires the FLAG_ACTIVITY_NEW_TASK flag
+                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | intent.getFlags());
+                        context.startActivity(intent);
+                    }
                     //activity.startActivityForResult(intent, 2);
                     return true;
                 } else {
