@@ -74,11 +74,16 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         this(audioSource, sampleRate, DEFAULT_BUFFER_LENGTH_IN_MILLIS, false);
     }
 
-    protected void createRecorder(int audioSource, int sampleRate, int bufferSize) {
-        mRecorder = new SpeechRecord(audioSource, sampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, bufferSize, false, false, false);
+    protected SpeechRecord createRecorder(int audioSource, int sampleRate, int bufferSize) {
+        if (mRecorder != null)
+            release();
+
+        mRecorder = new SpeechRecord(audioSource, sampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, bufferSize, true, false, false);
         if (getSpeechRecordState() != SpeechRecord.STATE_INITIALIZED) {
             throw new IllegalStateException("SpeechRecord initialization failed");
         }
+
+        return mRecorder;
     }
 
     // TODO: remove
@@ -112,18 +117,15 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         return bytes;
     }
 
-    protected int getSampleRate() {
+    public int getSampleRate() {
         return mSampleRate;
     }
 
     protected int getNumOfSamplesIn(int millis) {
-        return millis * mSamplesInOneMilliSec;
+        return Math.abs(millis) * mSamplesInOneMilliSec;
     }
 
     protected boolean isRecordedSessionSameAsConsumedSession() {
-        if (!mAlwaysListen)
-            return true;
-
         return mRecordedSessionId.get() == mConsumedSessionId.get();
     }
 
@@ -169,10 +171,14 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
      */
     private boolean isConsumePointerCrossed(boolean reachedTheEndOfRecordingBuffer, int numOfBytesRead) {
         return numOfBytesRead > 0 &&
-               mRecordingBufferIsFullWithData &&
-               isRecordedSessionSameAsConsumedSession() &&
-               ((mRecordedLength - numOfBytesRead < mConsumedLength && mRecordedLength >= mConsumedLength) ||
-                (reachedTheEndOfRecordingBuffer && mConsumedLength < mRecordedLength));
+                mRecordingBufferIsFullWithData &&
+                isRecordedSessionSameAsConsumedSession() &&
+                ((mRecordedLength - numOfBytesRead < mConsumedLength && mRecordedLength >= mConsumedLength) ||
+                        (reachedTheEndOfRecordingBuffer && mConsumedLength < mRecordedLength));
+    }
+
+    public long markNewRecordingSession() {
+        return mRecordedSessionId.incrementAndGet();
     }
 
     /**
@@ -182,6 +188,16 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
     protected int read(SpeechRecord recorder, byte[] buffer) {
         int len = buffer.length;
         int numOfBytes = recorder.read(buffer, 0, len);
+        // handling mediaserver crashes here
+        // it doesn't happen a lot but it happens and the way to handle it is to fully restart
+        // the audio recorder
+        if (numOfBytes == 0 && mAlwaysListen) {
+            consumeRecordingAndTruncate();
+            mBuffer = new byte[mBuffer.length];
+            createRecorder(recorder.getAudioSource(), recorder.getSampleRate(), getBufferSize());
+            start();
+        }
+
         int status = getStatus(numOfBytes, len);
         boolean reachedTheEndOfRecordingBuffer = false;
         // if we need to keep on listening, when reaching the end of the recorded buffer,
@@ -212,7 +228,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
             // increment the recorded session id in case that the consume pointer was crossed
             if (isConsumePointerCrossed(reachedTheEndOfRecordingBuffer, numOfBytes)) {
                 Log.i("recorder session changed. mRecordedLength was: " + (mRecordedLength - numOfBytes) + " and now it is: " + mRecordedLength + " while the mConsumedLength is: " + mConsumedLength);
-                mRecordedSessionId.incrementAndGet();
+                markNewRecordingSession();
             }
         }
 
@@ -257,15 +273,14 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
      */
     public synchronized byte[] consumeRecording() {
         byte[] bytes = getCurrentRecording(mConsumedLength);
-        // this is to avoid race (set the consumed length to be the recorded length though
-        // the last recording was empty while recorded length moved on - thus we always miss
-        // a part of the recording)
         if (bytes == null)
             return null;
 
+        // this is to avoid race (set the consumed length to be the recorded length though
+        // the last recording was empty while recorded length moved on - thus we always miss
+        // a part of the recording)
         mConsumedLength = mRecordedLength;
-        if (mAlwaysListen)
-            mConsumedSessionId.set(mRecordedSessionId.get());
+        mConsumedSessionId.set(mRecordedSessionId.get());
         return bytes;
     }
 
