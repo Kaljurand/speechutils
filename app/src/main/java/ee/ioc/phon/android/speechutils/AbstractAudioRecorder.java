@@ -78,7 +78,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         if (mRecorder != null)
             release();
 
-        mRecorder = new SpeechRecord(audioSource, sampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, bufferSize, true, false, false);
+        mRecorder = new SpeechRecord(audioSource, sampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, bufferSize, false, false, false);
         if (getSpeechRecordState() != SpeechRecord.STATE_INITIALIZED) {
             throw new IllegalStateException("SpeechRecord initialization failed");
         }
