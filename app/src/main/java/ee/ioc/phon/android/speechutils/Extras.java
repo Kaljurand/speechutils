@@ -17,7 +17,8 @@
 package ee.ioc.phon.android.speechutils;
 
 /**
- * <p>EXTRAs that K6nele supports.</p>
+ * <p>EXTRAs for RecognizerIntent and SpeechRecognizer,
+ * in addition to the standard Android EXTRAs defined as part of RecognizerIntent.</p>
  *
  * @author Kaarel Kaljurand
  */
@@ -30,8 +31,9 @@ public class Extras {
     public static final String EXTRA_SERVER_URL = "ee.ioc.phon.android.extra.SERVER_URL";
 
     /**
-     * String that combines the recognizer component name with the locale label, e.g.
-     * ee.ioc.phon.android.speak/.service.WebSocketRecognitionService;et-EE
+     * String.
+     * Class name of the recognizer component name, e.g.
+     * ee.ioc.phon.android.speak/.service.WebSocketRecognitionService
      */
     public static final String EXTRA_SERVICE_COMPONENT = "ee.ioc.phon.android.extra.SERVICE_COMPONENT";
 
@@ -224,7 +226,8 @@ public class Extras {
 
     /**
      * Used only by the app Arvutaja.
-     * TODO: deprecated in favour of EXTRA_AUTO_START
+     *
+     * @deprecated instead use EXTRA_AUTO_START
      */
     public static final String EXTRA_LAUNCH_RECOGNIZER = "ee.ioc.phon.android.extra.LAUNCH_RECOGNIZER";
 
