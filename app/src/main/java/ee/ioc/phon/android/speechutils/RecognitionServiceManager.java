@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.speech.RecognitionService;
@@ -128,18 +129,15 @@ public class RecognitionServiceManager {
         return "[?]";
     }
 
-    public static int getServiceIcon(Context context, ComponentName recognizerComponentName) {
+    public static Drawable getServiceIcon(Context context, ComponentName recognizerComponentName) {
         try {
             PackageManager pm = context.getPackageManager();
             ServiceInfo si = pm.getServiceInfo(recognizerComponentName, 0);
-            return si.icon;
-            // This tries to load application icon if service icon does not exist, leading to a crash
-            // with some services.
-            //return si.getIconResource();
+            return si.loadIcon(pm);
         } catch (PackageManager.NameNotFoundException e) {
             // ignored
         }
-        return 0;
+        return null;
     }
 
     public void setCombosExcluded(Set<String> set) {
