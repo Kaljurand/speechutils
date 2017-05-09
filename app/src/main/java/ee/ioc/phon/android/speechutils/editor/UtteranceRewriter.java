@@ -34,6 +34,9 @@ public class UtteranceRewriter {
 
     private static final Set<String> COLUMNS;
 
+    // Support Windows and Mac line endings and consume empty lines.
+    private static final String RE_LINE_SEPARATOR = "[\\r\\n]+";
+
     static {
         Set<String> aSet = new HashSet<>();
         aSet.add(HEADER_COMMENT);
@@ -322,7 +325,7 @@ public class UtteranceRewriter {
         if (str == null) {
             return new CommandHolder();
         }
-        String[] rows = str.split("\n");
+        String[] rows = str.split(RE_LINE_SEPARATOR);
         int length = rows.length;
         if (length == 0) {
             return new CommandHolder();
@@ -343,7 +346,7 @@ public class UtteranceRewriter {
      */
     private static CommandHolder loadRewrites(String str, String header, CommandMatcher commandMatcher) {
         CommandHolder commandHolder = new CommandHolder(header);
-        String[] rows = str.split("\n");
+        String[] rows = str.split(RE_LINE_SEPARATOR);
         if (rows.length > 0) {
             for (int i = 0; i < rows.length; i++) {
                 commandHolder.addLine(rows[i], i, commandMatcher);

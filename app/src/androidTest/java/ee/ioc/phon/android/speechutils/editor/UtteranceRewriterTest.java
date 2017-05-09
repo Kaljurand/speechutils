@@ -121,6 +121,13 @@ public class UtteranceRewriterTest {
         assertThat(ur.getRewrite("p utt s").mStr, is("p repl s"));
     }
 
+    @Test
+    public void test12() {
+        String tsv = "Utterance\tReplacement\r\nf1\tf2\rg1\tg2\n\n";
+        UtteranceRewriter ur = new UtteranceRewriter(tsv);
+        assertThat(ur.toTsv(), is("Utterance\tReplacement\nf1\tf2\ng1\tg2"));
+    }
+
     private void rewrite(String str1, String str2, String str3) {
         UtteranceRewriter.Rewrite rewrite = mUr.getRewrite(str1);
         assertThat(rewrite.ppCommand(), is(str2));
