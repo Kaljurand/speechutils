@@ -23,65 +23,32 @@ public class TtsProvider {
     private static final String UTT_COMPLETED_FEEDBACK = "UTT_COMPLETED_FEEDBACK";
 
     private final TextToSpeech mTts;
-    private final AudioPauser mAudioPauser;
 
     public TtsProvider(Context context, TextToSpeech.OnInitListener listener) {
         // TODO: use the 3-arg constructor (API 14) that supports passing the engine.
         // Choose the engine that supports the selected language, if there are several
         // then let the user choose.
         mTts = new TextToSpeech(context, listener);
-        mAudioPauser = new AudioPauser(context, false);
         Log.i("Default TTS engine:" + mTts.getDefaultEngine());
     }
 
-
-    @SuppressLint("NewApi")
-    public void say(String text) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
-            mTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-
-                @Override
-                public void onDone(String utteranceId) {
-                    mAudioPauser.resume();
-                }
-
-                @Override
-                public void onError(String utteranceId) {
-                    mAudioPauser.resume();
-                }
-
-                @Override
-                public void onStart(String utteranceId) {
-                }
-            });
-        } else {
-            mTts.setOnUtteranceCompletedListener(new TextToSpeech.OnUtteranceCompletedListener() {
-                @Override
-                public void onUtteranceCompleted(String utteranceId) {
-                    mAudioPauser.resume();
-                }
-            });
-        }
-        HashMap<String, String> params = new HashMap<String, String>();
-        params.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, UTT_COMPLETED_FEEDBACK);
-        mAudioPauser.pause();
-        mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params);
+    public int say(String text) {
+        return say(text, null);
     }
 
     @SuppressLint("NewApi")
-    public void say(String text, final Listener listener) {
+    public int say(String text, final Listener listener) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
             mTts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
 
                 @Override
                 public void onDone(String utteranceId) {
-                    mAudioPauser.resume();
-                    listener.onDone();
+                    if (listener != null) listener.onDone();
                 }
 
                 @Override
                 public void onError(String utteranceId) {
-                    mAudioPauser.resume();
+                    if (listener != null) listener.onDone();
                 }
 
                 @Override
@@ -92,15 +59,13 @@ public class TtsProvider {
             mTts.setOnUtteranceCompletedListener(new TextToSpeech.OnUtteranceCompletedListener() {
                 @Override
                 public void onUtteranceCompleted(String utteranceId) {
-                    mAudioPauser.resume();
-                    listener.onDone();
+                    if (listener != null) listener.onDone();
                 }
             });
         }
         HashMap<String, String> params = new HashMap<String, String>();
         params.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, UTT_COMPLETED_FEEDBACK);
-        mAudioPauser.pause();
-        mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params);
+        return mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params);
     }
 
 
@@ -110,7 +75,6 @@ public class TtsProvider {
      * @return {@ERROR} or {@SUCCESS}
      */
     public int stop() {
-        mAudioPauser.resume();
         // TODO: not sure which callbacks get called as a result of stop()
         return mTts.stop();
     }
@@ -164,7 +128,6 @@ public class TtsProvider {
      */
     public void shutdown() {
         mTts.shutdown();
-        mAudioPauser.resume();
     }
 
 }

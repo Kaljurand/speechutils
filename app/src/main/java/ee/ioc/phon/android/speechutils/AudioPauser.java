@@ -8,7 +8,7 @@ import android.media.AudioManager.OnAudioFocusChangeListener;
  * Pauses the audio stream by requesting the audio focus and
  * muting the music stream.
  * <p/>
- * TODO: Test this is two interleaving instances of AudioPauser, e.g.
+ * TODO: Test this with two interleaving instances of AudioPauser, e.g.
  * TTS starts playing and calls the AudioPauser, at the same time
  * the recognizer starts listening and also calls the AudioPauser.
  */
