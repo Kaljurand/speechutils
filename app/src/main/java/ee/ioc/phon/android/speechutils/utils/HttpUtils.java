@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Map;
 
 import ee.ioc.phon.android.speechutils.Log;
 
@@ -25,6 +26,11 @@ public class HttpUtils {
     }
 
     public static String fetchUrl(String myurl, String method, String body) throws IOException {
+        return fetchUrl(myurl, method, body, null);
+    }
+
+    public static String fetchUrl(String myurl, String method, String body, Map<String, String> properties)
+            throws IOException {
         byte[] outputInBytes = null;
 
         if (body != null) {
@@ -39,6 +45,14 @@ public class HttpUtils {
             conn.setReadTimeout(DEFAULT_READ_TIMEOUT);
             conn.setConnectTimeout(DEFAULT_CONNECT_TIMEOUT);
             conn.setRequestMethod(method);
+            if (properties != null) {
+                for (Map.Entry<String, String> entry : properties.entrySet()) {
+                    String value = entry.getValue();
+                    if (value != null) {
+                        conn.setRequestProperty(entry.getKey(), value);
+                    }
+                }
+            }
             conn.setDoInput(true);
 
             if (outputInBytes == null) {

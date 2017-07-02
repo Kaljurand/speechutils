@@ -3,6 +3,7 @@ package ee.ioc.phon.android.speechutils.utils;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -33,7 +34,7 @@ public final class JsonUtils {
     }
 
     /**
-     * TODO: support: array extras, broadcast intent, voice interaction launch mode, etc.
+     * TODO: support: broadcast intent, voice interaction launch mode, etc.
      *
      * @param query Intent serialized as JSON
      * @return Deserialized intent
@@ -76,8 +77,6 @@ public final class JsonUtils {
                     intent.putExtra(key, (Boolean) val);
                 } else if (val instanceof Double) {
                     intent.putExtra(key, (Double) val);
-                } else if (val instanceof Float) {
-                    intent.putExtra(key, (Float) val);
                 } else if (val instanceof String) {
                     intent.putExtra(key, (String) val);
                 } else if (val instanceof JSONArray) {
@@ -89,6 +88,19 @@ public final class JsonUtils {
                         vals.add(array.optString(i, ""));
                     }
                     intent.putExtra(key, vals.toArray(new String[0]));
+                } else if (val instanceof JSONObject) {
+                    // TODO: improve this, currently assumes that object is a <String, String> mapping
+                    JSONObject innerObject = (JSONObject) val;
+                    Bundle bundle = new Bundle();
+                    Iterator<String> innerIter = innerObject.keys();
+                    while (innerIter.hasNext()) {
+                        String innerKey = innerIter.next();
+                        Object innerVal = innerObject.get(innerKey);
+                        if (innerVal instanceof String) {
+                            bundle.putString(innerKey, (String) innerVal);
+                        }
+                    }
+                    intent.putExtra(key, bundle);
                 }
             }
         }
