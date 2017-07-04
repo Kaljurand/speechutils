@@ -81,4 +81,12 @@ public class BundleUtils {
         }
         return map;
     }
+
+    public static Bundle createResultsBundle(String hypothesis) {
+        ArrayList<String> hypotheses = new ArrayList<>();
+        hypotheses.add(hypothesis);
+        Bundle bundle = new Bundle();
+        bundle.putStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION, hypotheses);
+        return bundle;
+    }
 }
