@@ -68,6 +68,10 @@ public class UtteranceRewriter {
         DEFAULT_HEADER_2 = Collections.unmodifiableSortedMap(aMap2);
     }
 
+    /**
+     * A class that holds a text (mStr) and its possible interpretation as a command
+     * with a name (mId) and a list of arguments (mArgs).
+     */
     public static class Rewrite {
         public final String mId;
         public final String mStr;

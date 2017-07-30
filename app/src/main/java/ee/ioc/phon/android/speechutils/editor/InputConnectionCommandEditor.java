@@ -1286,6 +1286,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
             }
             newText = rewrite.mStr;
         }
+        if (rewrite == null) {
+            rewrite = new UtteranceRewriter.Rewrite(newText);
+        }
         return rewrite;
     }
 
