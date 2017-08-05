@@ -180,7 +180,7 @@ public final class IntentUtils {
                     Intent intent = JsonUtils.createIntent(rewrite.mArgs[0]);
                     switch (rewrite.mId) {
                         case "activity":
-                            IntentUtils.startActivityIfAvailable(context, intent);
+                            startActivityIfAvailable(context, intent);
                             break;
                         case "service":
                             // TODO
@@ -211,7 +211,7 @@ public final class IntentUtils {
                 Intent intent = JsonUtils.createIntent(rewrite.mArgs[0]);
                 switch (rewrite.mId) {
                     case "activity":
-                        IntentUtils.startActivityIfAvailable(context, intent);
+                        startActivityIfAvailable(context, intent);
                         break;
                     case "service":
                         // TODO
@@ -252,8 +252,29 @@ public final class IntentUtils {
         return list != null && list.size() != 0;
     }
 
+    /**
+     * Checks if there are any activities that can service this intent.
+     * Note that we search for activities using the MATCH_DEFAULT_ONLY flag, but this
+     * can also return a non-exported activity (for some reason).
+     * This can only (?) happen if the intent references the activity by its class name and the
+     * activity belongs to the app that calls this method.
+     * We assume that activities are not exported for a reason, and thus will declare the
+     * intent unserviceable if a non-exported activity matches the intent.
+     *
+     * @param mgr    PackageManager
+     * @param intent Intent
+     * @return true iff an exported activity exists to service this intent
+     */
     private static boolean isActivityAvailable(PackageManager mgr, Intent intent) {
         List<ResolveInfo> list = mgr.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+        for (ResolveInfo ri : list) {
+            if (ri.activityInfo != null) {
+                if (!ri.activityInfo.exported) {
+                    Log.i("Query returned non-exported activity, declaring it unavailable.");
+                    return false;
+                }
+            }
+        }
         return list.size() > 0;
     }
 
