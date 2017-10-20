@@ -61,6 +61,10 @@ public class RecognitionServiceManager {
      */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public static String makeLangLabel(String localeAsStr) {
+        // Just to make sure we do not get a NPE from Locale.forLanguageTag
+        if (localeAsStr == null || localeAsStr.isEmpty()) {
+            return "?";
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             return Locale.forLanguageTag(localeAsStr).getDisplayName();
         }
@@ -94,7 +98,7 @@ public class RecognitionServiceManager {
     public static Pair<ComponentName, String> unflattenFromString(String comboId) {
         String serviceAsStr = "";
         String localeAsStr = "";
-        String[] splits = RecognitionServiceManager.getServiceAndLang(comboId);
+        String[] splits = getServiceAndLang(comboId);
         if (splits.length > 0) {
             serviceAsStr = splits[0];
             if (splits.length > 1) {
