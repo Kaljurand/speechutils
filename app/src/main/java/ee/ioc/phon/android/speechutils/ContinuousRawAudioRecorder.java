@@ -204,7 +204,8 @@ public class ContinuousRawAudioRecorder extends AbstractAudioRecorder {
 
     private byte[] getCurrentRecordingFrom(int numOfSamplesToGoBack) {
         byte[] buffer = new byte[numOfSamplesToGoBack];
-        int potentialStartSample = getLength() - numOfSamplesToGoBack;
+        int currentLength = getLength();
+        int potentialStartSample = currentLength - numOfSamplesToGoBack;
 
         if (potentialStartSample >= 0) {
             Log.i(LOG_FILTER + "Start sample in the recording is a positive one. Copying from position: " + potentialStartSample + ", " + numOfSamplesToGoBack + " bytes");
@@ -212,15 +213,15 @@ public class ContinuousRawAudioRecorder extends AbstractAudioRecorder {
         }
         else {
             if (!mRecordingBufferIsFullWithData) {
-                Log.i(LOG_FILTER + "Start sample in the recording is a negative one. The buffer did not pass one cycle yet. Copying from position: 0, " + getLength() + " bytes");
-                System.arraycopy(mRecording, 0, buffer, 0, getLength());
+                Log.i(LOG_FILTER + "Start sample in the recording is a negative one. The buffer did not pass one cycle yet. Copying from position: 0, " + currentLength + " bytes");
+                System.arraycopy(mRecording, 0, buffer, 0, currentLength);
             }
             else {
                 // the potential start sample is out of the boundaries of the array to the negative side
                 potentialStartSample = Math.abs(potentialStartSample);
-                Log.i(LOG_FILTER + "Start sample in the recording is a negative one. The buffer passed at least one cycle. Copying from position: " + (mRecording.length - potentialStartSample) + ", " + potentialStartSample + " bytes and from position: 0, " + getLength() + " bytes");
+                Log.i(LOG_FILTER + "Start sample in the recording is a negative one. The buffer passed at least one cycle. Copying from position: " + (mRecording.length - potentialStartSample) + ", " + potentialStartSample + " bytes and from position: 0, " + currentLength + " bytes");
                 System.arraycopy(mRecording, mRecording.length - potentialStartSample, buffer, 0, potentialStartSample);
-                System.arraycopy(mRecording, 0, buffer, potentialStartSample, getLength());
+                System.arraycopy(mRecording, 0, buffer, potentialStartSample, currentLength);
             }
         }
 
