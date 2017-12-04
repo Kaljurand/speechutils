@@ -30,6 +30,15 @@ public interface CommandEditor {
      */
     Op moveRel(int numOfChars);
 
+    /**
+     * Change either the start or the end of the selection by the given number of characters.
+     *
+     * @param numOfChars number of character positions
+     * @param type       0 for start, 1 for end
+     * @return Op
+     */
+    Op moveRelSel(int numOfChars, int type);
+
     // Press Up-arrow key
     Op keyUp();
 

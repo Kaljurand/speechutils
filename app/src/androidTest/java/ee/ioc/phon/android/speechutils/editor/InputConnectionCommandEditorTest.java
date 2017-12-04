@@ -1158,6 +1158,28 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("789123 456 ");
     }
 
+    @Test
+    public void test101() {
+        add("1234567890");
+        runOp(mEditor.moveRel(-5));
+        runOp(mEditor.moveRelSel(2, 1));
+        runOp(mEditor.deleteLeftChars(2));
+        assertThatTextIs("12345890");
+        runOp(mEditor.moveRelSel(-2, 0));
+        runOp(mEditor.deleteLeftChars(1));
+        assertThatTextIs("123890");
+        // Cursor ends cross
+        runOp(mEditor.moveRelSel(-2, 1));
+        runOp(mEditor.deleteLeftChars(2));
+        assertThatTextIs("1890");
+        runOp(mEditor.moveRelSel(2, 1));
+        runOp(mEditor.moveRelSel(1, 0));
+        runOp(mEditor.deleteLeftChars(1));
+        assertThatTextIs("180");
+        undo(9);
+        assertThatTextIs("1234567890");
+    }
+
     // Can't create handler inside thread that has not called Looper.prepare()
     //@Test
     public void test201() {

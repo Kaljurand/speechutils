@@ -1259,7 +1259,18 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return cs.toString();
     }
 
-    public Op moveRel(final int numberOfChars) {
+    @Override
+    public Op moveRel(final int numOfChars) {
+        return move(numOfChars, 2);
+    }
+
+
+    @Override
+    public Op moveRelSel(final int numOfChars, final int type) {
+        return move(numOfChars, type);
+    }
+
+    private Op move(final int numberOfChars, final int type) {
         return new Op("moveRel") {
             @Override
             public Op run() {
@@ -1267,14 +1278,22 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 mInputConnection.beginBatchEdit();
                 ExtractedText extractedText = getExtractedText();
                 if (extractedText != null) {
-                    int pos;
-                    if (numberOfChars < 0) {
-                        pos = extractedText.selectionStart;
+                    int newStart = extractedText.selectionStart;
+                    int newEnd = extractedText.selectionEnd;
+                    if (type == 0) {
+                        newStart += numberOfChars;
+                    } else if (type == 1) {
+                        newEnd += numberOfChars;
                     } else {
-                        pos = extractedText.selectionEnd;
+                        if (numberOfChars < 0) {
+                            newStart += numberOfChars;
+                            newEnd = newStart;
+                        } else {
+                            newEnd += numberOfChars;
+                            newStart = newEnd;
+                        }
                     }
-                    int newPos = pos + numberOfChars;
-                    undo = getOpSetSelection(newPos, newPos, extractedText.selectionStart, extractedText.selectionEnd).run();
+                    undo = getOpSetSelection(newStart, newEnd, extractedText.selectionStart, extractedText.selectionEnd).run();
                 }
                 mInputConnection.endBatchEdit();
                 return undo;
