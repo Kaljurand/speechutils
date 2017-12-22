@@ -864,6 +864,43 @@ public class InputConnectionCommandEditor implements CommandEditor {
         };
     }
 
+    // TODO: share code with deleteLeftWord
+    @Override
+    public Op deleteLeftChars(final int numOfChars) {
+        return new Op("deleteLeftChars") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                boolean success = false;
+                mInputConnection.beginBatchEdit();
+                // If something is selected then delete the selection and return
+                final String oldText = getSelectedText();
+                if (oldText.length() > 0) {
+                    undo = getCommitTextOp(oldText, "").run();
+                } else {
+                    final CharSequence cs = mInputConnection.getTextBeforeCursor(numOfChars, 0);
+                    if (cs != null) {
+                        success = mInputConnection.deleteSurroundingText(numOfChars, 0);
+                        if (success) {
+                            mInputConnection.endBatchEdit();
+                            undo = new Op("commitText: " + cs) {
+                                @Override
+                                public Op run() {
+                                    if (mInputConnection.commitText(cs, 0)) {
+                                        return NO_OP;
+                                    }
+                                    return null;
+                                }
+                            };
+                        }
+                    }
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
     /**
      * Not undoable
      *
