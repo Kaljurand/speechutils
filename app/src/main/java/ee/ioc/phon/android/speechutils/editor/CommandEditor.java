@@ -67,6 +67,9 @@ public interface CommandEditor {
     // Move cursor right to the Nth matching regex
     Op selectReAfter(String regex, int n);
 
+    // Extend the cursor to match the given regex
+    Op selectRe(String regex);
+
     // Select all (note: not a context menu action)
     Op selectAll();
 

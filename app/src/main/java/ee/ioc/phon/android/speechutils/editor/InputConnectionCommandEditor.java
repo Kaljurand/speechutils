@@ -662,6 +662,26 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
+    public Op selectRe(final String regex) {
+        return new Op("selectRe") {
+            @Override
+            public Op run() {
+                Op undo = null;
+                mInputConnection.beginBatchEdit();
+                final ExtractedText et = getExtractedText();
+                if (et != null) {
+                    Pair<Integer, Integer> pos = matchAtPos(Pattern.compile(regex), et.text, et.selectionStart, et.selectionEnd);
+                    if (pos != null) {
+                        undo = getOpSetSelection(pos.first, pos.second, et.selectionStart, et.selectionEnd).run();
+                    }
+                }
+                mInputConnection.endBatchEdit();
+                return undo;
+            }
+        };
+    }
+
+    @Override
     public Op replace(final String query, final String replacement) {
         return new Op("replace") {
             @Override
@@ -1246,6 +1266,26 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 }
             } else {
                 end = newEnd;
+            }
+        }
+        return pos;
+    }
+
+    private Pair<Integer, Integer> matchAtPos(Pattern pattern, CharSequence input, int posStart, int posEnd) {
+        Matcher matcher = pattern.matcher(input);
+        Pair<Integer, Integer> pos = null;
+        while (matcher.find()) {
+            int group = 0;
+            if (matcher.groupCount() > 0) {
+                group = 1;
+            }
+            if (matcher.start(group) <= posStart) {
+                if (posEnd <= matcher.end(group)) {
+                    return new Pair<>(matcher.start(group), matcher.end(group));
+                }
+            } else {
+                // Stop searching if the match start only after the cursor.
+                return null;
             }
         }
         return pos;

@@ -1180,6 +1180,15 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("1234567890");
     }
 
+    @Test
+    public void test102() {
+        add("123 456 789");
+        runOp(mEditor.moveAbs(5));
+        runOp(mEditor.selectRe("\\d+"));
+        add("new");
+        assertThatTextIs("123 new 789");
+    }
+
     // Can't create handler inside thread that has not called Looper.prepare()
     //@Test
     public void test201() {
