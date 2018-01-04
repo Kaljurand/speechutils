@@ -91,6 +91,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     @Override
     public boolean runOp(Op op) {
+        return runOp(op, true);
+    }
+
+    @Override
+    public boolean runOp(Op op, boolean undoable) {
         // TODO: why does this happen
         //if (op == null) {
         //    return false;
@@ -101,7 +106,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
             // Operation failed;
             return false;
         }
-        if (!undo.isNoOp()) {
+        if (undoable && !undo.isNoOp()) {
             pushOp(op);
             pushOpUndo(undo);
         }
@@ -662,7 +667,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public Op selectRe(final String regex) {
+    public Op selectRe(final String regex, final boolean applyToSelection) {
         return new Op("selectRe") {
             @Override
             public Op run() {
@@ -670,9 +675,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 mInputConnection.beginBatchEdit();
                 final ExtractedText et = getExtractedText();
                 if (et != null) {
-                    Pair<Integer, Integer> pos = matchAtPos(Pattern.compile(regex), et.text, et.selectionStart, et.selectionEnd);
-                    if (pos != null) {
-                        undo = getOpSetSelection(pos.first, pos.second, et.selectionStart, et.selectionEnd).run();
+                    if (applyToSelection || et.selectionStart == et.selectionEnd) {
+                        Pair<Integer, Integer> pos = matchAtPos(Pattern.compile(regex), et.text, et.selectionStart, et.selectionEnd);
+                        if (pos != null) {
+                            undo = getOpSetSelection(pos.first, pos.second, et.selectionStart, et.selectionEnd).run();
+                        }
                     }
                 }
                 mInputConnection.endBatchEdit();

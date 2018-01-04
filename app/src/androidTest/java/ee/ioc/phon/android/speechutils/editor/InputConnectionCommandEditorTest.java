@@ -1184,7 +1184,7 @@ public class InputConnectionCommandEditorTest {
     public void test102() {
         add("123 456 789");
         runOp(mEditor.moveAbs(5));
-        runOp(mEditor.selectRe("\\d+"));
+        runOp(mEditor.selectRe("\\d+", false));
         add("new");
         assertThatTextIs("123 new 789");
     }

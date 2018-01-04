@@ -68,7 +68,7 @@ public interface CommandEditor {
     Op selectReAfter(String regex, int n);
 
     // Extend the cursor to match the given regex
-    Op selectRe(String regex);
+    Op selectRe(String regex, boolean applyToSelection);
 
     // Select all (note: not a context menu action)
     Op selectAll();
@@ -177,6 +177,8 @@ public interface CommandEditor {
     boolean commitPartialResult(String text);
 
     boolean runOp(Op op);
+
+    boolean runOp(Op op, boolean undoable);
 
     ExtractedText getExtractedText();
 
