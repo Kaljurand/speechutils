@@ -1189,6 +1189,16 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("123 new 789");
     }
 
+    /**
+     * deleting 😃 can be done by deleting a single char
+     */
+    @Test
+    public void test103() {
+        add("\uD83D\uDE03");
+        runOp(mEditor.deleteLeftChars(1));
+        assertThatTextIs("");
+    }
+
     // Can't create handler inside thread that has not called Looper.prepare()
     //@Test
     public void test201() {

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.Pair;
@@ -160,7 +161,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     @Override
                     public Op run() {
                         mInputConnection.beginBatchEdit();
-                        boolean success = mInputConnection.deleteSurroundingText(len, 0);
+                        boolean success = deleteSurrounding(len, 0);
                         if (et != null && selectedText.length() > 0) {
                             success = mInputConnection.commitText(selectedText, 1) &&
                                     mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
@@ -578,9 +579,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
                             lastIndex = beforeCursorLength == m.end() ? m.start() : m.end();
                         }
                         if (lastIndex > 0) {
-                            success = mInputConnection.deleteSurroundingText(beforeCursorLength - lastIndex, 0);
+                            success = deleteSurrounding(beforeCursorLength - lastIndex, 0);
                         } else if (beforeCursorLength < MAX_DELETABLE_CONTEXT) {
-                            success = mInputConnection.deleteSurroundingText(beforeCursorLength, 0);
+                            success = deleteSurrounding(beforeCursorLength, 0);
                         }
                         if (success) {
                             mInputConnection.endBatchEdit();
@@ -703,7 +704,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                         boolean success = mInputConnection.setSelection(queryResult.first, queryResult.first);
                         if (success) {
                             // Delete existing text
-                            success = mInputConnection.deleteSurroundingText(0, match.length());
+                            success = deleteSurrounding(0, match.length());
                             if (replacement.isEmpty()) {
                                 if (success) {
                                     undo = new Op("undo replace1") {
@@ -727,7 +728,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                                         @Override
                                         public Op run() {
                                             mInputConnection.beginBatchEdit();
-                                            boolean success2 = mInputConnection.deleteSurroundingText(replacement.length(), 0) &&
+                                            boolean success2 = deleteSurrounding(replacement.length(), 0) &&
                                                     mInputConnection.commitText(match, 1) &&
                                                     mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
                                             mInputConnection.endBatchEdit();
@@ -907,7 +908,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 } else {
                     final CharSequence cs = mInputConnection.getTextBeforeCursor(numOfChars, 0);
                     if (cs != null) {
-                        success = mInputConnection.deleteSurroundingText(numOfChars, 0);
+                        success = deleteSurrounding(numOfChars, 0);
                         if (success) {
                             mInputConnection.endBatchEdit();
                             undo = new Op("commitText: " + cs) {
@@ -1063,7 +1064,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
         // Delete the part that changed compared to the partial text added earlier.
         int deletableLength = mPrevText.length() - commonPrefixLength;
         if (deletableLength > 0) {
-            mInputConnection.deleteSurroundingText(deletableLength, 0);
+            deleteSurrounding(deletableLength, 0);
         }
 
         // Finish if there is nothing to add
@@ -1114,7 +1115,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 // Delete the part that changed compared to the partial text added earlier.
                 int deletableLength = mPrevText.length() - commonPrefixLength;
                 if (deletableLength > 0) {
-                    mInputConnection.deleteSurroundingText(deletableLength, 0);
+                    deleteSurrounding(deletableLength, 0);
                 }
 
                 // Finish if there is nothing to add
@@ -1148,7 +1149,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     @Override
                     public Op run() {
                         mInputConnection.beginBatchEdit();
-                        boolean success = mInputConnection.deleteSurroundingText(mAddedLength, 0);
+                        boolean success = deleteSurrounding(mAddedLength, 0);
                         if (et != null && selectedText.length() > 0) {
                             success = mInputConnection.commitText(selectedText, 1) &&
                                     mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
@@ -1180,7 +1181,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                         @Override
                         public Op run() {
                             mInputConnection.beginBatchEdit();
-                            boolean success = mInputConnection.deleteSurroundingText(newText.length(), 0);
+                            boolean success = deleteSurrounding(newText.length(), 0);
                             if (success && oldText != null) {
                                 success = mInputConnection.commitText(oldText, 1);
                             }
@@ -1393,6 +1394,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
             rewrite = new UtteranceRewriter.Rewrite(newText);
         }
         return rewrite;
+    }
+
+    private boolean deleteSurrounding(int beforeLength, int afterLength) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            return mInputConnection.deleteSurroundingTextInCodePoints(beforeLength, afterLength);
+        }
+        return mInputConnection.deleteSurroundingText(beforeLength, afterLength);
     }
 
     /**
