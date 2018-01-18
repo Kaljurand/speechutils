@@ -964,6 +964,14 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     /**
+     * There is no undo.
+     */
+    @Override
+    public Op imeAction(int editorAction) {
+        return getEditorActionOp(editorAction);
+    }
+
+    /**
      * There is no undo, because the undo-stack does not survive the jump to another field.
      */
     @Override

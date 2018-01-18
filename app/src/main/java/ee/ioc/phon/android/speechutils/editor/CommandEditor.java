@@ -135,6 +135,9 @@ public interface CommandEditor {
     // Interpret the text under the cursor as an integer and increase it by 1
     Op incSel();
 
+    // Perform the given IME action
+    Op imeAction(int editorAction);
+
     // Jump to the previous field (IME action)
     Op imeActionPrevious();
 
