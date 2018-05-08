@@ -234,32 +234,35 @@ public class RecognitionServiceManager {
                 if (getResultCode() != Activity.RESULT_OK) {
                     Log.i(combos.size() + ") NO LANG: " + service);
                     combos.add(service);
-                    populateCombos(activity, services, counter + 1, listener, combos, selectedCombos);
-                    return;
-                }
+                } else {
+                    Bundle results = getResultExtras(true);
 
-                Bundle results = getResultExtras(true);
+                    // Supported languages
+                    String prefLang = results.getString(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE);
+                    ArrayList<CharSequence> allLangs = results.getCharSequenceArrayList(RecognizerIntent.EXTRA_SUPPORTED_LANGUAGES);
 
-                // Supported languages
-                String prefLang = results.getString(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE);
-                ArrayList<CharSequence> allLangs = results.getCharSequenceArrayList(RecognizerIntent.EXTRA_SUPPORTED_LANGUAGES);
+                    Log.i("Supported langs: " + prefLang + ": " + allLangs);
+                    if (allLangs == null) {
+                        allLangs = new ArrayList<>();
+                    }
+                    // We add the preferred language to the list of supported languages, if not already there.
+                    if (prefLang != null && !allLangs.contains(prefLang)) {
+                        allLangs.add(prefLang);
+                    }
 
-                Log.i("Supported langs: " + prefLang + ": " + allLangs);
-                if (allLangs == null) {
-                    allLangs = new ArrayList<>();
-                }
-                // We add the preferred language to the list of supported languages, if not already there.
-                if (prefLang != null && !allLangs.contains(prefLang)) {
-                    allLangs.add(prefLang);
-                }
-
-                for (CharSequence lang : allLangs) {
-                    String combo = service + SEPARATOR + lang;
-                    if (!mCombosExcluded.contains(combo)) {
-                        Log.i(combos.size() + ") " + combo);
-                        combos.add(combo);
-                        if (mInitiallySelectedCombos.contains(combo)) {
-                            selectedCombos.add(combo);
+                    if (allLangs.isEmpty()) {
+                        Log.i(combos.size() + ") RESULT_OK but NO LANG: " + service);
+                        combos.add(service);
+                    } else {
+                        for (CharSequence lang : allLangs) {
+                            String combo = service + SEPARATOR + lang;
+                            if (!mCombosExcluded.contains(combo)) {
+                                Log.i(combos.size() + ") " + combo);
+                                combos.add(combo);
+                                if (mInitiallySelectedCombos.contains(combo)) {
+                                    selectedCombos.add(combo);
+                                }
+                            }
                         }
                     }
                 }
