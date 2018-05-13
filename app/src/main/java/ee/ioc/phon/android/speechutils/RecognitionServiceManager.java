@@ -230,11 +230,9 @@ public class RecognitionServiceManager {
             @Override
             public void onReceive(Context context, Intent intent) {
 
-                // Service that does not report which languages it supports
-                if (getResultCode() != Activity.RESULT_OK) {
-                    Log.i(combos.size() + ") NO LANG: " + service);
-                    combos.add(service);
-                } else {
+                ArrayList<CharSequence> langs = new ArrayList<>();
+
+                if (getResultCode() == Activity.RESULT_OK) {
                     Bundle results = getResultExtras(true);
 
                     // Supported languages
@@ -242,27 +240,34 @@ public class RecognitionServiceManager {
                     ArrayList<CharSequence> allLangs = results.getCharSequenceArrayList(RecognizerIntent.EXTRA_SUPPORTED_LANGUAGES);
 
                     Log.i("Supported langs: " + prefLang + ": " + allLangs);
-                    if (allLangs == null) {
-                        allLangs = new ArrayList<>();
+                    if (allLangs != null) {
+                        langs.addAll(allLangs);
                     }
                     // We add the preferred language to the list of supported languages, if not already there.
-                    if (prefLang != null && !allLangs.contains(prefLang)) {
-                        allLangs.add(prefLang);
+                    if (prefLang != null && !langs.contains(prefLang)) {
+                        langs.add(prefLang);
                     }
+                }
 
-                    if (allLangs.isEmpty()) {
-                        Log.i(combos.size() + ") RESULT_OK but NO LANG: " + service);
-                        combos.add(service);
-                    } else {
-                        for (CharSequence lang : allLangs) {
-                            String combo = service + SEPARATOR + lang;
-                            if (!mCombosExcluded.contains(combo)) {
-                                Log.i(combos.size() + ") " + combo);
-                                combos.add(combo);
-                                if (mInitiallySelectedCombos.contains(combo)) {
-                                    selectedCombos.add(combo);
-                                }
-                            }
+                // Make sure that the list of languages contains at least one member.
+                // If the service declares no languages then this member could be interpreted
+                // as "some unspecified languages" or "all languages" (but not "no languages").
+                // We use the code "und" here, see also:
+                // - https://en.wikipedia.org/wiki/ISO_639-3
+                // - https://android.googlesource.com/platform/libcore/+/refs/heads/master/ojluni/src/main/java/java/util/Locale.java
+                //   Android-added: (internal only): ISO 639-3 generic code for undetermined languages.
+                //   private static final String UNDETERMINED_LANGUAGE = "und";
+                if (langs.isEmpty()) {
+                    langs.add("und");
+                }
+
+                for (CharSequence lang : langs) {
+                    String combo = service + SEPARATOR + lang;
+                    if (!mCombosExcluded.contains(combo)) {
+                        Log.i(combos.size() + ") " + combo);
+                        combos.add(combo);
+                        if (mInitiallySelectedCombos.contains(combo)) {
+                            selectedCombos.add(combo);
                         }
                     }
                 }
