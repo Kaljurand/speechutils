@@ -197,7 +197,6 @@ public class RecognitionServiceManager {
         populateCombos(activity, services, listener);
     }
 
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR1)
     private void populateCombos(final Activity activity, final List<String> services, final int counter, final Listener listener,
                                 final List<String> combos, final Set<String> selectedCombos) {
 
@@ -219,11 +218,9 @@ public class RecognitionServiceManager {
             //intent.setComponent(serviceComponent);
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR1) {
-            // This is needed to include newly installed apps or stopped apps
-            // as receivers of the broadcast.
-            intent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
-        }
+        // This is needed to include newly installed apps or stopped apps
+        // as receivers of the broadcast.
+        intent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
 
         activity.sendOrderedBroadcast(intent, null, new BroadcastReceiver() {
 

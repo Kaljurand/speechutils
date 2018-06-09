@@ -18,10 +18,10 @@ android {
     buildToolsVersion rootProject.buildToolsVersion
 
     defaultConfig {
-        minSdkVersion 12
-        targetSdkVersion 27
-        versionCode 207
-        versionName '0.2.07'
+        minSdkVersion 14
+        targetSdkVersion 28
+        versionCode 208
+        versionName '0.2.08'
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
 }
