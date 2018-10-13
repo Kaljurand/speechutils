@@ -243,6 +243,7 @@ public abstract class AbstractRecognitionService extends RecognitionService {
         try {
             mListener.readyForSpeech(bundle);
         } catch (RemoteException e) {
+            // Ignored
         }
     }
 
@@ -250,6 +251,7 @@ public abstract class AbstractRecognitionService extends RecognitionService {
         try {
             mListener.rmsChanged(rms);
         } catch (RemoteException e) {
+            // Ignored
         }
     }
 
@@ -259,6 +261,7 @@ public abstract class AbstractRecognitionService extends RecognitionService {
         try {
             mListener.error(errorCode);
         } catch (RemoteException e) {
+            // Ignored
         }
     }
 
@@ -267,6 +270,7 @@ public abstract class AbstractRecognitionService extends RecognitionService {
         try {
             mListener.results(bundle);
         } catch (RemoteException e) {
+            // Ignored
         }
     }
 
@@ -274,6 +278,7 @@ public abstract class AbstractRecognitionService extends RecognitionService {
         try {
             mListener.partialResults(bundle);
         } catch (RemoteException e) {
+            // Ignored
         }
     }
 
@@ -281,6 +286,7 @@ public abstract class AbstractRecognitionService extends RecognitionService {
         try {
             mListener.beginningOfSpeech();
         } catch (RemoteException e) {
+            // Ignored
         }
     }
 
@@ -308,6 +314,7 @@ public abstract class AbstractRecognitionService extends RecognitionService {
         try {
             mListener.endOfSpeech();
         } catch (RemoteException e) {
+            // Ignored
         }
         afterRecording(recording);
     }
@@ -316,6 +323,7 @@ public abstract class AbstractRecognitionService extends RecognitionService {
         try {
             mListener.bufferReceived(buffer);
         } catch (RemoteException e) {
+            // Ignored
         }
     }
 

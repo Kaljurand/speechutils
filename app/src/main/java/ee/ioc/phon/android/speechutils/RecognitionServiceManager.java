@@ -105,7 +105,7 @@ public class RecognitionServiceManager {
                 localeAsStr = splits[1];
             }
         }
-        return new Pair(ComponentName.unflattenFromString(serviceAsStr), localeAsStr);
+        return new Pair<>(ComponentName.unflattenFromString(serviceAsStr), localeAsStr);
     }
 
     /**
