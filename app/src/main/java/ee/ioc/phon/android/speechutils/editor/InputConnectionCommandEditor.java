@@ -54,7 +54,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private SharedPreferences mPreferences;
     private Resources mRes;
 
-    private String mPrevText = "";
     private int mAddedLength = 0;
 
     // TODO: Restrict the size of these stacks
@@ -186,14 +185,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
             }
             result = new CommandEditorResult(success, rewrite);
         }
-        mPrevText = "";
         mAddedLength = 0;
         return result;
     }
 
     /**
-     * Writes the text into the text field and stores it for future reference.
-     * If there is a selection then partial results are not written out.
+     * Sets the text as "composing text" unless there is a selection.
      */
     @Override
     public boolean commitPartialResult(String text) {
@@ -216,8 +213,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
             }
         }
 
-        commitWithOverwrite(newText);
-        mPrevText = newText;
+        mInputConnection.setComposingText(newText, 1);
         return true;
     }
 
@@ -233,7 +229,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public void reset() {
         mCommandPrefix.clear();
-        mPrevText = "";
         mAddedLength = 0;
     }
 
@@ -1064,43 +1059,24 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * Returns the number of characters added.
      */
     private int commitWithOverwrite(String text) {
-        // Calculate the length of the text that has changed
-        String commonPrefix = greatestCommonPrefix(mPrevText, text);
-        int commonPrefixLength = commonPrefix.length();
-
-        mInputConnection.beginBatchEdit();
-        // Delete the part that changed compared to the partial text added earlier.
-        int deletableLength = mPrevText.length() - commonPrefixLength;
-        if (deletableLength > 0) {
-            deleteSurrounding(deletableLength, 0);
-        }
-
         // Finish if there is nothing to add
-        if (text.isEmpty() || commonPrefixLength == text.length()) {
-            mAddedLength -= deletableLength;
-        } else {
+        if (!text.isEmpty()) {
             CharSequence leftContext = "";
-            String glue = "";
-            // If the prev text and the current text share no prefix then recalculate the glue.
-            if (commonPrefixLength == 0) {
-                // We look at the left context of the cursor
-                // to decide which glue symbol to use and whether to capitalize the text.
-                CharSequence textBeforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
-                // In some error situations, null is returned
-                if (textBeforeCursor != null) {
-                    leftContext = textBeforeCursor;
-                }
-                glue = getGlue(text, leftContext);
-                mAddedLength = glue.length() + text.length();
-            } else {
-                text = text.substring(commonPrefixLength);
-                leftContext = commonPrefix;
-                mAddedLength = mAddedLength - deletableLength + text.length();
+            // We look at the left context of the cursor
+            // to decide which glue symbol to use and whether to capitalize the text.
+            mInputConnection.beginBatchEdit();
+            CharSequence textBeforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
+            // In some error situations, null is returned
+            if (textBeforeCursor != null) {
+                leftContext = textBeforeCursor;
             }
+            String glue = getGlue(text, leftContext);
+            mAddedLength = glue.length() + text.length();
+
             text = capitalizeIfNeeded(text, leftContext);
             mInputConnection.commitText(glue + text, 1);
+            mInputConnection.endBatchEdit();
         }
-        mInputConnection.endBatchEdit();
         return mAddedLength;
     }
 
@@ -1113,42 +1089,23 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return new Op("add " + text) {
             @Override
             public Op run() {
-                // Calculate the length of the text that has changed
-                String commonPrefix = greatestCommonPrefix(mPrevText, text);
-                int commonPrefixLength = commonPrefix.length();
-
                 mInputConnection.beginBatchEdit();
                 final ExtractedText et = getExtractedText();
                 final String selectedText = getSelectedText();
-                // Delete the part that changed compared to the partial text added earlier.
-                int deletableLength = mPrevText.length() - commonPrefixLength;
-                if (deletableLength > 0) {
-                    deleteSurrounding(deletableLength, 0);
-                }
-
                 // Finish if there is nothing to add
-                if (text.isEmpty() || commonPrefixLength == text.length()) {
-                    mAddedLength -= deletableLength;
-                } else {
+                if (!text.isEmpty()) {
                     CharSequence leftContext = "";
-                    String glue = "";
                     String text1 = text;
-                    // If the prev text and the current text share no prefix then recalculate the glue.
-                    if (commonPrefixLength == 0) {
-                        // We look at the left context of the cursor
-                        // to decide which glue symbol to use and whether to capitalize the text.
-                        CharSequence textBeforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
-                        // In some error situations, null is returned
-                        if (textBeforeCursor != null) {
-                            leftContext = textBeforeCursor;
-                        }
-                        glue = getGlue(text, leftContext);
-                        mAddedLength = glue.length() + text.length();
-                    } else {
-                        text1 = text.substring(commonPrefixLength);
-                        leftContext = commonPrefix;
-                        mAddedLength = mAddedLength - deletableLength + text1.length();
+                    // We look at the left context of the cursor
+                    // to decide which glue symbol to use and whether to capitalize the text.
+                    CharSequence textBeforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
+                    // In some error situations, null is returned
+                    if (textBeforeCursor != null) {
+                        leftContext = textBeforeCursor;
                     }
+                    String glue = getGlue(text, leftContext);
+                    mAddedLength = glue.length() + text.length();
+
                     text1 = capitalizeIfNeeded(text1, leftContext);
                     mInputConnection.commitText(glue + text1, 1);
                 }
@@ -1463,15 +1420,5 @@ public class InputConnectionCommandEditor implements CommandEditor {
             return "";
         }
         return " ";
-    }
-
-    private static String greatestCommonPrefix(String a, String b) {
-        int minLength = Math.min(a.length(), b.length());
-        for (int i = 0; i < minLength; i++) {
-            if (a.charAt(i) != b.charAt(i)) {
-                return a.substring(0, i);
-            }
-        }
-        return a.substring(0, minLength);
     }
 }
