@@ -54,8 +54,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private SharedPreferences mPreferences;
     private Resources mRes;
 
-    private int mAddedLength = 0;
-
+    private CharSequence mTextBeforeCursor;
     // TODO: Restrict the size of these stacks
 
     // The command prefix is a list of consecutive final results whose concatenation can possibly
@@ -145,7 +144,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
         CommandEditorResult result = null;
         if (mRewriters == null || mRewriters.isEmpty()) {
             // If rewrites/commands are not defined (default), then selection can be dictated over.
-            commitWithOverwrite(text);
+            commitWithOverwrite(text, true);
         } else {
             final ExtractedText et = getExtractedText();
             final String selectedText = getSelectedText();
@@ -153,7 +152,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
             // Otherwise write out the text as usual.
             UtteranceRewriter.Rewrite rewrite = applyCommand(text);
             String textRewritten = rewrite.mStr;
-            final int len = commitWithOverwrite(textRewritten);
+            final int len = commitWithOverwrite(textRewritten, true);
             // TODO: add undo for setSelection even if len==0
             if (len > 0) {
                 pushOpUndo(new Op("delete " + len) {
@@ -185,7 +184,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
             }
             result = new CommandEditorResult(success, rewrite);
         }
-        mAddedLength = 0;
         return result;
     }
 
@@ -212,8 +210,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 }
             }
         }
-
-        mInputConnection.setComposingText(newText, 1);
+        commitWithOverwrite(text, false);
         return true;
     }
 
@@ -229,7 +226,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public void reset() {
         mCommandPrefix.clear();
-        mAddedLength = 0;
+        mTextBeforeCursor = getTextBeforeCursor();
     }
 
     @Override
@@ -1058,26 +1055,34 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * Adds text at the cursor, possibly overwriting a selection.
      * Returns the number of characters added.
      */
-    private int commitWithOverwrite(String text) {
-        // Finish if there is nothing to add
-        if (!text.isEmpty()) {
-            CharSequence leftContext = "";
-            // We look at the left context of the cursor
-            // to decide which glue symbol to use and whether to capitalize the text.
-            mInputConnection.beginBatchEdit();
-            CharSequence textBeforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
-            // In some error situations, null is returned
-            if (textBeforeCursor != null) {
-                leftContext = textBeforeCursor;
-            }
-            String glue = getGlue(text, leftContext);
-            mAddedLength = glue.length() + text.length();
-
-            text = capitalizeIfNeeded(text, leftContext);
-            mInputConnection.commitText(glue + text, 1);
-            mInputConnection.endBatchEdit();
+    private int commitWithOverwrite(String text, boolean isCommitText) {
+        if (text.isEmpty()) {
+            return 0;
         }
-        return mAddedLength;
+        mInputConnection.beginBatchEdit();
+        if (isCommitText) {
+            mTextBeforeCursor = getTextBeforeCursor();
+        }
+        text = getGlue(text, mTextBeforeCursor) + capitalizeIfNeeded(text, mTextBeforeCursor);
+        if (isCommitText) {
+            mInputConnection.commitText(text, 1);
+        } else {
+            mInputConnection.setComposingText(text, 1);
+        }
+        mInputConnection.endBatchEdit();
+        return text.length();
+    }
+
+    /**
+     * We look at the left context of the cursor
+     * to decide which glue symbol to use and whether to capitalize the text.
+     */
+    private CharSequence getTextBeforeCursor() {
+        CharSequence textBeforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
+        if (textBeforeCursor == null) {
+            return "";
+        }
+        return textBeforeCursor;
     }
 
     /**
@@ -1092,29 +1097,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 mInputConnection.beginBatchEdit();
                 final ExtractedText et = getExtractedText();
                 final String selectedText = getSelectedText();
-                // Finish if there is nothing to add
-                if (!text.isEmpty()) {
-                    CharSequence leftContext = "";
-                    String text1 = text;
-                    // We look at the left context of the cursor
-                    // to decide which glue symbol to use and whether to capitalize the text.
-                    CharSequence textBeforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
-                    // In some error situations, null is returned
-                    if (textBeforeCursor != null) {
-                        leftContext = textBeforeCursor;
-                    }
-                    String glue = getGlue(text, leftContext);
-                    mAddedLength = glue.length() + text.length();
-
-                    text1 = capitalizeIfNeeded(text1, leftContext);
-                    mInputConnection.commitText(glue + text1, 1);
-                }
+                final int addedLength = commitWithOverwrite(text, true);
                 mInputConnection.endBatchEdit();
-                return new Op("delete " + mAddedLength) {
+                return new Op("delete " + addedLength) {
                     @Override
                     public Op run() {
                         mInputConnection.beginBatchEdit();
-                        boolean success = deleteSurrounding(mAddedLength, 0);
+                        boolean success = deleteSurrounding(addedLength, 0);
                         if (et != null && selectedText.length() > 0) {
                             success = mInputConnection.commitText(selectedText, 1) &&
                                     mInputConnection.setSelection(et.selectionStart, et.selectionEnd);
