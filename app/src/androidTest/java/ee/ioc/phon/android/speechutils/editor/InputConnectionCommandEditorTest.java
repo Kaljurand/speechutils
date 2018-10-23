@@ -130,6 +130,7 @@ public class InputConnectionCommandEditorTest {
     public void test04() {
         addPartial("...123");
         addPartial("...124");
+        assertThatTextIs("...124");
         add("...1245");
         runOp(mEditor.moveAbs(4));
         assertThat(getTextBeforeCursor(10), is("...1"));
@@ -511,11 +512,20 @@ public class InputConnectionCommandEditorTest {
     @Test
     public void test42() {
         add("test word1 word2");
-        assertTrue(mEditor.commitPartialResult("connect word1 and word2"));
+        addPartial("connect word1 and word2");
         add("connect word1 and word2");
         assertThatTextIs("Test word1-word2");
         undo();
         assertThatTextIs("Test word1 word2");
+    }
+
+    @Test
+    public void test42a() {
+        add("test word1 word2");
+        addPartial("connect word1 and word2");
+        assertThatTextIs("Test word1 word2");
+        runOp(mEditor.replace("word1 word2", "word1-word2"));
+        assertThatTextIs("Test word1-word2");
     }
 
     /**
@@ -571,12 +581,13 @@ public class InputConnectionCommandEditorTest {
         add("this is 1st test. this is 2nd test.");
         addPartial("this is 3rd");
         add("this is 3rd test.");
-        assertThatTextIs("This is 1st test. This is 2nd test. This is 3rd test.");
+        // TODO: 2nd sentence is lowercase, right?
+        assertThatTextIs("This is 1st test. this is 2nd test. This is 3rd test.");
         add("delete this");
-        assertThatTextIs("This is 1st test. This is 2nd test.  is 3rd test.");
+        assertThatTextIs("This is 1st test. this is 2nd test.  is 3rd test.");
         undo();
         // TODO: capitalization is not restored
-        assertThatTextIs("This is 1st test. This is 2nd test. This is 3rd test.");
+        assertThatTextIs("This is 1st test. this is 2nd test. This is 3rd test.");
     }
 
     /**
@@ -782,7 +793,7 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test68() {
-        mEditor.commitPartialResult("Initial text");
+        addPartial("Initial text");
         assertThatOpStackIs("[]");
         assertThatUndoStackIs("[]");
         runOpThatFails(mEditor.undo(1));
@@ -796,7 +807,7 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test69() {
-        mEditor.commitPartialResult("Initial text");
+        addPartial("Initial text");
         assertThatTextIs("Initial text");
         assertThatOpStackIs("[]");
         assertThatUndoStackIs("[]");
@@ -1155,7 +1166,9 @@ public class InputConnectionCommandEditorTest {
 
     @Test
     public void test100() {
-        add("123", "456 moveAbs0", "789");
+        add("123", "456 moveAbs0");
+        assertThatTextIs("123 456 ");
+        add("789");
         assertThatTextIs("789123 456 ");
     }
 
@@ -1258,6 +1271,17 @@ public class InputConnectionCommandEditorTest {
         runOp(mEditor.paste());
         assertThatTextIs("Test word1 word2");
     }
+
+    /**
+     * Single letter is always glued to the previous symbol, but possibly capitalized.
+     */
+    @Test
+    public void test206() {
+        add("test.");
+        add("a");
+        assertThatTextIs("Test.A");
+    }
+
 
     private String getTextBeforeCursor(int n) {
         return mEditor.getInputConnection().getTextBeforeCursor(n, 0).toString();

@@ -109,6 +109,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
             pushOp(op);
             pushOpUndo(undo);
         }
+        mTextBeforeCursor = getTextBeforeCursor();
         return true;
     }
 
@@ -152,7 +153,15 @@ public class InputConnectionCommandEditor implements CommandEditor {
             // Otherwise write out the text as usual.
             UtteranceRewriter.Rewrite rewrite = applyCommand(text);
             String textRewritten = rewrite.mStr;
-            final int len = commitWithOverwrite(textRewritten, true);
+            final int len;
+            // If there is a selection, and the input is a command with no replacement text
+            // then do not replace the selection with an empty string, because the command
+            // needs to apply to the selection, e.g. uppercase it.
+            if (textRewritten.isEmpty() && !selectedText.isEmpty() && rewrite.isCommand()) {
+                len = 0;
+            } else {
+                len = commitWithOverwrite(textRewritten, true);
+            }
             // TODO: add undo for setSelection even if len==0
             if (len > 0) {
                 pushOpUndo(new Op("delete " + len) {
@@ -210,7 +219,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 }
             }
         }
-        commitWithOverwrite(text, false);
+        commitWithOverwrite(newText, false);
         return true;
     }
 
@@ -226,7 +235,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public void reset() {
         mCommandPrefix.clear();
-        mTextBeforeCursor = getTextBeforeCursor();
     }
 
     @Override
@@ -1056,16 +1064,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * Returns the number of characters added.
      */
     private int commitWithOverwrite(String text, boolean isCommitText) {
-        if (text.isEmpty()) {
-            return 0;
-        }
         mInputConnection.beginBatchEdit();
-        if (isCommitText) {
-            mTextBeforeCursor = getTextBeforeCursor();
-        }
         text = getGlue(text, mTextBeforeCursor) + capitalizeIfNeeded(text, mTextBeforeCursor);
         if (isCommitText) {
             mInputConnection.commitText(text, 1);
+            if (!text.isEmpty()) {
+                mTextBeforeCursor = text; //getTextBeforeCursor();
+            }
         } else {
             mInputConnection.setComposingText(text, 1);
         }
@@ -1076,13 +1081,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
     /**
      * We look at the left context of the cursor
      * to decide which glue symbol to use and whether to capitalize the text.
+     * Note that also the composing text (set by partial results) moves the cursor.
      */
     private CharSequence getTextBeforeCursor() {
-        CharSequence textBeforeCursor = mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
-        if (textBeforeCursor == null) {
-            return "";
-        }
-        return textBeforeCursor;
+        return mInputConnection.getTextBeforeCursor(MAX_DELETABLE_CONTEXT, 0);
     }
 
     /**
@@ -1361,8 +1363,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * Capitalize if required by left context
      */
     private static String capitalizeIfNeeded(String text, CharSequence leftContext) {
+        if (text.isEmpty()) {
+            return text;
+        }
         // Capitalize if required by left context
-        String leftContextTrimmed = leftContext.toString().trim();
+        String leftContextTrimmed = leftContext == null ? "" : leftContext.toString().trim();
         if (leftContextTrimmed.length() == 0
                 || Constants.CHARACTERS_EOS.contains(leftContextTrimmed.charAt(leftContextTrimmed.length() - 1))) {
             // Since the text can start with whitespace (newline),
@@ -1390,6 +1395,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * Return a whitespace iff the 1st character of the text is not punctuation, or whitespace, etc.
      */
     private static String getGlue(String text, CharSequence leftContext) {
+        if (leftContext == null || text.isEmpty()) {
+            return "";
+        }
         char firstChar = text.charAt(0);
 
         // TODO: experimental: glue all 1-character strings (somewhat Estonian-specific)
