@@ -3,10 +3,15 @@ package ee.ioc.phon.android.speechutils.editor;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.Spanned;
 import android.text.TextUtils;
+import android.text.style.ForegroundColorSpan;
 import android.util.Pair;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
@@ -49,6 +54,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
     // Token optionally preceded by whitespace
     private static final Pattern WHITESPACE_AND_TOKEN = Pattern.compile("\\s*\\w+");
     private static final String F_SELECTION = "@sel()";
+
+    private static final ForegroundColorSpan SPAN_PARTIAL_RESULTS = new ForegroundColorSpan(Color.parseColor("#757575"));
 
     private Context mContext;
     private SharedPreferences mPreferences;
@@ -235,6 +242,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     @Override
     public void reset() {
         mCommandPrefix.clear();
+        mTextBeforeCursor = getTextBeforeCursor();
     }
 
     @Override
@@ -1069,10 +1077,14 @@ public class InputConnectionCommandEditor implements CommandEditor {
         if (isCommitText) {
             mInputConnection.commitText(text, 1);
             if (!text.isEmpty()) {
-                mTextBeforeCursor = text; //getTextBeforeCursor();
+                // This seems to work correctly, regardless of the length of the added text,
+                // i.e. we do not need to call (the expensive) getTextBeforeCursor() here.
+                mTextBeforeCursor = text;
             }
         } else {
-            mInputConnection.setComposingText(text, 1);
+            Spannable ss = new SpannableString(text);
+            ss.setSpan(SPAN_PARTIAL_RESULTS, 0, text.length(), Spanned.SPAN_COMPOSING);
+            mInputConnection.setComposingText(ss, 1);
         }
         mInputConnection.endBatchEdit();
         return text.length();
@@ -1360,7 +1372,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     /**
-     * Capitalize if required by left context
+     * Return capitalized text if
+     * the last character of the trimmed left context is end-of-sentence marker.
      */
     private static String capitalizeIfNeeded(String text, CharSequence leftContext) {
         if (text.isEmpty()) {
@@ -1392,7 +1405,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     /**
-     * Return a whitespace iff the 1st character of the text is not punctuation, or whitespace, etc.
+     * Return a whitespace if
+     * - the 1st character of the text is not punctuation, or whitespace, etc.
+     * - or the previous character (last character of the left context) is not opening bracket, etc.
      */
     private static String getGlue(String text, CharSequence leftContext) {
         if (leftContext == null || text.isEmpty()) {
@@ -1405,12 +1420,14 @@ public class InputConnectionCommandEditor implements CommandEditor {
             return "";
         }
 
+        // Glue whitespace and punctuation
         if (leftContext.length() == 0
                 || Constants.CHARACTERS_WS.contains(firstChar)
                 || Constants.CHARACTERS_PUNCT.contains(firstChar)) {
             return "";
         }
 
+        // Glue if the previous character is "sticky", e.g. opening bracket.
         char prevChar = leftContext.charAt(leftContext.length() - 1);
         if (Constants.CHARACTERS_WS.contains(prevChar)
                 || Constants.CHARACTERS_STICKY.contains(prevChar)) {

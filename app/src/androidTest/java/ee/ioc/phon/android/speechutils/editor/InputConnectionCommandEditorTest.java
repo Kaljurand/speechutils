@@ -1282,6 +1282,13 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("Test.A");
     }
 
+    @Test
+    public void test207() {
+        add("test!");
+        add("  ");
+        add("abc");
+        assertThatTextIs("Test!  Abc");
+    }
 
     private String getTextBeforeCursor(int n) {
         return mEditor.getInputConnection().getTextBeforeCursor(n, 0).toString();
