@@ -3,15 +3,10 @@ package ee.ioc.phon.android.speechutils.editor;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
-import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.preference.PreferenceManager;
-import android.text.Spannable;
-import android.text.SpannableString;
-import android.text.Spanned;
 import android.text.TextUtils;
-import android.text.style.ForegroundColorSpan;
 import android.util.Pair;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
@@ -54,8 +49,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
     // Token optionally preceded by whitespace
     private static final Pattern WHITESPACE_AND_TOKEN = Pattern.compile("\\s*\\w+");
     private static final String F_SELECTION = "@sel()";
-
-    private static final ForegroundColorSpan SPAN_PARTIAL_RESULTS = new ForegroundColorSpan(Color.parseColor("#757575"));
 
     private Context mContext;
     private SharedPreferences mPreferences;
@@ -1082,9 +1075,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 mTextBeforeCursor = text;
             }
         } else {
-            Spannable ss = new SpannableString(text);
-            ss.setSpan(SPAN_PARTIAL_RESULTS, 0, text.length(), Spanned.SPAN_COMPOSING);
-            mInputConnection.setComposingText(ss, 1);
+            // We let the editor define the style of the composing text.
+            //Spannable ss = new SpannableString(text);
+            //ss.setSpan(SPAN_PARTIAL_RESULTS, 0, text.length(), Spanned.SPAN_COMPOSING);
+            mInputConnection.setComposingText(text, 1);
         }
         mInputConnection.endBatchEdit();
         return text.length();
