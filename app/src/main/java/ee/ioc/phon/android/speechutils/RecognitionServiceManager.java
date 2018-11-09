@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
+import android.content.res.XmlResourceParser;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
@@ -17,6 +18,10 @@ import android.speech.RecognizerIntent;
 import android.text.TextUtils;
 import android.util.Pair;
 
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -131,6 +136,44 @@ public class RecognitionServiceManager {
             // ignored
         }
         return "[?]";
+    }
+
+    public static ServiceInfo getServiceInfo(Context context, ComponentName recognizerComponentName) {
+        try {
+            PackageManager pm = context.getPackageManager();
+            return pm.getServiceInfo(recognizerComponentName, PackageManager.GET_META_DATA);
+        } catch (PackageManager.NameNotFoundException e) {
+            // ignored
+        }
+        return null;
+    }
+
+    public static String getSettingsActivity(Context context, ServiceInfo si)
+            throws XmlPullParserException, IOException {
+        PackageManager pm = context.getPackageManager();
+        XmlResourceParser parser = null;
+        try {
+            parser = si.loadXmlMetaData(pm, RecognitionService.SERVICE_META_DATA);
+            if (parser == null) {
+                throw new XmlPullParserException("No " + RecognitionService.SERVICE_META_DATA + " meta-data");
+            }
+
+            int type;
+            while ((type = parser.next()) != XmlPullParser.END_DOCUMENT
+                    && type != XmlPullParser.START_TAG) {
+            }
+
+            String nodeName = parser.getName();
+            if (!"recognition-service".equals(nodeName)) {
+                throw new XmlPullParserException(
+                        "Meta-data does not start with recognition-service tag");
+            }
+
+            return parser.getAttributeValue("http://schemas.android.com/apk/res/android",
+                    "settingsActivity");
+        } finally {
+            if (parser != null) parser.close();
+        }
     }
 
     public static Drawable getServiceIcon(Context context, ComponentName recognizerComponentName) {

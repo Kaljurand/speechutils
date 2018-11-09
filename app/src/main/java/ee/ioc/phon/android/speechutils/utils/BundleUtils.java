@@ -53,6 +53,9 @@ public class BundleUtils {
      * @return first matching key's value
      */
     public static Object getBundleValue(Bundle bundle, String key) {
+        if (bundle == null) {
+            return null;
+        }
         for (String k : bundle.keySet()) {
             Object value = bundle.get(k);
             if (value instanceof Bundle) {
