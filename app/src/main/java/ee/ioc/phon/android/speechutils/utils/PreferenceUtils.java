@@ -90,7 +90,7 @@ public class PreferenceUtils {
      */
     public static void putPrefMapEntry(SharedPreferences prefs, Resources res, int nameId, String key, String value) {
         String name = res.getString(nameId);
-        Set<String> keys = prefs.getStringSet(name, new HashSet<String>());
+        Set<String> keys = prefs.getStringSet(name, new HashSet<>());
         SharedPreferences.Editor editor = prefs.edit();
         String nameKey = name + '/' + key;
         if (value == null) {

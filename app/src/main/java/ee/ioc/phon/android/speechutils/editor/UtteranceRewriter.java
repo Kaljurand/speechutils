@@ -19,7 +19,13 @@ import java.util.TreeMap;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-// TODO: do not use Java split
+/**
+ * utterance = "go to position 1"
+ * pattern = ("go to position (\d+)", "moveAbs", "$1")
+ * command = moveAbs($1)
+ * <p>
+ * TODO: do not use Java split
+ */
 public class UtteranceRewriter {
 
     public static final String HEADER_COMMENT = "Comment";
@@ -125,11 +131,11 @@ public class UtteranceRewriter {
         private final SortedMap<Integer, String> mErrors = new TreeMap<>();
 
         public CommandHolder() {
-            this(DEFAULT_HEADER_1, new ArrayList<Command>());
+            this(DEFAULT_HEADER_1, new ArrayList<>());
         }
 
         public CommandHolder(String inputHeader) {
-            this(inputHeader, new ArrayList<Command>());
+            this(inputHeader, new ArrayList<>());
         }
 
         public CommandHolder(SortedMap<Integer, String> header, List<Command> commands) {

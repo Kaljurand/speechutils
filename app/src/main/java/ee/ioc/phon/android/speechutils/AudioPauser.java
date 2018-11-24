@@ -28,12 +28,7 @@ public class AudioPauser {
     public AudioPauser(Context context, boolean isMuteStream) {
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         mIsMuteStream = isMuteStream;
-
-        mAfChangeListener = new OnAudioFocusChangeListener() {
-            public void onAudioFocusChange(int focusChange) {
-                Log.i("onAudioFocusChange" + focusChange);
-            }
-        };
+        mAfChangeListener = focusChange -> Log.i("onAudioFocusChange" + focusChange);
     }
 
 

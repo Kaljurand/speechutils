@@ -5,9 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * utterance = "go to position 1"
- * pattern = ("go to position (\d+)", "moveAbs", "$1")
- * command = moveAbs($1)
+ * Mapping of command names to function calls.
  */
 public class CommandEditorManager {
 
@@ -66,65 +64,15 @@ public class CommandEditorManager {
 
         aMap.put(KEY_RIGHT, (ce, args) -> ce.keyRight());
 
-        aMap.put(UNDO, (ce, args) -> {
-            int steps = 1;
-            if (args != null && args.length > 0) {
-                try {
-                    steps = Integer.parseInt(args[0]);
-                } catch (NumberFormatException e) {
-                    // Intentional
-                }
-            }
-            return ce.undo(steps);
-        });
+        aMap.put(UNDO, (ce, args) -> ce.undo(getArgInt(args, 0, 1)));
 
-        aMap.put(COMBINE, (ce, args) -> {
-            int numOfOps = 2;
-            if (args != null && args.length > 0) {
-                try {
-                    numOfOps = Integer.parseInt(args[0]);
-                } catch (NumberFormatException e) {
-                    // Intentional
-                }
-            }
-            return ce.combine(numOfOps);
-        });
+        aMap.put(COMBINE, (ce, args) -> ce.combine(getArgInt(args, 0, 2)));
 
-        aMap.put(APPLY, (ce, args) -> {
-            int steps = 1;
-            if (args != null && args.length > 0) {
-                try {
-                    steps = Integer.parseInt(args[0]);
-                } catch (NumberFormatException e) {
-                    // Intentional
-                }
-            }
-            return ce.apply(steps);
-        });
+        aMap.put(APPLY, (ce, args) -> ce.apply(getArgInt(args, 0, 1)));
 
-        aMap.put(MOVE_ABS, (ce, args) -> {
-            int pos = 0;
-            if (args != null && args.length > 0) {
-                try {
-                    pos = Integer.parseInt(args[0]);
-                } catch (NumberFormatException e) {
-                    // Intentional
-                }
-            }
-            return ce.moveAbs(pos);
-        });
+        aMap.put(MOVE_ABS, (ce, args) -> ce.moveAbs(getArgInt(args, 0, 1)));
 
-        aMap.put(MOVE_REL, (ce, args) -> {
-            int pos = 1;
-            if (args != null && args.length > 0) {
-                try {
-                    pos = Integer.parseInt(args[0]);
-                } catch (NumberFormatException e) {
-                    // Intentional
-                }
-            }
-            return ce.moveRel(pos);
-        });
+        aMap.put(MOVE_REL, (ce, args) -> ce.moveRel(getArgInt(args, 0, 1)));
 
         aMap.put(KEY_CODE, (ce, args) -> {
             if (args != null && args.length > 0) {
@@ -137,26 +85,11 @@ public class CommandEditorManager {
             return null;
         });
 
-        aMap.put(KEY_CODE_STR, (ce, args) -> {
-            if (args == null || args.length < 1) {
-                return null;
-            }
-            return ce.keyCodeStr(args[0]);
-        });
+        aMap.put(KEY_CODE_STR, (ce, args) -> ce.keyCodeStr(getArgString(args, 0, null)));
 
-        aMap.put(SELECT, (ce, args) -> {
-            if (args == null || args.length < 1) {
-                return null;
-            }
-            return ce.select(args[0]);
-        });
+        aMap.put(SELECT, (ce, args) -> ce.select(getArgString(args, 0, null)));
 
-        aMap.put(SELECT_RE_BEFORE, (ce, args) -> {
-            if (args == null || args.length < 1) {
-                return null;
-            }
-            return ce.selectReBefore(args[0]);
-        });
+        aMap.put(SELECT_RE_BEFORE, (ce, args) -> ce.selectReBefore(getArgString(args, 0, null)));
 
         aMap.put(SELECT_RE_AFTER, (ce, args) -> {
             if (args == null || args.length < 1) {
@@ -182,6 +115,7 @@ public class CommandEditorManager {
 
         aMap.put(DELETE_LEFT_WORD, (ce, args) -> ce.deleteLeftWord());
 
+        // Single-argument "replace" replaces by empty string (i.e. deletes)
         aMap.put(REPLACE, (ce, args) -> {
             if (args == null || args.length < 1) {
                 return null;
@@ -191,12 +125,7 @@ public class CommandEditorManager {
             return ce.replace(text1, text2);
         });
 
-        aMap.put(REPLACE_SEL, (ce, args) -> {
-            if (args == null || args.length < 1) {
-                return null;
-            }
-            return ce.replaceSel(args[0]);
-        });
+        aMap.put(REPLACE_SEL, (ce, args) -> ce.replaceSel(getArgString(args, 0, null)));
 
         aMap.put(SAVE_CLIP, (ce, args) -> {
             if (args == null || args.length < 2) {
@@ -205,12 +134,7 @@ public class CommandEditorManager {
             return ce.saveClip(args[0], args[1]);
         });
 
-        aMap.put(LOAD_CLIP, (ce, args) -> {
-            if (args == null || args.length < 1) {
-                return null;
-            }
-            return ce.loadClip(args[0]);
-        });
+        aMap.put(LOAD_CLIP, (ce, args) -> ce.loadClip(getArgString(args, 0, null)));
 
         aMap.put(SHOW_CLIPBOARD, (ce, args) -> ce.showClipboard());
 
@@ -248,19 +172,9 @@ public class CommandEditorManager {
 
         aMap.put(IME_ACTION_SEND, (ce, args) -> ce.imeActionSend());
 
-        aMap.put(ACTIVITY, (ce, args) -> {
-            if (args == null || args.length < 1) {
-                return null;
-            }
-            return ce.activity(args[0]);
-        });
+        aMap.put(ACTIVITY, (ce, args) -> ce.activity(getArgString(args, 0, null)));
 
-        aMap.put(GET_URL, (ce, args) -> {
-            if (args == null || args.length < 1) {
-                return null;
-            }
-            return ce.getUrl(args[0]);
-        });
+        aMap.put(GET_URL, (ce, args) -> ce.getUrl(getArgString(args, 0, null)));
 
         EDITOR_COMMANDS = Collections.unmodifiableMap(aMap);
     }
@@ -271,5 +185,23 @@ public class CommandEditorManager {
 
     public static EditorCommand get(String id) {
         return EDITOR_COMMANDS.get(id);
+    }
+
+    private static String getArgString(String[] args, int idx, String defaultValue) {
+        if (args != null && args.length > idx) {
+            return args[idx];
+        }
+        return defaultValue;
+    }
+
+    private static int getArgInt(String[] args, int idx, int defaultValue) {
+        if (args != null && args.length > idx) {
+            try {
+                return Integer.parseInt(args[idx]);
+            } catch (NumberFormatException e) {
+                // Return defaultValue if number conversion fails
+            }
+        }
+        return defaultValue;
     }
 }
