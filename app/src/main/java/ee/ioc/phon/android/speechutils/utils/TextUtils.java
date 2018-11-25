@@ -28,8 +28,8 @@ public class TextUtils {
             String glue = " ";
             char firstChar = tok.charAt(0);
             if (isWhitespaceBefore
-                    || Constants.CHARACTERS_WS.contains(firstChar)
-                    || Constants.CHARACTERS_PUNCT.contains(firstChar)) {
+                    || Character.isWhitespace(firstChar)
+                    || Constants.CHARACTERS_STICKY_LEFT.contains(firstChar)) {
                 glue = "";
             }
 
@@ -43,7 +43,7 @@ public class TextUtils {
                 text += glue + tok;
             }
 
-            isWhitespaceBefore = Constants.CHARACTERS_WS.contains(firstChar);
+            isWhitespaceBefore = Character.isWhitespace(firstChar);
 
             // If the token is not a character then we are in the middle of the sentence.
             // If the token is an EOS character then a new sentences has started.

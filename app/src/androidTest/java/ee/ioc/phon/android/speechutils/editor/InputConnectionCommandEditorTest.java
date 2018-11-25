@@ -36,6 +36,9 @@ public class InputConnectionCommandEditorTest {
         list1.add(new Command("old_word", "new_word"));
         list1.add(new Command("dollar sign", "\\$"));
         list1.add(new Command("double backslash", "\\\\\\\\"));
+        list1.add(new Command("hyphen", "-"));
+        list1.add(new Command("space", " "));
+        list1.add(new Command("newbullet", "\n- "));
 
         // Editor commands
         List<Command> list2 = new ArrayList<>();
@@ -1288,6 +1291,36 @@ public class InputConnectionCommandEditorTest {
         add("  ");
         add("abc");
         assertThatTextIs("Test!  Abc");
+    }
+
+    /**
+     * Spacing around hyphen.
+     * TODO: do not capitalize after " - "
+     */
+    @Test
+    public void test208() {
+        add("test", "-", "test", "hyphen", "test", "space", "hyphen", "space", "test", "newbullet", "test");
+        assertThatTextIs("Test-test-test - Test\n- test");
+    }
+
+    /**
+     * Spacing around common punctuation.
+     */
+    @Test
+    public void test209() {
+        add("test", "test", ",", "test", ":", "test", "!", "test", "(", "test", "test", ")", ".", "(", "test", ".", ")");
+        assertThatTextIs("Test test, test: test! Test (Test test). (Test.)");
+    }
+
+    /**
+     * Spacing around common punctuation.
+     * Capitalization depends on how much left context is available.
+     * If left context contains only transparent characters then the text is capitalized.
+     */
+    @Test
+    public void test210() {
+        add("test (", "test", "!", "test", "(", "test");
+        assertThatTextIs("Test (test! Test (Test");
     }
 
     private String getTextBeforeCursor(int n) {

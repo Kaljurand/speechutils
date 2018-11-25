@@ -1373,15 +1373,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
         if (text.isEmpty()) {
             return text;
         }
-        // Capitalize if required by left context
-        String leftContextTrimmed = leftContext == null ? "" : leftContext.toString().trim();
-        if (leftContextTrimmed.length() == 0
-                || Constants.CHARACTERS_EOS.contains(leftContextTrimmed.charAt(leftContextTrimmed.length() - 1))) {
+        if (requiresCap(leftContext)) {
             // Since the text can start with whitespace (newline),
             // we capitalize the first non-whitespace character.
             int firstNonWhitespaceIndex = -1;
             for (int i = 0; i < text.length(); i++) {
-                if (!Constants.CHARACTERS_WS.contains(text.charAt(i))) {
+                if (!Constants.isTransparent(text.charAt(i))) {
                     firstNonWhitespaceIndex = i;
                     break;
                 }
@@ -1396,6 +1393,21 @@ public class InputConnectionCommandEditor implements CommandEditor {
             }
         }
         return text;
+    }
+
+    private static boolean requiresCap(CharSequence leftContext) {
+        if (leftContext != null) {
+            for (int i = leftContext.length() - 1; i >= 0; i--) {
+                char c = leftContext.charAt(i);
+                if (Constants.CHARACTERS_EOS.contains(c)) {
+                    return true;
+                }
+                if (!Constants.isTransparent(c)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /**
@@ -1416,15 +1428,15 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
         // Glue whitespace and punctuation
         if (leftContext.length() == 0
-                || Constants.CHARACTERS_WS.contains(firstChar)
-                || Constants.CHARACTERS_PUNCT.contains(firstChar)) {
+                || Character.isWhitespace(firstChar)
+                || Constants.CHARACTERS_STICKY_LEFT.contains(firstChar)) {
             return "";
         }
 
         // Glue if the previous character is "sticky", e.g. opening bracket.
         char prevChar = leftContext.charAt(leftContext.length() - 1);
-        if (Constants.CHARACTERS_WS.contains(prevChar)
-                || Constants.CHARACTERS_STICKY.contains(prevChar)) {
+        if (Character.isWhitespace(prevChar)
+                || Constants.CHARACTERS_STICKY_RIGHT.contains(prevChar)) {
             return "";
         }
         return " ";
