@@ -1118,9 +1118,11 @@ public class InputConnectionCommandEditorTest {
         runOp(mEditor.saveClip("number456", "@sel()"));
         add("select 123");
         runOp(mEditor.saveClip("number123", "@sel()"));
+        runOp(mEditor.saveClip("a", ""));
+        runOp(mEditor.saveClip("z", ""));
         runOp(mEditor.selectAll());
         runOp(mEditor.showClipboard());
-        assertThatTextIs("<number123|123>\n<number456|456>\n");
+        assertThatTextIs("<a|>\n<number123|123>\n<number456|456>\n<z|>\n");
     }
 
     @Test

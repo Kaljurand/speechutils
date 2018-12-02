@@ -24,6 +24,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -865,11 +866,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 Map<String, String> clipboard = PreferenceUtils.getPrefMap(mPreferences, mRes, R.string.keyClipboardMap);
                 if (clipboard != null && !clipboard.isEmpty()) {
                     StringBuilder sb = new StringBuilder();
-                    for (Map.Entry entry : clipboard.entrySet()) {
+                    for (String key : new TreeSet<>(clipboard.keySet())) {
                         sb.append('<');
-                        sb.append(entry.getKey());
+                        sb.append(key);
                         sb.append('|');
-                        sb.append(entry.getValue());
+                        sb.append(clipboard.get(key));
                         sb.append('>');
                         sb.append('\n');
                     }
