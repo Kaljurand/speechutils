@@ -14,6 +14,7 @@ import android.os.Parcelable;
 import android.speech.RecognitionService;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.support.annotation.NonNull;
 import android.util.SparseIntArray;
 import android.widget.Toast;
 
@@ -89,7 +90,7 @@ public final class IntentUtils {
                 getSearchIntent(Intent.ACTION_SEARCH, query));
     }
 
-    public static boolean startActivityIfAvailable(Context context, Intent... intents) {
+    public static boolean startActivityIfAvailable(@NonNull Context context, Intent... intents) {
         PackageManager mgr = context.getPackageManager();
         try {
             for (Intent intent : intents) {

@@ -4,7 +4,6 @@ import android.content.Context;
 import android.os.Build;
 import android.support.test.runner.AndroidJUnit4;
 import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputConnection;
 import android.widget.EditText;
 
 import org.junit.Before;
@@ -101,10 +100,9 @@ public class InputConnectionCommandEditorTest {
         EditorInfo editorInfo = new EditorInfo();
         //editorInfo.initialSelStart = 12;
         //editorInfo.initialSelEnd = 19;
-        InputConnection connection = view.onCreateInputConnection(editorInfo);
-        //InputConnection connection = new BaseInputConnection(view, true);
         mEditor = new InputConnectionCommandEditor(context);
-        mEditor.setInputConnection(connection);
+        // maybe: new BaseInputConnection(view, true);
+        mEditor.setInputConnection(view.onCreateInputConnection(editorInfo));
         mEditor.setRewriters(URS);
     }
 

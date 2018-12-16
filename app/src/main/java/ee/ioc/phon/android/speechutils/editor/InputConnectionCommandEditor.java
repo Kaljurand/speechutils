@@ -6,6 +6,7 @@ import android.content.res.Resources;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Pair;
 import android.view.KeyEvent;
@@ -69,17 +70,18 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     private List<UtteranceRewriter> mRewriters;
 
-    public InputConnectionCommandEditor(Context context) {
+    public InputConnectionCommandEditor(@NonNull Context context) {
         mContext = context;
         mPreferences = PreferenceManager.getDefaultSharedPreferences(context);
         mRes = context.getResources();
     }
 
-    public void setInputConnection(InputConnection inputConnection) {
+    public void setInputConnection(@NonNull InputConnection inputConnection) {
         mInputConnection = inputConnection;
     }
 
-    protected InputConnection getInputConnection() {
+    protected @NonNull
+    InputConnection getInputConnection() {
         return mInputConnection;
     }
 
