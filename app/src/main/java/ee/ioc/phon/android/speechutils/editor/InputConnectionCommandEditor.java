@@ -260,10 +260,17 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public Op getUrl(final String url) {
+    public Op getUrl(final String url, final String arg) {
         return new Op("getUrl") {
             @Override
             public Op run() {
+                String selectedText = getSelectedText();
+                final String url1;
+                if (arg != null && !arg.isEmpty()) {
+                    url1 = url.replace(F_SELECTION, selectedText) + HttpUtils.encode(arg.replace(F_SELECTION, selectedText));
+                } else {
+                    url1 = url.replace(F_SELECTION, selectedText);
+                }
                 new AsyncTask<String, Void, String>() {
 
                     @Override
@@ -279,7 +286,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     protected void onPostExecute(String result) {
                         runOp(replaceSel(result));
                     }
-                }.execute(url);
+                }.execute(url1);
                 return Op.NO_OP;
             }
         };

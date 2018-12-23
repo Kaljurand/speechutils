@@ -5,8 +5,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.Map;
 
 import ee.ioc.phon.android.speechutils.Log;
@@ -70,6 +72,15 @@ public class HttpUtils {
             return inputStreamToString(is, 1024);
         } finally {
             closeQuietly(is);
+        }
+    }
+
+    public static String encode(String text) {
+        try {
+            return URLEncoder.encode(text, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            // This should never happen
+            return "";
         }
     }
 

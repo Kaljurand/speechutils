@@ -170,8 +170,10 @@ public interface CommandEditor {
     Op activity(String json);
 
     // Replace cursor with the response of the given URL.
+    // The arg (if not null) is encoded and concatenated to the URL.
     // Executed by AsyncTask.
-    Op getUrl(String url);
+    // E.g. url == "http://api.mathjs.org/v4/?expr="; arg == "@sel+1"
+    Op getUrl(String url, String arg);
 
     // Commands that are not exposed to the end-user in CommandEditorManager
 

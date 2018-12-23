@@ -1323,6 +1323,14 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("Test (test! Test (Test");
     }
 
+    // TODO: make AsyncTask ops testable
+    // @Test
+    public void test211() {
+        add("123 456", "select 123");
+        runOp(mEditor.getUrl("http://api.mathjs.org/v4/?expr=2-3", null));
+        assertThatTextIs("-1 456");
+    }
+
     private String getTextBeforeCursor(int n) {
         return mEditor.getInputConnection().getTextBeforeCursor(n, 0).toString();
     }

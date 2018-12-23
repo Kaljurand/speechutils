@@ -174,7 +174,14 @@ public class CommandEditorManager {
 
         aMap.put(ACTIVITY, (ce, args) -> ce.activity(getArgString(args, 0, null)));
 
-        aMap.put(GET_URL, (ce, args) -> ce.getUrl(getArgString(args, 0, null)));
+        aMap.put(GET_URL, (ce, args) -> {
+            if (args == null || args.length < 1) {
+                return null;
+            }
+            String urlPrefix = args[0];
+            String urlArg = args.length > 1 ? args[1] : null;
+            return ce.getUrl(urlPrefix, urlArg);
+        });
 
         EDITOR_COMMANDS = Collections.unmodifiableMap(aMap);
     }
