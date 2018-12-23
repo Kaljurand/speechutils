@@ -64,7 +64,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         mSampleRate = sampleRate;
         // E.g. 1 second of 16kHz 16-bit mono audio takes 32000 bytes.
         mSamplesInOneSec = RESOLUTION_IN_BYTES * CHANNELS * mSampleRate;
-        mSamplesInOneMilliSec = (int)((double) mSamplesInOneSec / 1000.0);
+        mSamplesInOneMilliSec = (int) ((double) mSamplesInOneSec / 1000.0);
         mRecordingBufferLengthMillis = recordingBufferLengthMillis;
         mRecording = new byte[mSamplesInOneMilliSec * mRecordingBufferLengthMillis];
         mAlwaysListen = alwaysListen;
@@ -141,7 +141,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
             return numOfBytes;
         }
         if (numOfBytes > len) {
-            Log.e("Read more bytes than is buffer length:" + numOfBytes + ": " + len);
+            Log.e("Read more bytes than is buffer length: " + numOfBytes + ": " + len);
             return -100;
         } else if (numOfBytes == 0) {
             Log.e("Read zero bytes");
@@ -164,9 +164,10 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
      * it will not assume that the data is complete and could be fetched but it will act according to
      * the SessionStartPointer configured (e.g. read the buffer from the beginning, from now, or from
      * now - X millis)
+     *
      * @param reachedTheEndOfRecordingBuffer - in case that in the read before the call to this method the recorder
-     *                       passed the end of the buffer and returned to the beginning
-     * @param numOfBytesRead - in the reading process
+     *                                       passed the end of the buffer and returned to the beginning
+     * @param numOfBytesRead                 - in the reading process
      * @return true/false according to the above logic
      */
     private boolean isConsumePointerCrossed(boolean reachedTheEndOfRecordingBuffer, int numOfBytesRead) {
@@ -216,8 +217,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
                 // numOfBytes <= len, typically == len, but at the end of the recording can be < len.
                 System.arraycopy(buffer, 0, mRecording, mRecordedLength, numOfBytes);
                 mRecordedLength += numOfBytes;
-            }
-            else {
+            } else {
                 int numOfBytesBeforeCyclic = mRecording.length - mRecordedLength;
                 System.arraycopy(buffer, 0, mRecording, mRecordedLength, numOfBytesBeforeCyclic);
                 System.arraycopy(buffer, numOfBytesBeforeCyclic, mRecording, 0, numOfBytes - numOfBytesBeforeCyclic);
@@ -288,7 +288,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         int len = getLength() - startPos;
         byte[] bytes = new byte[len];
         System.arraycopy(mRecording, startPos, bytes, 0, len);
-        Log.i("Copied from: " + startPos + ": " + bytes.length + " bytes");
+        Log.i("Copied (raw) from pos: " + startPos + ", bytes: " + bytes.length);
         return bytes;
     }
 

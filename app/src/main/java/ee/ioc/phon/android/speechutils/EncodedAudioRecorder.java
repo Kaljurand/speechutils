@@ -34,10 +34,12 @@ import ee.ioc.phon.android.speechutils.utils.AudioUtils;
 public class EncodedAudioRecorder extends AbstractAudioRecorder {
 
     // Stop encoding if output buffer has not been available that many times.
-    private static final int MAX_NUM_RETRIES_DEQUEUE_OUTPUT_BUFFER = 500;
+    private static final int MAX_NUM_RETRIES_DEQUEUE_OUTPUT_BUFFER = 10;
 
-    // Time period to dequeue a buffer
-    private static final long DEQUEUE_TIMEOUT = 10000;
+    // Timeout in microseconds to dequeue a buffer
+    // TODO: not sure what values are best here (behaves weird with negative values and very large values)
+    private static final long DEQUEUE_INPUT_BUFFER_TIMEOUT = 10000;
+    private static final long DEQUEUE_OUTPUT_BUFFER_TIMEOUT = 10000;
 
     // TODO: Use queue of byte[]
     private final byte[] mRecordingEnc;
@@ -106,23 +108,35 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
     protected void recorderLoop(SpeechRecord speechRecord) {
         mNumBytesSubmitted = 0;
         mNumBytesDequeued = 0;
+        MediaFormat format = MediaFormatFactory.createMediaFormat(MediaFormatFactory.Type.FLAC, getSampleRate());
+        MediaCodec codec = getCodec(format);
+        if (codec == null) {
+            handleError("no codec found");
+        } else {
+            int status = recorderEncoderLoop(codec, speechRecord);
+            if (Log.DEBUG) {
+                AudioUtils.showMetrics(format, mNumBytesSubmitted, mNumBytesDequeued);
+            }
+            if (status < 0) {
+                handleError("encoder error");
+            }
+        }
+    }
+
+    // TODO: we currently return the first suitable codec
+    private MediaCodec getCodec(MediaFormat format) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-            MediaFormat format = MediaFormatFactory.createMediaFormat(MediaFormatFactory.Type.FLAC, getSampleRate());
             List<String> componentNames = AudioUtils.getEncoderNamesForType(format.getString(MediaFormat.KEY_MIME));
             for (String componentName : componentNames) {
                 Log.i("component/format: " + componentName + "/" + format);
                 MediaCodec codec = AudioUtils.createCodec(componentName, format);
                 if (codec != null) {
-                    recorderEncoderLoop(codec, speechRecord);
-                    if (Log.DEBUG) {
-                        AudioUtils.showMetrics(format, mNumBytesSubmitted, mNumBytesDequeued);
-                    }
-                    break; // TODO: we use the first one that is suitable
+                    return codec;
                 }
             }
         }
+        return null;
     }
-
 
     private int getConsumedEncLength() {
         return mConsumedEncLength;
@@ -154,7 +168,7 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
         int len = getRecordedEncLength() - startPos;
         byte[] bytes = new byte[len];
         System.arraycopy(mRecordingEnc, startPos, bytes, 0, len);
-        Log.i("Copied from: " + startPos + ": " + bytes.length + " bytes");
+        Log.i("Copied (enc) from pos: " + startPos + ", bytes: " + bytes.length);
         return bytes;
     }
 
@@ -222,7 +236,8 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
      * Buffers containing codec-specific-data have no meaningful timestamps.
      */
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-    private void recorderEncoderLoop(MediaCodec codec, SpeechRecord speechRecord) {
+    private int recorderEncoderLoop(MediaCodec codec, SpeechRecord speechRecord) {
+        int status = -1;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             codec.start();
             // Getting some buffers (e.g. 4 of each) to communicate with the codec
@@ -230,11 +245,11 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
             ByteBuffer[] codecOutputBuffers = codec.getOutputBuffers();
             Log.i("input buffers " + codecInputBuffers.length + "; output buffers: " + codecOutputBuffers.length);
             boolean doneSubmittingInput = false;
-            int numRetriesDequeueOutputBuffer = 0;
+            int numDequeueOutputBufferTimeout = 0;
             int index;
             while (true) {
                 if (!doneSubmittingInput) {
-                    index = codec.dequeueInputBuffer(DEQUEUE_TIMEOUT);
+                    index = codec.dequeueInputBuffer(DEQUEUE_INPUT_BUFFER_TIMEOUT);
                     if (index >= 0) {
                         int size = queueInputBuffer(codec, codecInputBuffers, index, speechRecord);
                         if (size == -1) {
@@ -250,11 +265,12 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
                     }
                 }
                 MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
-                index = codec.dequeueOutputBuffer(info, DEQUEUE_TIMEOUT);
+                index = codec.dequeueOutputBuffer(info, DEQUEUE_OUTPUT_BUFFER_TIMEOUT);
                 Log.i("enc: out: flags/index: " + info.flags + "/" + index);
                 if (index == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                    Log.i("enc: out: INFO_TRY_AGAIN_LATER: " + numRetriesDequeueOutputBuffer);
-                    if (++numRetriesDequeueOutputBuffer > MAX_NUM_RETRIES_DEQUEUE_OUTPUT_BUFFER) {
+                    numDequeueOutputBufferTimeout++;
+                    Log.i("enc: out: INFO_TRY_AGAIN_LATER: " + numDequeueOutputBufferTimeout);
+                    if (numDequeueOutputBufferTimeout > MAX_NUM_RETRIES_DEQUEUE_OUTPUT_BUFFER) {
                         break;
                     }
                 } else if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
@@ -266,14 +282,18 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
                 } else {
                     dequeueOutputBuffer(codec, codecOutputBuffers, index, info);
                     mNumBytesDequeued += info.size;
+                    numDequeueOutputBufferTimeout = 0;
                     if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                         Log.i("enc: out: EOS");
+                        status = 0;
                         break;
                     }
                 }
             }
             codec.stop();
             codec.release();
+            Log.i("stopped and released codec");
         }
+        return status;
     }
 }
