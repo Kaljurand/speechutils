@@ -1,5 +1,6 @@
 package ee.ioc.phon.android.speechutils.editor;
 
+import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Pair;
 
@@ -70,6 +71,44 @@ public class Command {
     }
 
     /**
+     * TODO: experimental
+     *
+     * @param colId Column name
+     * @return field value from the given column, converted to String
+     */
+    public String get(@NonNull String colId) {
+        switch (colId) {
+            case UtteranceRewriter.HEADER_COMMENT:
+                return mComment;
+            case UtteranceRewriter.HEADER_LOCALE:
+                return mLocale.pattern();
+            case UtteranceRewriter.HEADER_SERVICE:
+                return mService.pattern();
+            case UtteranceRewriter.HEADER_APP:
+                return mApp.pattern();
+            case UtteranceRewriter.HEADER_UTTERANCE:
+                return unre(mUtt.pattern());
+            case UtteranceRewriter.HEADER_REPLACEMENT:
+                return mReplacement;
+            case UtteranceRewriter.HEADER_COMMAND:
+                return mCommand;
+            case UtteranceRewriter.HEADER_ARG1:
+                if (mArgs.length > 0) {
+                    return mArgs[0];
+                }
+                break;
+            case UtteranceRewriter.HEADER_ARG2:
+                if (mArgs.length > 1) {
+                    return mArgs[1];
+                }
+                break;
+            default:
+                break;
+        }
+        return null;
+    }
+
+    /**
      * Parses the given string.
      * If the entire string matches the utterance pattern, then extracts the arguments as well.
      * Example:
@@ -113,6 +152,8 @@ public class Command {
      * command ID (which does not contain spaces).
      *
      * @return pretty-printed command
+     * <p>
+     * TODO: simplify to accept List<String> as input (because keys are not used)
      */
     public String toPp(SortedMap<Integer, String> header) {
         StringBuilder sb = new StringBuilder();
@@ -166,6 +207,7 @@ public class Command {
         return sb.toString();
     }
 
+    // TODO: simplify to accept List<String> as input (because keys are not used)
     public String toTsv(SortedMap<Integer, String> header) {
         StringBuilder sb = new StringBuilder();
         boolean isFirst = true;
@@ -220,6 +262,16 @@ public class Command {
 
     private static String pp(Object str) {
         return escape(str).replace(" ", "·");
+    }
+
+    /**
+     * Removes ^ and $ from the given regex
+     * TODO: experimental
+     */
+    private static String unre(String re) {
+        if (re.startsWith("^")) re = re.substring(1);
+        if (re.endsWith("$")) re = re.substring(0, re.length() - 1);
+        return re;
     }
 
     /**

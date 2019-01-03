@@ -2,6 +2,7 @@ package ee.ioc.phon.android.speechutils.utils;
 
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.support.annotation.NonNull;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -117,6 +118,7 @@ public class PreferenceUtils {
         return prefs.getStringSet(res.getString(nameId), Collections.<String>emptySet());
     }
 
+    @NonNull
     public static Map<String, String> getPrefMap(SharedPreferences prefs, Resources res, int nameId) {
         String name = res.getString(nameId);
         Set<String> keys = prefs.getStringSet(name, Collections.<String>emptySet());

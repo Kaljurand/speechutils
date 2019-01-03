@@ -2,6 +2,7 @@ package ee.ioc.phon.android.speechutils.editor;
 
 import android.content.ContentResolver;
 import android.net.Uri;
+import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Pair;
 
@@ -280,6 +281,11 @@ public class UtteranceRewriter {
             }
         }
         return new Rewrite(str);
+    }
+
+    @NonNull
+    public List<Command> getCommands() {
+        return mCommandHolder.getCommands();
     }
 
     /**
