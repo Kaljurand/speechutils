@@ -905,32 +905,43 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     // TODO: share code with deleteLeftWord
     @Override
-    public Op deleteLeftChars(final int numOfChars) {
-        return new Op("deleteLeftChars") {
+    public Op deleteChars(final int before, final int after) {
+        return new Op("deleteChars") {
             @Override
             public Op run() {
                 Op undo = null;
-                boolean success = false;
+                boolean success;
                 mInputConnection.beginBatchEdit();
                 // If something is selected then delete the selection and return
                 final String oldText = getSelectedText();
                 if (oldText.length() > 0) {
                     undo = getCommitTextOp(oldText, "").run();
                 } else {
-                    final CharSequence cs = mInputConnection.getTextBeforeCursor(numOfChars, 0);
-                    if (cs != null) {
-                        success = deleteSurrounding(numOfChars, 0);
-                        if (success) {
-                            mInputConnection.endBatchEdit();
-                            undo = new Op("commitText: " + cs) {
-                                @Override
-                                public Op run() {
-                                    if (mInputConnection.commitText(cs, 0)) {
-                                        return NO_OP;
+                    if (before > 0 || after > 0) {
+                        CharSequence csBefore = "";
+                        CharSequence csAfter = "";
+                        if (before > 0) {
+                            csBefore = mInputConnection.getTextBeforeCursor(before, 0);
+                        }
+                        if (after > 0) {
+                            csAfter = mInputConnection.getTextAfterCursor(after, 0);
+                        }
+                        if (csBefore != null && csAfter != null &&
+                                csBefore.length() == before && csAfter.length() == after) {
+                            success = deleteSurrounding(before, after);
+                            if (success) {
+                                mInputConnection.endBatchEdit();
+                                final CharSequence cs = csBefore.toString() + csAfter.toString();
+                                undo = new Op("commitText: " + cs) {
+                                    @Override
+                                    public Op run() {
+                                        if (mInputConnection.commitText(cs, 0)) {
+                                            return NO_OP;
+                                        }
+                                        return null;
                                     }
-                                    return null;
-                                }
-                            };
+                                };
+                            }
                         }
                     }
                 }

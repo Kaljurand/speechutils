@@ -22,6 +22,7 @@ public class CommandEditorManager {
     public static final String CUT_ALL = "cutAll";
     public static final String DELETE_ALL = "deleteAll";
     public static final String COPY_ALL = "copyAll";
+    public static final String DELETE_CHARS = "deleteChars";
     public static final String DELETE_LEFT_WORD = "deleteLeftWord";
     public static final String REPLACE = "replace";
     public static final String REPLACE_SEL = "replaceSel";
@@ -111,6 +112,21 @@ public class CommandEditorManager {
                 return null;
             }
             return ce.replaceSelRe(args[0], args[1]);
+        });
+
+        aMap.put(DELETE_CHARS, (ce, args) -> {
+            if (args != null && args.length > 0) {
+                try {
+                    int before = Integer.parseInt(args[0]);
+                    int after = args.length > 1 ? Integer.parseInt(args[1]) : 0;
+                    if (before >= 0 || after >= 0) {
+                        return ce.deleteChars(before, after);
+                    }
+                } catch (NumberFormatException e) {
+                    // Intentional
+                }
+            }
+            return null;
         });
 
         aMap.put(DELETE_LEFT_WORD, (ce, args) -> ce.deleteLeftWord());

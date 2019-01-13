@@ -1175,23 +1175,27 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("789123 456 ");
     }
 
+    /**
+     * Because below there is always a selection before deleteChars is applied,
+     * it ignores its args and just deletes the selection.
+     */
     @Test
     public void test101() {
         add("1234567890");
         runOp(mEditor.moveRel(-5));
         runOp(mEditor.moveRelSel(2, 1));
-        runOp(mEditor.deleteLeftChars(2));
+        runOp(mEditor.deleteChars(100, 100));
         assertThatTextIs("12345890");
         runOp(mEditor.moveRelSel(-2, 0));
-        runOp(mEditor.deleteLeftChars(1));
+        runOp(mEditor.deleteChars(1, 0));
         assertThatTextIs("123890");
         // Cursor ends cross
         runOp(mEditor.moveRelSel(-2, 1));
-        runOp(mEditor.deleteLeftChars(2));
+        runOp(mEditor.deleteChars(2, 0));
         assertThatTextIs("1890");
         runOp(mEditor.moveRelSel(2, 1));
         runOp(mEditor.moveRelSel(1, 0));
-        runOp(mEditor.deleteLeftChars(1));
+        runOp(mEditor.deleteChars(1, 0));
         assertThatTextIs("180");
         undo(9);
         assertThatTextIs("1234567890");
@@ -1213,11 +1217,22 @@ public class InputConnectionCommandEditorTest {
     public void test103() {
         add("\uD83D\uDE03");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            runOp(mEditor.deleteLeftChars(1));
+            runOp(mEditor.deleteChars(1, 0));
         } else {
-            runOp(mEditor.deleteLeftChars(2));
+            runOp(mEditor.deleteChars(2, 0));
         }
         assertThatTextIs("");
+    }
+
+    @Test
+    public void test104() {
+        String initial = "123456789";
+        add(initial);
+        runOp(mEditor.moveRel(-5));
+        runOp(mEditor.deleteChars(2, 3));
+        assertThatTextIs("1289");
+        runOp(mEditor.undo(1));
+        assertThatTextIs(initial);
     }
 
     // Can't create handler inside thread that has not called Looper.prepare()
