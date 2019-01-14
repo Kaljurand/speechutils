@@ -1184,18 +1184,18 @@ public class InputConnectionCommandEditorTest {
         add("1234567890");
         runOp(mEditor.moveRel(-5));
         runOp(mEditor.moveRelSel(2, 1));
-        runOp(mEditor.deleteChars(100, 100));
+        runOp(mEditor.deleteChars(100));
         assertThatTextIs("12345890");
         runOp(mEditor.moveRelSel(-2, 0));
-        runOp(mEditor.deleteChars(1, 0));
+        runOp(mEditor.deleteChars(1));
         assertThatTextIs("123890");
         // Cursor ends cross
         runOp(mEditor.moveRelSel(-2, 1));
-        runOp(mEditor.deleteChars(2, 0));
+        runOp(mEditor.deleteChars(2));
         assertThatTextIs("1890");
         runOp(mEditor.moveRelSel(2, 1));
         runOp(mEditor.moveRelSel(1, 0));
-        runOp(mEditor.deleteChars(1, 0));
+        runOp(mEditor.deleteChars(1));
         assertThatTextIs("180");
         undo(9);
         assertThatTextIs("1234567890");
@@ -1217,9 +1217,9 @@ public class InputConnectionCommandEditorTest {
     public void test103() {
         add("\uD83D\uDE03");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            runOp(mEditor.deleteChars(1, 0));
+            runOp(mEditor.deleteChars(-1));
         } else {
-            runOp(mEditor.deleteChars(2, 0));
+            runOp(mEditor.deleteChars(-2));
         }
         assertThatTextIs("");
     }
@@ -1229,10 +1229,23 @@ public class InputConnectionCommandEditorTest {
         String initial = "123456789";
         add(initial);
         runOp(mEditor.moveRel(-5));
-        runOp(mEditor.deleteChars(2, 3));
+        runOp(mEditor.deleteChars(-2));
+        runOp(mEditor.deleteChars(3));
         assertThatTextIs("1289");
-        runOp(mEditor.undo(1));
+        runOp(mEditor.undo(2));
         assertThatTextIs(initial);
+    }
+
+    @Test
+    public void test105() {
+        String str = "Word1 word2";
+        add(str);
+        runOp(mEditor.deleteLeftWord());
+        assertThatTextIs("Word1");
+        undo();
+        assertThatTextIs(str);
+        runOp(mEditor.deleteLeftWord());
+        assertThatTextIs("Word1");
     }
 
     // Can't create handler inside thread that has not called Looper.prepare()

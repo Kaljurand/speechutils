@@ -110,9 +110,14 @@ public interface CommandEditor {
     // Clear the clipboard
     Op clearClipboard();
 
-    // Delete the given numbers of character immediately to the left and to the right of the cursor.
-    // In case there is a selection, then the selection is deleted instead.
-    Op deleteChars(int numOfCharsBefore, int numOfCharsAfter);
+    /**
+     * Delete the given numbers of character either to the left and to the right of the cursor.
+     * In case there is a selection, then the selection is deleted instead.
+     *
+     * @param numOfChars number of chars to delete, if negative then from the left, if positive then from the right
+     * @return Op
+     */
+    Op deleteChars(int numOfChars);
 
     // Delete the word immediately to the left.
     // In case there is a selection, then the selection is deleted.

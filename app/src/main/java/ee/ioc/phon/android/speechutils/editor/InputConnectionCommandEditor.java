@@ -600,7 +600,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                             undo = new Op("commitText: " + cs) {
                                 @Override
                                 public Op run() {
-                                    if (mInputConnection.commitText(cs, 0)) {
+                                    if (mInputConnection.commitText(cs, 1)) {
                                         return NO_OP;
                                     }
                                     return null;
@@ -905,7 +905,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     // TODO: share code with deleteLeftWord
     @Override
-    public Op deleteChars(final int before, final int after) {
+    public Op deleteChars(final int numOfChars) {
         return new Op("deleteChars") {
             @Override
             public Op run() {
@@ -917,25 +917,31 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 if (oldText.length() > 0) {
                     undo = getCommitTextOp(oldText, "").run();
                 } else {
-                    if (before > 0 || after > 0) {
-                        CharSequence csBefore = "";
-                        CharSequence csAfter = "";
-                        if (before > 0) {
-                            csBefore = mInputConnection.getTextBeforeCursor(before, 0);
+                    if (numOfChars != 0) {
+                        final int num;
+                        final CharSequence cs;
+                        if (numOfChars < 0) {
+                            num = -1 * numOfChars;
+                            cs = mInputConnection.getTextBeforeCursor(num, 0);
+                        } else {
+                            num = numOfChars;
+                            cs = mInputConnection.getTextAfterCursor(num, 0);
                         }
-                        if (after > 0) {
-                            csAfter = mInputConnection.getTextAfterCursor(after, 0);
-                        }
-                        if (csBefore != null && csAfter != null &&
-                                csBefore.length() == before && csAfter.length() == after) {
-                            success = deleteSurrounding(before, after);
+                        if (cs != null && cs.length() == num) {
+                            final int newCursorPos;
+                            if (numOfChars < 0) {
+                                success = deleteSurrounding(num, 0);
+                                newCursorPos = 1;
+                            } else {
+                                success = deleteSurrounding(0, num);
+                                newCursorPos = 0;
+                            }
                             if (success) {
                                 mInputConnection.endBatchEdit();
-                                final CharSequence cs = csBefore.toString() + csAfter.toString();
                                 undo = new Op("commitText: " + cs) {
                                     @Override
                                     public Op run() {
-                                        if (mInputConnection.commitText(cs, 0)) {
+                                        if (mInputConnection.commitText(cs, newCursorPos)) {
                                             return NO_OP;
                                         }
                                         return null;
