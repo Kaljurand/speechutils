@@ -4,6 +4,9 @@ import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Pair;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -146,65 +149,46 @@ public class Command {
         }
     }
 
-    /**
-     * Pretty-prints the command by putting the components of the command onto separate lines,
-     * and marks spaces with middot in every component except for the human-readable comment and the
-     * command ID (which does not contain spaces).
-     *
-     * @return pretty-printed command
-     * <p>
-     * TODO: simplify to accept List<String> as input (because keys are not used)
-     */
-    public String toPp(SortedMap<Integer, String> header) {
-        StringBuilder sb = new StringBuilder();
-        boolean isFirst = true;
-        for (SortedMap.Entry<Integer, String> entry : header.entrySet()) {
-            if (isFirst) {
-                isFirst = false;
-            } else {
-                sb.append('\n');
-            }
-            switch (entry.getValue()) {
+    public Map<String, String> toMap(Collection<String> header) {
+        Map<String, String> map = new HashMap<>();
+        for (String colName : header) {
+            switch (colName) {
                 case UtteranceRewriter.HEADER_COMMENT:
-                    if (mComment != null) {
-                        sb.append(mComment);
-                    }
+                    map.put(UtteranceRewriter.HEADER_COMMENT, mComment);
                     break;
                 case UtteranceRewriter.HEADER_LOCALE:
-                    sb.append(pp(mLocale));
+                    map.put(UtteranceRewriter.HEADER_LOCALE, mLocale.pattern());
                     break;
                 case UtteranceRewriter.HEADER_SERVICE:
-                    sb.append(pp(mService));
+                    map.put(UtteranceRewriter.HEADER_SERVICE, mService.pattern());
                     break;
                 case UtteranceRewriter.HEADER_APP:
-                    sb.append(pp(mApp));
+                    map.put(UtteranceRewriter.HEADER_APP, mApp.pattern());
                     break;
                 case UtteranceRewriter.HEADER_UTTERANCE:
-                    sb.append(pp(mUtt));
+                    map.put(UtteranceRewriter.HEADER_UTTERANCE, mUtt.pattern());
                     break;
                 case UtteranceRewriter.HEADER_REPLACEMENT:
-                    sb.append(pp(mReplacement));
+                    map.put(UtteranceRewriter.HEADER_REPLACEMENT, mReplacement);
                     break;
                 case UtteranceRewriter.HEADER_COMMAND:
-                    if (mCommand != null) {
-                        sb.append(mCommand);
-                    }
+                    map.put(UtteranceRewriter.HEADER_COMMAND, mCommand);
                     break;
                 case UtteranceRewriter.HEADER_ARG1:
                     if (mArgs.length > 0) {
-                        sb.append(pp(mArgs[0]));
+                        map.put(UtteranceRewriter.HEADER_ARG1, mArgs[0]);
                     }
                     break;
                 case UtteranceRewriter.HEADER_ARG2:
                     if (mArgs.length > 1) {
-                        sb.append(pp(mArgs[1]));
+                        map.put(UtteranceRewriter.HEADER_ARG2, mArgs[1]);
                     }
                     break;
                 default:
                     break;
             }
         }
-        return sb.toString();
+        return map;
     }
 
     // TODO: simplify to accept List<String> as input (because keys are not used)
@@ -258,10 +242,6 @@ public class Command {
 
     public String toString() {
         return mUtt + "/" + mReplacement + "/" + mCommand + "(" + mArgsAsStr + ")";
-    }
-
-    private static String pp(Object str) {
-        return escape(str).replace(" ", "·");
     }
 
     /**

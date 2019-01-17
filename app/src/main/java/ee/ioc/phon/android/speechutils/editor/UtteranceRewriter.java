@@ -122,7 +122,7 @@ public class UtteranceRewriter {
         }
     }
 
-    private static class CommandHolder {
+    public static class CommandHolder {
         // Line that starts with "#" or consists entirely of 0 or more tabs.
         // Must be used with "lookingAt()".
         private static final Pattern PATTERN_EMPTY_ROW = Pattern.compile("#|\t*$");
@@ -313,14 +313,8 @@ public class UtteranceRewriter {
         return stringBuilder.toString();
     }
 
-    public String[] toStringArray() {
-        SortedMap<Integer, String> header = mCommandHolder.getHeader();
-        String[] array = new String[mCommandHolder.size()];
-        int i = 0;
-        for (Command command : mCommandHolder.getCommands()) {
-            array[i++] = command.toPp(header);
-        }
-        return array;
+    public CommandHolder getCommandHolder() {
+        return mCommandHolder;
     }
 
     public String[] getErrorsAsStringArray() {
