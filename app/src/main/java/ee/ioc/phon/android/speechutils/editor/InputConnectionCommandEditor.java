@@ -116,6 +116,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return true;
     }
 
+    /**
+     * TODO: this is used only by the tests...
+     * TODO: maybe avoid combineOps, i.e. return null, if ops is empty; and return op if ops is singleton
+     *
+     * @param text Text to generate an Op from
+     * @return
+     */
     @Override
     public Op getOpFromText(final String text) {
         List<Op> ops = new ArrayList<>();
@@ -141,6 +148,39 @@ public class InputConnectionCommandEditor implements CommandEditor {
             ops.add(getCommitWithOverwriteOp(newText));
         }
         return combineOps(ops);
+    }
+
+    @Override
+    public Op getOpOrNull(@NonNull final String text) {
+        List<Op> ops = new ArrayList<>();
+        boolean isCommand = false;
+        String newText = text;
+        for (UtteranceRewriter ur : mRewriters) {
+            if (ur == null) {
+                continue;
+            }
+            UtteranceRewriter.Rewrite rewrite = ur.getRewrite(text);
+            newText = rewrite.mStr;
+            if (rewrite.isCommand()) {
+                isCommand = true;
+                ops.add(getCommitWithOverwriteOp(newText));
+                CommandEditorManager.EditorCommand ec = CommandEditorManager.get(rewrite.mId);
+                if (ec != null) {
+                    ops.add(ec.getOp(this, rewrite.mArgs));
+                }
+                break;
+            }
+        }
+        // If is command, then the 2 ops will be combined.
+        if (isCommand) {
+            return combineOps(ops);
+        }
+        // If not command and was changed by the rewrite rules, then return the single op.
+        if (!text.equals(newText)) {
+            return getCommitWithOverwriteOp(newText);
+        }
+        // Otherwise return null.
+        return null;
     }
 
     @Override

@@ -6,7 +6,6 @@ import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
-import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageButton;
@@ -16,6 +15,7 @@ import java.util.List;
 
 import ee.ioc.phon.android.speechutils.R;
 
+// TODO: rather use android.support.design.widget.FloatingActionButton
 public class MicButton extends ImageButton {
 
     public enum State {
@@ -128,16 +128,13 @@ public class MicButton extends ImageButton {
         initAnimations(context);
 
         // Vibrate when the microphone key is pressed down
-        setOnTouchListener(new OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                    // TODO: what is the diff between KEYBOARD_TAP and the other constants?
-                    // TODO: does not seem to work on Android 7.1
-                    v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                }
-                return false;
+        setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                // TODO: what is the diff between KEYBOARD_TAP and the other constants?
+                // TODO: does not seem to work on Android 7.1
+                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
             }
+            return false;
         });
     }
 }

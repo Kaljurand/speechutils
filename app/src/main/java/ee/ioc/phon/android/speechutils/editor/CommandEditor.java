@@ -177,7 +177,7 @@ public interface CommandEditor {
     // Replace cursor with the response of the given URL.
     // The arg (if not null) is encoded and concatenated to the URL.
     // Executed by AsyncTask.
-    // E.g. url == "http://api.mathjs.org/v4/?expr="; arg == "@sel+1"
+    // E.g. url == "http://api.mathjs.org/v4/?expr="; arg == "@sel()+1"
     Op getUrl(String url, String arg);
 
     // Commands that are not exposed to the end-user in CommandEditorManager
@@ -201,6 +201,15 @@ public interface CommandEditor {
     Deque<Op> getUndoStack();
 
     Op combineOps(Collection<Op> ops);
+
+    /**
+     * Convert the given text into an op, if some rewrite rules trigger on it.
+     * Otherwise return null.
+     *
+     * @param text Input text
+     * @return Op or null
+     */
+    Op getOpOrNull(String text);
 
     Op getOpFromText(String text);
 
