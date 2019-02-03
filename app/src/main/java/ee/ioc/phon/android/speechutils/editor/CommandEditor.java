@@ -61,10 +61,27 @@ public interface CommandEditor {
     // Supports function @sel() to refer to the content of the current selection.
     Op select(String str);
 
-    // Move cursor left to the matching regex
+    /**
+     * Move cursor left to the matching regex.
+     * Supports function @sel() to refer to the content of the current selection.
+     * The content of the selection is interpreted as a (part of a) regular expression, i.e. "."
+     * refers to any character, not a ".".
+     *
+     * @param regex regular expression to be searched
+     * @return Op
+     */
     Op selectReBefore(String regex);
 
-    // Move cursor right to the Nth matching regex
+    /**
+     * Move cursor right to the Nth matching regex.
+     * Supports function @sel() to refer to the content of the current selection.
+     * The content of the selection is interpreted as a (part of a) regular expression, i.e. "."
+     * refers to any character, not a ".".
+     *
+     * @param regex regular expression to be searched
+     * @param n     number of matches before stopping the search
+     * @return Op
+     */
     Op selectReAfter(String regex, int n);
 
     // Extend the cursor to match the given regex

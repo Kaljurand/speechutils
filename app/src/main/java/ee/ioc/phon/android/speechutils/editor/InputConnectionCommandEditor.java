@@ -639,8 +639,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 final ExtractedText et = getExtractedText();
                 if (et != null) {
                     CharSequence input = et.text.subSequence(0, et.selectionStart);
+                    CharSequence selectedText = et.text.subSequence(et.selectionStart, et.selectionEnd);
                     // 0 == last match
-                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex), input, 0);
+                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex.replace(F_SELECTION, selectedText)), input, 0);
                     if (pos != null) {
                         undo = getOpSetSelection(pos.first, pos.second, et.selectionStart, et.selectionEnd).run();
                     }
@@ -661,7 +662,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 final ExtractedText et = getExtractedText();
                 if (et != null) {
                     CharSequence input = et.text.subSequence(et.selectionEnd, et.text.length());
-                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex), input, n);
+                    CharSequence selectedText = et.text.subSequence(et.selectionStart, et.selectionEnd);
+                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex.replace(F_SELECTION, selectedText)), input, n);
                     if (pos != null) {
                         undo = getOpSetSelection(et.selectionEnd + pos.first, et.selectionEnd + pos.second, et.selectionStart, et.selectionEnd).run();
                     }
@@ -867,7 +869,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
             public Op run() {
                 Op undo = null;
                 Map<String, String> clipboard = PreferenceUtils.getPrefMap(mPreferences, mRes, R.string.keyClipboardMap);
-                if (clipboard != null && !clipboard.isEmpty()) {
+                if (!clipboard.isEmpty()) {
                     StringBuilder sb = new StringBuilder();
                     for (String key : new TreeSet<>(clipboard.keySet())) {
                         sb.append('<');

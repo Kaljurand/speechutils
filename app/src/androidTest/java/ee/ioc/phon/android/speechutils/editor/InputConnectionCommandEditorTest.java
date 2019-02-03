@@ -69,6 +69,8 @@ public class InputConnectionCommandEditorTest {
         list2.add(new Command("second_number", "", "selectReAfter", new String[]{"(\\d)\\.", "2"}));
         list2.add(new Command("next_word", "", "selectReAfter", new String[]{"\\b(.+?)\\b"}));
         list2.add(new Command("next_next_word", "", "selectReAfter", new String[]{"\\b(.+?)\\b", "2"}));
+        list2.add(new Command("prev_sel", "", "selectReBefore", new String[]{"@sel()"}));
+        list2.add(new Command("next_sel", "", "selectReAfter", new String[]{"@sel()"}));
         list2.add(new Command("code (\\d+)", "", "keyCode", new String[]{"$1"}));
         list2.add(new Command("code letter (.)", "", "keyCodeStr", new String[]{"$1"}));
         list2.add(new Command("undo (\\d+)", "", "undo", new String[]{"$1"}));
@@ -1246,6 +1248,31 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs(str);
         runOp(mEditor.deleteLeftWord());
         assertThatTextIs("Word1");
+    }
+
+    @Test
+    public void test106() {
+        add("1 2 3 1 2 3 1 2 3");
+        runOp(mEditor.selectReBefore("2"));
+        add("apply 2");
+        add("next_sel");
+        add("*");
+        assertThatTextIs("1 2 3 1 * 3 1 2 3");
+        runOp(mEditor.selectReAfter("2", 1));
+        add("prev_sel");
+        add("*");
+        assertThatTextIs("1 * 3 1 * 3 1 2 3");
+        undo(2);
+        add("*");
+        assertThatTextIs("1 2 3 1 * 3 1 * 3");
+        runOp(mEditor.selectReBefore("1"));
+        add("apply 2");
+        add("next_sel");
+        add("*");
+        assertThatTextIs("1 2 3 * * 3 1 * 3");
+        undo(3);
+        add("*");
+        assertThatTextIs("1 2 3 1 * 3 * * 3");
     }
 
     // Can't create handler inside thread that has not called Looper.prepare()
