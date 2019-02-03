@@ -949,13 +949,14 @@ public class InputConnectionCommandEditorTest {
         runOpFromText("123");
         runOpFromText("456");
         assertThatTextIs("123 456");
-        assertThatOpStackIs("[[add 456], [add 123]]");
-        assertThatUndoStackIs("[[delete 4], [delete 3]]");
+        assertThatOpStackIs("[add 456, add 123]");
+        assertThatUndoStackIs("[delete 4, delete 3]");
         runOpFromText("select 7");
-        assertThatOpStackIs("[[add 456], [add 123]]");
-        assertThatUndoStackIs("[[delete 4], [delete 3]]");
+        // Here stacks should remain the same because "select 7" fails.
+        assertThatOpStackIs("[add 456, add 123]");
+        assertThatUndoStackIs("[delete 4, delete 3]");
         runOpFromText("undo 1");
-        assertThatTextIs("");
+        assertThatTextIs("123");
     }
 
     /**
@@ -1438,6 +1439,9 @@ public class InputConnectionCommandEditorTest {
     }
 
     private void runOpFromText(String text) {
-        runOp(mEditor.getOpOrNull(text, true));
+        Op op = mEditor.getOpOrNull(text, true);
+        assertNotNull(op);
+        // Op can fail
+        mEditor.runOp(op);
     }
 }

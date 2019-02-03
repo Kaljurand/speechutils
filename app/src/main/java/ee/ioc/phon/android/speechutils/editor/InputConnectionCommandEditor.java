@@ -126,14 +126,16 @@ public class InputConnectionCommandEditor implements CommandEditor {
             UtteranceRewriter.Rewrite rewrite = ur.getRewrite(text);
             newText = rewrite.mStr;
             if (rewrite.isCommand()) {
-                Op op = getCommitWithOverwriteOp(newText, true);
                 CommandEditorManager.EditorCommand ec = CommandEditorManager.get(rewrite.mId);
                 if (ec == null) {
-                    return op;
+                    return null;
                 } else {
+                    if (newText.isEmpty()) {
+                        return ec.getOp(this, rewrite.mArgs);
+                    }
                     // If is command, then the 2 ops will be combined.
                     List<Op> ops = new ArrayList<>();
-                    ops.add(op);
+                    ops.add(getCommitWithOverwriteOp(newText, true));
                     ops.add(ec.getOp(this, rewrite.mArgs));
                     return combineOps(ops);
                 }
@@ -522,11 +524,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 final Deque<Op> combination = new ArrayDeque<>();
                 mInputConnection.beginBatchEdit();
                 for (Op op : ops) {
-                    Op undo = op.run();
-                    if (undo == null) {
-                        break;
+                    if (op != null && !op.isNoOp()) {
+                        Op undo = op.run();
+                        if (undo == null) {
+                            break;
+                        }
+                        combination.push(undo);
                     }
-                    combination.push(undo);
                 }
                 mInputConnection.endBatchEdit();
                 return new Op(combination.toString(), combination.size()) {
@@ -1120,16 +1124,19 @@ public class InputConnectionCommandEditor implements CommandEditor {
      * TODO: review
      * we should be able to review the last N ops and undo them if they can be interpreted as
      * a combined op.
-     * TODO: improve the case where addedLength == 0
      */
-    private Op getCommitWithOverwriteOp(final String text, boolean isCommand) {
+    private Op getCommitWithOverwriteOp(final String text, final boolean isCommand) {
         return new Op("add " + text) {
             @Override
             public Op run() {
                 mInputConnection.beginBatchEdit();
                 final ExtractedText et = getExtractedText();
                 final String selectedText = getSelectedText();
-                final int addedLength = maybeCommit(text, !selectedText.isEmpty() && isCommand);
+                if (text.isEmpty() && !selectedText.isEmpty() && isCommand) {
+                    mInputConnection.endBatchEdit();
+                    return null;
+                }
+                final int addedLength = commitWithOverwrite(text, true);
                 mInputConnection.endBatchEdit();
                 return new Op("delete " + addedLength) {
                     @Override
