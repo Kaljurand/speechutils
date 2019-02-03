@@ -761,8 +761,8 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test65() {
-        runOp(mEditor.getOpFromText("123"));
-        runOp(mEditor.getOpFromText("apply 2"));
+        runOpFromText("123");
+        runOpFromText("apply 2");
         assertThatTextIs("123 123 123");
     }
 
@@ -927,15 +927,15 @@ public class InputConnectionCommandEditorTest {
 
     @Test
     public void test78() {
-        runOp(mEditor.getOpFromText("123"));
+        runOpFromText("123");
         assertThatTextIs("123");
-        runOp(mEditor.getOpFromText("undo 1"));
+        runOpFromText("undo 1");
         assertThatTextIs("");
-        runOp(mEditor.getOpFromText("123"));
-        runOp(mEditor.getOpFromText("select 2"));
-        runOp(mEditor.getOpFromText("selection_replace _"));
+        runOpFromText("123");
+        runOpFromText("select 2");
+        runOpFromText("selection_replace _");
         assertThatTextIs("1_3");
-        runOp(mEditor.getOpFromText("undo 1"));
+        runOpFromText("undo 1");
         assertThatTextIs("123");
     }
 
@@ -944,15 +944,15 @@ public class InputConnectionCommandEditorTest {
      */
     @Test
     public void test79() {
-        runOp(mEditor.getOpFromText("123"));
-        runOp(mEditor.getOpFromText("456"));
+        runOpFromText("123");
+        runOpFromText("456");
         assertThatTextIs("123 456");
         assertThatOpStackIs("[[add 456], [add 123]]");
         assertThatUndoStackIs("[[delete 4], [delete 3]]");
-        runOp(mEditor.getOpFromText("select 7"));
+        runOpFromText("select 7");
         assertThatOpStackIs("[[add 456], [add 123]]");
         assertThatUndoStackIs("[[delete 4], [delete 3]]");
-        runOp(mEditor.getOpFromText("undo 1"));
+        runOpFromText("undo 1");
         assertThatTextIs("");
     }
 
@@ -1408,5 +1408,9 @@ public class InputConnectionCommandEditorTest {
     private void runOpThatFails(Op op) {
         assertNotNull(op);
         assertFalse(mEditor.runOp(op));
+    }
+
+    private void runOpFromText(String text) {
+        runOp(mEditor.getOpOrNull(text, true));
     }
 }

@@ -116,17 +116,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return true;
     }
 
-    /**
-     * TODO: this is used only by the tests...
-     * TODO: maybe avoid combineOps, i.e. return null, if ops is empty; and return op if ops is singleton
-     *
-     * @param text Text to generate an Op from
-     * @return
-     */
     @Override
-    public Op getOpFromText(final String text) {
-        List<Op> ops = new ArrayList<>();
-        boolean isCommand = false;
+    public Op getOpOrNull(@NonNull final String text, boolean always) {
         String newText = text;
         for (UtteranceRewriter ur : mRewriters) {
             if (ur == null) {
@@ -135,51 +126,22 @@ public class InputConnectionCommandEditor implements CommandEditor {
             UtteranceRewriter.Rewrite rewrite = ur.getRewrite(text);
             newText = rewrite.mStr;
             if (rewrite.isCommand()) {
-                isCommand = true;
-                ops.add(getCommitWithOverwriteOp(newText));
+                Op op = getCommitWithOverwriteOp(newText, true);
                 CommandEditorManager.EditorCommand ec = CommandEditorManager.get(rewrite.mId);
-                if (ec != null) {
+                if (ec == null) {
+                    return op;
+                } else {
+                    // If is command, then the 2 ops will be combined.
+                    List<Op> ops = new ArrayList<>();
+                    ops.add(op);
                     ops.add(ec.getOp(this, rewrite.mArgs));
+                    return combineOps(ops);
                 }
-                break;
             }
         }
-        if (!isCommand) {
-            ops.add(getCommitWithOverwriteOp(newText));
+        if (always || !text.equals(newText)) {
+            return getCommitWithOverwriteOp(newText, false);
         }
-        return combineOps(ops);
-    }
-
-    @Override
-    public Op getOpOrNull(@NonNull final String text) {
-        List<Op> ops = new ArrayList<>();
-        boolean isCommand = false;
-        String newText = text;
-        for (UtteranceRewriter ur : mRewriters) {
-            if (ur == null) {
-                continue;
-            }
-            UtteranceRewriter.Rewrite rewrite = ur.getRewrite(text);
-            newText = rewrite.mStr;
-            if (rewrite.isCommand()) {
-                isCommand = true;
-                ops.add(getCommitWithOverwriteOp(newText));
-                CommandEditorManager.EditorCommand ec = CommandEditorManager.get(rewrite.mId);
-                if (ec != null) {
-                    ops.add(ec.getOp(this, rewrite.mArgs));
-                }
-                break;
-            }
-        }
-        // If is command, then the 2 ops will be combined.
-        if (isCommand) {
-            return combineOps(ops);
-        }
-        // If not command and was changed by the rewrite rules, then return the single op.
-        if (!text.equals(newText)) {
-            return getCommitWithOverwriteOp(newText);
-        }
-        // Otherwise return null.
         return null;
     }
 
@@ -196,15 +158,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
             // Otherwise write out the text as usual.
             UtteranceRewriter.Rewrite rewrite = applyCommand(text);
             String textRewritten = rewrite.mStr;
-            final int len;
-            // If there is a selection, and the input is a command with no replacement text
-            // then do not replace the selection with an empty string, because the command
-            // needs to apply to the selection, e.g. uppercase it.
-            if (textRewritten.isEmpty() && !selectedText.isEmpty() && rewrite.isCommand()) {
-                len = 0;
-            } else {
-                len = commitWithOverwrite(textRewritten, true);
-            }
+            final int len = maybeCommit(textRewritten, !selectedText.isEmpty() && rewrite.isCommand());
             // TODO: add undo for setSelection even if len==0
             if (len > 0) {
                 pushOpUndo(new Op("delete " + len) {
@@ -1162,17 +1116,18 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     /**
      * TODO: review
-     * we should be able to review the last N ops and undo then if they can be interpreted as
+     * we should be able to review the last N ops and undo them if they can be interpreted as
      * a combined op.
+     * TODO: improve the case where addedLength == 0
      */
-    private Op getCommitWithOverwriteOp(final String text) {
+    private Op getCommitWithOverwriteOp(final String text, boolean isCommand) {
         return new Op("add " + text) {
             @Override
             public Op run() {
                 mInputConnection.beginBatchEdit();
                 final ExtractedText et = getExtractedText();
                 final String selectedText = getSelectedText();
-                final int addedLength = commitWithOverwrite(text, true);
+                final int addedLength = maybeCommit(text, !selectedText.isEmpty() && isCommand);
                 mInputConnection.endBatchEdit();
                 return new Op("delete " + addedLength) {
                     @Override
@@ -1192,6 +1147,22 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 };
             }
         };
+    }
+
+    /**
+     * If there is a selection, and the input is a command with no replacement text
+     * then do not replace the selection with an empty string, because the command
+     * needs to apply to the selection, e.g. uppercase it.
+     *
+     * @param text      Text to be commited
+     * @param condition Condition in addition to text begin empty to block the commit
+     * @return Length of the added text
+     */
+    private int maybeCommit(String text, boolean condition) {
+        if (text.isEmpty() && condition) {
+            return 0;
+        }
+        return commitWithOverwrite(text, true);
     }
 
     /**

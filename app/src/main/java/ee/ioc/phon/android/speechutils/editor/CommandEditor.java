@@ -204,14 +204,13 @@ public interface CommandEditor {
 
     /**
      * Convert the given text into an op, if some rewrite rules trigger on it.
-     * Otherwise return null.
+     * Otherwise return null, unless always==true.
      *
-     * @param text Input text
+     * @param text   Input text
+     * @param always Return Op also if no rewrite triggers
      * @return Op or null
      */
-    Op getOpOrNull(String text);
-
-    Op getOpFromText(String text);
+    Op getOpOrNull(String text, boolean always);
 
     void reset();
 }
