@@ -17,3 +17,14 @@ Used by
 - https://github.com/Kaljurand/K6nele
 - https://github.com/Kaljurand/Arvutaja
 - https://github.com/willblaschko/AlexaAndroid
+
+Testing
+-------
+
+    adb shell am instrument -w -r \
+    -e package ee.ioc.phon.android.speechutils -e debug false \
+    ee.ioc.phon.android.speechutils.test/android.support.test.runner.AndroidJUnitRunner
+
+Some tests currently fail:
+
+    Tests run: 120,  Failures: 8
