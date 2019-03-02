@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="keyClipboardMap" translatable="false">keyClipboardMap</string>
+    <string name="keyClipboardMap" translatable="false">keyRewritesMap</string>
+    <string name="keyClipboardName" translatable="false">00Clipboard</string>
 </resources>

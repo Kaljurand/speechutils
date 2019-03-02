@@ -113,19 +113,16 @@ public interface CommandEditor {
     // selectAll + copy
     Op copyAll();
 
-    // Save the given value under the given key into the app's key-value storage ("clipboard")
-    // Supports function @sel() to refer to the content of the current selection.
-    Op saveClip(String key, String val);
-
-    // Load the string saved under the given key from the app's key-value storage,
-    // and replace the cursor with the string.
-    Op loadClip(String key);
-
-    // Replace the cursor with the pretty-printed clipboard
-    Op showClipboard();
-
-    // Clear the clipboard
-    Op clearClipboard();
+    /**
+     * Saves the given utterance and replacement as the 1st line of the clipboard-rewrites table.
+     * TODO: rename
+     * TODO: add arg for the name of the used table
+     *
+     * @param utt  Utterance (regular expression)
+     * @param repl Replacement (supports function @sel() to refer to the content of the current selection)
+     * @return Op
+     */
+    Op saveClip(String utt, String repl);
 
     /**
      * Delete the given numbers of character either to the left and to the right of the cursor.
@@ -210,6 +207,8 @@ public interface CommandEditor {
     ExtractedText getExtractedText();
 
     CharSequence getText();
+
+    List<UtteranceRewriter> getRewriters();
 
     void setRewriters(List<UtteranceRewriter> urs);
 

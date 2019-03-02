@@ -991,7 +991,7 @@ public class InputConnectionCommandEditorTest {
         runOp(mEditor.replaceSel("REPL"));
         assertThatTextIs("0 word1 REPL word3");
         add("select word1");
-        runOp(mEditor.loadClip("key"));
+        //TODO: replace with rewrites lookup: runOp(mEditor.loadClip("key"));
         assertThatTextIs("0 _word2_word2_ REPL word3");
     }
 
@@ -1114,7 +1114,8 @@ public class InputConnectionCommandEditorTest {
 
     @Test
     public void test94() {
-        runOp(mEditor.clearClipboard());
+        // TODO: replace with rewrites lookup
+        //runOp(mEditor.clearClipboard());
         add("123 456 789", "select 456");
         runOp(mEditor.saveClip("number456", "@sel()"));
         add("select 123");
@@ -1122,7 +1123,7 @@ public class InputConnectionCommandEditorTest {
         runOp(mEditor.saveClip("a", ""));
         runOp(mEditor.saveClip("z", ""));
         runOp(mEditor.selectAll());
-        runOp(mEditor.showClipboard());
+        //runOp(mEditor.showClipboard());
         assertThatTextIs("<a|>\n<number123|123>\n<number456|456>\n<z|>\n");
     }
 

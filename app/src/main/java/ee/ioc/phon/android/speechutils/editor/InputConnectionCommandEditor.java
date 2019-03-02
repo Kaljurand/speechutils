@@ -23,9 +23,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -89,6 +87,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
     public void setRewriters(List<UtteranceRewriter> urs) {
         mRewriters = urs;
         reset();
+    }
+
+    @Override
+    public List<UtteranceRewriter> getRewriters() {
+        return mRewriters;
     }
 
     @Override
@@ -839,65 +842,20 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     @Override
-    public Op saveClip(final String key, final String val) {
-        return new Op("saveClip " + key) {
+    public Op saveClip(final String utt, final String repl) {
+        return new Op("saveClip " + repl) {
             @Override
             public Op run() {
-                PreferenceUtils.putPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, key, val.replace(F_SELECTION, getSelectedText()));
-                return Op.NO_OP;
-            }
-        };
-    }
-
-    @Override
-    public Op loadClip(final String key) {
-        return new Op("loadClip " + key) {
-            @Override
-            public Op run() {
-                Op undo = null;
-                String savedText = PreferenceUtils.getPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, key);
-                if (savedText != null) {
-                    mInputConnection.beginBatchEdit();
-                    undo = getCommitTextOp(getSelectedText(), savedText).run();
-                    mInputConnection.endBatchEdit();
-                }
-                return undo;
-            }
-        };
-    }
-
-    @Override
-    public Op showClipboard() {
-        return new Op("showClipboard") {
-            @Override
-            public Op run() {
-                Op undo = null;
-                Map<String, String> clipboard = PreferenceUtils.getPrefMap(mPreferences, mRes, R.string.keyClipboardMap);
-                if (!clipboard.isEmpty()) {
-                    StringBuilder sb = new StringBuilder();
-                    for (String key : new TreeSet<>(clipboard.keySet())) {
-                        sb.append('<');
-                        sb.append(key);
-                        sb.append('|');
-                        sb.append(clipboard.get(key));
-                        sb.append('>');
-                        sb.append('\n');
-                    }
-                    mInputConnection.beginBatchEdit();
-                    undo = getCommitTextOp(getSelectedText(), sb.toString()).run();
-                    mInputConnection.endBatchEdit();
-                }
-                return undo;
-            }
-        };
-    }
-
-    @Override
-    public Op clearClipboard() {
-        return new Op("clearClipboard") {
-            @Override
-            public Op run() {
-                PreferenceUtils.clearPrefMap(mPreferences, mRes, R.string.keyClipboardMap);
+                String name = mRes.getString(R.string.keyClipboardName);
+                // Load the existing rewrite rule table
+                String rewrites = PreferenceUtils.getPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, name);
+                UtteranceRewriter ur = new UtteranceRewriter(rewrites);
+                List<Command> commands = ur.getCommands();
+                // Add a line
+                commands.add(0, new Command(utt, repl.replace(F_SELECTION, getSelectedText())));
+                UtteranceRewriter newUr = new UtteranceRewriter(commands);
+                // Save it again
+                PreferenceUtils.putPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, name, newUr.toTsv());
                 return Op.NO_OP;
             }
         };

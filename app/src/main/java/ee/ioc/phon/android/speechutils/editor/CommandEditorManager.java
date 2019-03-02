@@ -30,9 +30,6 @@ public class CommandEditorManager {
     public static final String LC_SEL = "lcSel";
     public static final String INC_SEL = "incSel";
     public static final String SAVE_CLIP = "saveClip";
-    public static final String LOAD_CLIP = "loadClip";
-    public static final String SHOW_CLIPBOARD = "showClipboard";
-    public static final String CLEAR_CLIPBOARD = "clearClipboard";
     public static final String KEY_UP = "keyUp";
     public static final String KEY_DOWN = "keyDown";
     public static final String KEY_LEFT = "keyLeft";
@@ -136,12 +133,6 @@ public class CommandEditorManager {
             }
             return ce.saveClip(args[0], args[1]);
         });
-
-        aMap.put(LOAD_CLIP, (ce, args) -> ce.loadClip(getArgString(args, 0, null)));
-
-        aMap.put(SHOW_CLIPBOARD, (ce, args) -> ce.showClipboard());
-
-        aMap.put(CLEAR_CLIPBOARD, (ce, args) -> ce.clearClipboard());
 
         aMap.put(UC_SEL, (ce, args) -> ce.ucSel());
 
