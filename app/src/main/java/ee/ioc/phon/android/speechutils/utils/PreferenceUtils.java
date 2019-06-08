@@ -75,6 +75,12 @@ public class PreferenceUtils {
         editor.apply();
     }
 
+    public static void putPrefBoolean(SharedPreferences prefs, Resources res, int key, boolean value) {
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean(res.getString(key), value);
+        editor.apply();
+    }
+
     public static void putPrefString(SharedPreferences prefs, Resources res, int key, String value) {
         putPrefString(prefs, res.getString(key), value);
     }
