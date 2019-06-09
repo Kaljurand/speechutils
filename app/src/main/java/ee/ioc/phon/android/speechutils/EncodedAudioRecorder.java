@@ -29,9 +29,14 @@ import ee.ioc.phon.android.speechutils.utils.AudioUtils;
 /**
  * Based on https://android.googlesource.com/platform/cts/+/jb-mr2-release/tests/tests/media/src/android/media/cts/EncoderTest.java
  * Requires Android v4.1 / API 16 / JELLY_BEAN
- * TODO: support other formats than FLAC
  */
 public class EncodedAudioRecorder extends AbstractAudioRecorder {
+
+    // TODO: support other formats than FLAC
+    private static final String MIME = "audio/flac";
+    private static final String WS_ARGS = "?content-type=audio/x-flac";
+    //private static final String MIME = "audio/opus";
+    //private static final String WS_ARGS = "?content-type=audio/x-opus";
 
     // Stop encoding if output buffer has not been available that many times.
     private static final int MAX_NUM_RETRIES_DEQUEUE_OUTPUT_BUFFER = 10;
@@ -83,7 +88,7 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
      * such as "audio/x-flac", but it did not work without (nor with "audio/flac").
      */
     public String getWsArgs() {
-        return "?content-type=audio/x-flac";
+        return WS_ARGS;
     }
 
     public synchronized byte[] consumeRecordingEncAndTruncate() {
@@ -108,11 +113,12 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
     protected void recorderLoop(SpeechRecord speechRecord) {
         mNumBytesSubmitted = 0;
         mNumBytesDequeued = 0;
-        MediaFormat format = MediaFormatFactory.createMediaFormat(MediaFormatFactory.Type.FLAC, getSampleRate());
+        MediaFormat format = MediaFormatFactory.createMediaFormat(MIME, getSampleRate());
         MediaCodec codec = getCodec(format);
         if (codec == null) {
             handleError("no codec found");
         } else {
+            Log.i("Using codec: " + codec.getCanonicalName());
             int status = recorderEncoderLoop(codec, speechRecord);
             if (Log.DEBUG) {
                 AudioUtils.showMetrics(format, mNumBytesSubmitted, mNumBytesDequeued);

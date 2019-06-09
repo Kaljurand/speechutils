@@ -29,8 +29,7 @@ public class AudioUtils {
     public static void saveWavToFile(String wavFileFullPath, byte[] wav, boolean append) {
         try {
             FileUtils.writeByteArrayToFile(new File(wavFileFullPath), wav, append);
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             Log.e("Could not save a recording to " + wavFileFullPath + " due to: " + e.getMessage());
         }
     }
@@ -41,8 +40,7 @@ public class AudioUtils {
             file.seek(0L);
             file.write(wavHeader);
             file.close();
-        }
-        catch(Throwable t) {
+        } catch (Throwable t) {
             Log.e("Could not write/rewrite the wav header to " + wavFileFullPath + " due to: " + t.getMessage());
         }
     }
@@ -110,20 +108,23 @@ public class AudioUtils {
         return wav;
     }
 
+    // TODO: use MediaFormat.MIMETYPE_AUDIO_FLAC) on API>=21
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public static List<String> getAvailableEncoders(int sampleRate) {
+    public static List<String> getAvailableEncoders(String mime, int sampleRate) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            MediaFormat format = MediaFormatFactory.createMediaFormat(MediaFormatFactory.Type.FLAC, sampleRate);
+            MediaFormat format = MediaFormatFactory.createMediaFormat(mime, sampleRate);
             MediaCodecList mcl = new MediaCodecList(MediaCodecList.REGULAR_CODECS);
             String encoderAsStr = mcl.findEncoderForFormat(format);
             List<String> encoders = new ArrayList<>();
             for (MediaCodecInfo info : mcl.getCodecInfos()) {
                 if (info.isEncoder()) {
-                    if (info.getName().equals(encoderAsStr)) {
-                        encoders.add("*** " + info.getName() + ": " + TextUtils.join(", ", info.getSupportedTypes()));
-                    } else {
-                        encoders.add(info.getName() + ": " + TextUtils.join(", ", info.getSupportedTypes()));
+                    String name = info.getName();
+                    String infoAsStr = name + ": " + TextUtils.join(", ", info.getSupportedTypes())
+                            + ": " + info.isHardwareAccelerated() + "/" + info.isSoftwareOnly();
+                    if (name.equals(encoderAsStr)) {
+                        infoAsStr = "⭐ " + infoAsStr;
                     }
+                    encoders.add(infoAsStr);
                 }
             }
             return encoders;
@@ -145,6 +146,7 @@ public class AudioUtils {
                 if (!info.isEncoder()) {
                     continue;
                 }
+                // TODO: do we still need this?
                 if (!info.getName().startsWith("OMX.")) {
                     // Unfortunately for legacy reasons, "AACEncoder", a
                     // non OMX component had to be in this list for the video
