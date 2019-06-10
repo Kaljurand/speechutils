@@ -120,6 +120,26 @@ public final class IntentUtils {
         return false;
     }
 
+    /**
+     * Starts an activity from the given context and catches a possible security exception.
+     */
+    public static void startActivityWithCatch(@NonNull Context context, Intent intent) {
+        try {
+            if (context instanceof Activity) {
+                context.startActivity(intent);
+            } else {
+                // Calling startActivity() from outside of an Activity context requires the FLAG_ACTIVITY_NEW_TASK flag
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | intent.getFlags());
+                context.startActivity(intent);
+            }
+        } catch (SecurityException e) {
+            // This happens if the user constructs an intent for which we do not have a
+            // permission, e.g. the CALL intent,
+            // or according to Google Play, com.vlingo.midas/.settings.SettingsScreen
+            showMessage(context, e.getLocalizedMessage());
+        }
+    }
+
     public static String rewriteResultWithExtras(Context context, Bundle extras, String result) {
         String defaultResultUtterance = null;
         String defaultResultCommand = null;
@@ -250,7 +270,7 @@ public final class IntentUtils {
         Intent intent = new Intent(RecognitionService.SERVICE_INTERFACE);
         intent.setComponent(componentName);
         final List<ResolveInfo> list = context.getPackageManager().queryIntentServices(intent, 0);
-        return list != null && list.size() != 0;
+        return list.size() != 0;
     }
 
     /**
