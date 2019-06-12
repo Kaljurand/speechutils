@@ -119,10 +119,12 @@ public class AudioUtils {
             for (MediaCodecInfo info : mcl.getCodecInfos()) {
                 if (info.isEncoder()) {
                     String name = info.getName();
-                    String infoAsStr = name + ": " + TextUtils.join(", ", info.getSupportedTypes())
-                            + ": " + info.isHardwareAccelerated() + "/" + info.isSoftwareOnly();
+                    String infoAsStr = name + ": " + TextUtils.join(", ", info.getSupportedTypes());
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        infoAsStr += String.format(": %s/%s/%s/%s", info.isHardwareAccelerated(), info.isSoftwareOnly(), info.isAlias(), info.isVendor());
+                    }
                     if (name.equals(encoderAsStr)) {
-                        infoAsStr = "⭐ " + infoAsStr;
+                        infoAsStr = '#' + infoAsStr;
                     }
                     encoders.add(infoAsStr);
                 }
