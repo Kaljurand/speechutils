@@ -34,9 +34,9 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
 
     // TODO: support other formats than FLAC
     private static final String MIME = "audio/flac";
-    private static final String WS_ARGS = "?content-type=audio/x-flac";
+    private static final String CONTENT_TYPE = "audio/x-flac";
     //private static final String MIME = "audio/opus";
-    //private static final String WS_ARGS = "?content-type=audio/x-opus";
+    //private static final String CONTENT_TYPE = "audio/x-opus";
 
     // Stop encoding if output buffer has not been available that many times.
     private static final int MAX_NUM_RETRIES_DEQUEUE_OUTPUT_BUFFER = 10;
@@ -87,8 +87,8 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
      * TODO: according to the server docs, for encoded data we do not need to specify the content type
      * such as "audio/x-flac", but it did not work without (nor with "audio/flac").
      */
-    public String getWsArgs() {
-        return WS_ARGS;
+    public String getContentType() {
+        return CONTENT_TYPE;
     }
 
     public synchronized byte[] consumeRecordingEncAndTruncate() {
@@ -118,7 +118,9 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
         if (codec == null) {
             handleError("no codec found");
         } else {
-            Log.i("Using codec: " + codec.getCanonicalName());
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Log.i("Using codec: " + codec.getCanonicalName());
+            }
             int status = recorderEncoderLoop(codec, speechRecord);
             if (Log.DEBUG) {
                 AudioUtils.showMetrics(format, mNumBytesSubmitted, mNumBytesDequeued);

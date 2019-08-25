@@ -9,7 +9,7 @@ public interface AudioRecorder {
     // Number of channels (MONO = 1, STEREO = 2)
     short CHANNELS = 1;
 
-    String getWsArgs();
+    String getContentType();
 
     State getState();
 

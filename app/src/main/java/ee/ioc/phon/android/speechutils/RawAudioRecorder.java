@@ -76,7 +76,7 @@ public class RawAudioRecorder extends AbstractAudioRecorder {
         this(DEFAULT_AUDIO_SOURCE, DEFAULT_SAMPLE_RATE);
     }
 
-    public String getWsArgs() {
-        return "?content-type=audio/x-raw,+layout=(string)interleaved,+rate=(int)" + getSampleRate() + ",+format=(string)S16LE,+channels=(int)1";
+    public String getContentType() {
+        return "audio/x-raw, layout=(string)interleaved, rate=(int)" + getSampleRate() + ", format=(string)S16LE, channels=(int)1";
     }
 }

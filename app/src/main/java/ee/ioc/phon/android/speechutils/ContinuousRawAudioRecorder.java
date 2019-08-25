@@ -16,11 +16,11 @@ import ee.ioc.phon.android.speechutils.utils.AudioUtils;
  * a mechanism that will allow the developer to compensate between the various delays and
  * enable audio processing of an audio buffer from a specific point in time (past, current
  * of future).
- *
+ * <p>
  * For the purpose of efficiency and reduction of garbage collection, the recorded buffer
  * is a cyclic one and the code handles the edge cases (gotten audio buffer is split
  * between the end of the recording buffer and the beginning).
- *
+ * <p>
  * The class also handles the cyclic buffer consumption. While consuming the recorded
  * buffer, the consumer is always behind or exactly on the producer pointer (chasing the
  * recording).
@@ -143,8 +143,8 @@ public class ContinuousRawAudioRecorder extends AbstractAudioRecorder {
         this(DEFAULT_AUDIO_SOURCE, DEFAULT_SAMPLE_RATE, DEFAULT_BUFFER_LENGTH_IN_MILLIS);
     }
 
-    public String getWsArgs() {
-        return "?content-type=audio/x-raw,+layout=(string)interleaved,+rate=(int)" + getSampleRate() + ",+format=(string)S16LE,+channels=(int)1";
+    public String getContentType() {
+        return "audio/x-raw, layout=(string)interleaved, rate=(int)" + getSampleRate() + ", format=(string)S16LE, channels=(int)1";
     }
 
     public ContinuousRawAudioRecorder setSessionStartPointer(SessionStartPointer sessionStartPointer) {
@@ -163,8 +163,8 @@ public class ContinuousRawAudioRecorder extends AbstractAudioRecorder {
             if (mSessionStartPointer.getSessionStartPointerMillis() > 0) {
                 try {
                     Thread.sleep(mSessionStartPointer.getSessionStartPointerMillis());
+                } catch (InterruptedException e) {
                 }
-                catch (InterruptedException e) {}
 
                 return getNumOfSamplesIn(SessionStartPointer.now().getSessionStartPointerMillis());
             }
@@ -210,13 +210,11 @@ public class ContinuousRawAudioRecorder extends AbstractAudioRecorder {
         if (potentialStartSample >= 0) {
             Log.i(LOG_FILTER + "Start sample in the recording is a positive one. Copying from position: " + potentialStartSample + ", " + numOfSamplesToGoBack + " bytes");
             System.arraycopy(mRecording, potentialStartSample, buffer, 0, numOfSamplesToGoBack);
-        }
-        else {
+        } else {
             if (!mRecordingBufferIsFullWithData) {
                 Log.i(LOG_FILTER + "Start sample in the recording is a negative one. The buffer did not pass one cycle yet. Copying from position: 0, " + currentLength + " bytes");
                 System.arraycopy(mRecording, 0, buffer, 0, currentLength);
-            }
-            else {
+            } else {
                 // the potential start sample is out of the boundaries of the array to the negative side
                 potentialStartSample = Math.abs(potentialStartSample);
                 Log.i(LOG_FILTER + "Start sample in the recording is a negative one. The buffer passed at least one cycle. Copying from position: " + (mRecording.length - potentialStartSample) + ", " + potentialStartSample + " bytes and from position: 0, " + currentLength + " bytes");
@@ -258,14 +256,13 @@ public class ContinuousRawAudioRecorder extends AbstractAudioRecorder {
                 byte[] pcmData;
                 AtomicBoolean firstBuffer = new AtomicBoolean(true);
 
-                while(mRecordingToFile.get()) {
+                while (mRecordingToFile.get()) {
 
                     // No need to endlessly poll the recording. It will work without the sleep well but
                     // every 50ms is also good (keeps the CPU happier than without the sleep)
                     try {
                         Thread.sleep(50L);
-                    }
-                    catch (InterruptedException e) {
+                    } catch (InterruptedException e) {
                         mRecordingToFile.set(false);
                         return;
                     }
