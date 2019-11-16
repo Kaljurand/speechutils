@@ -53,12 +53,7 @@ public class AudioCue {
             return false;
         }
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mp) {
-                mp.release();
-            }
-        });
+        mp.setOnCompletionListener(MediaPlayer::release);
         mp.start();
         return true;
     }

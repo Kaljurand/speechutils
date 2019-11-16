@@ -56,14 +56,11 @@ public class TtsProvider {
                 }
             });
         } else {
-            mTts.setOnUtteranceCompletedListener(new TextToSpeech.OnUtteranceCompletedListener() {
-                @Override
-                public void onUtteranceCompleted(String utteranceId) {
-                    if (listener != null) listener.onDone();
-                }
+            mTts.setOnUtteranceCompletedListener(utteranceId -> {
+                if (listener != null) listener.onDone();
             });
         }
-        HashMap<String, String> params = new HashMap<String, String>();
+        HashMap<String, String> params = new HashMap<>();
         params.put(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, UTT_COMPLETED_FEEDBACK);
         return mTts.speak(text, TextToSpeech.QUEUE_FLUSH, params);
     }
