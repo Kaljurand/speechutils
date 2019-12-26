@@ -183,7 +183,8 @@ public abstract class AbstractRecognitionService extends RecognitionService {
             return;
         }
 
-        mAudioPauser = new AudioPauser(this);
+        mAudioPauser = AudioPauser.createAudioPauser(this, true);
+        Log.i("AudioPauser can mute stream: " + mAudioPauser.isMuteStream());
         mAudioPauser.pause();
 
         try {

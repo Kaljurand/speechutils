@@ -1,8 +1,10 @@
 package ee.ioc.phon.android.speechutils;
 
+import android.app.NotificationManager;
 import android.content.Context;
 import android.media.AudioManager;
 import android.media.AudioManager.OnAudioFocusChangeListener;
+import android.os.Build;
 
 /**
  * Pauses the audio stream by requesting the audio focus and
@@ -20,17 +22,34 @@ public class AudioPauser {
     private int mCurrentVolume = 0;
     private boolean isPausing = false;
 
-    public AudioPauser(Context context) {
-        this(context, true);
-    }
-
-
-    public AudioPauser(Context context, boolean isMuteStream) {
+    private AudioPauser(Context context, boolean isMuteStream) {
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         mIsMuteStream = isMuteStream;
         mAfChangeListener = focusChange -> Log.i("onAudioFocusChange" + focusChange);
     }
 
+    /**
+     * Creates and returns an AudioPauser.
+     *
+     * @param context      Context
+     * @param isMuteStream if true then we additionally try to mute the audio stream.
+     *                     This does not succeed if the app is not allowed to
+     *                     "modify notification do not disturb policy" on Android N and higher.
+     * @return AudioPauser
+     */
+    public static AudioPauser createAudioPauser(Context context, boolean isMuteStream) {
+        if (isMuteStream && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null && !nm.isNotificationPolicyAccessGranted()) {
+                isMuteStream = false;
+            }
+        }
+        return new AudioPauser(context, isMuteStream);
+    }
+
+    public boolean isMuteStream() {
+        return mIsMuteStream;
+    }
 
     /**
      * Requests audio focus with the goal of pausing any existing audio player.
