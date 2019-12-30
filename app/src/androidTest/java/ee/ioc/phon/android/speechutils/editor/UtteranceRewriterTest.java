@@ -1,6 +1,6 @@
 package ee.ioc.phon.android.speechutils.editor;
 
-import android.support.test.runner.AndroidJUnit4;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 import android.util.Pair;
 
 import org.junit.Before;

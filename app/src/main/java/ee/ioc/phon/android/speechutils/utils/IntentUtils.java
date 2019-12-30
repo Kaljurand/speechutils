@@ -14,7 +14,7 @@ import android.os.Parcelable;
 import android.speech.RecognitionService;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 import android.util.SparseIntArray;
 import android.widget.Toast;
 

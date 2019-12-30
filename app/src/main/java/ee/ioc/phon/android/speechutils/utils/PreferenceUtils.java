@@ -2,7 +2,7 @@ package ee.ioc.phon.android.speechutils.utils;
 
 import android.content.SharedPreferences;
 import android.content.res.Resources;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import java.util.Arrays;
 import java.util.Collections;
