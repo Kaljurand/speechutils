@@ -225,22 +225,22 @@ public class RecognitionServiceManager {
     /**
      * Collect together the languages supported by the given services and call back once done.
      */
-    public void populateCombos(Activity activity, final Listener listener) {
+    public void populateCombos(Context activity, final Listener listener) {
         List<String> services = getServices(activity.getPackageManager());
         populateCombos(activity, services, listener);
     }
 
-    public void populateCombos(Activity activity, List<String> services, final Listener listener) {
+    public void populateCombos(Context activity, List<String> services, final Listener listener) {
         populateCombos(activity, services, 0, listener, new ArrayList<String>(), new HashSet<String>());
     }
 
-    public void populateCombos(Activity activity, String service, final Listener listener) {
+    public void populateCombos(Context activity, String service, final Listener listener) {
         final List<String> services = new ArrayList<>();
         services.add(service);
         populateCombos(activity, services, listener);
     }
 
-    private void populateCombos(final Activity activity, final List<String> services, final int counter, final Listener listener,
+    private void populateCombos(final Context activity, final List<String> services, final int counter, final Listener listener,
                                 final List<String> combos, final Set<String> selectedCombos) {
 
         if (services.size() == counter) {
