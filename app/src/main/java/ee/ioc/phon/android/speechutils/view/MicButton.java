@@ -8,15 +8,14 @@ import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.widget.ImageButton;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import ee.ioc.phon.android.speechutils.R;
 
-// TODO: rather use android.support.design.widget.FloatingActionButton
-public class MicButton extends ImageButton {
+// TODO: rather use com.google.android.material.floatingactionbutton.FloatingActionButton
+public class MicButton extends androidx.appcompat.widget.AppCompatImageButton {
 
     public enum State {
         // Initial state
