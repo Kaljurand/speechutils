@@ -125,6 +125,13 @@ public interface CommandEditor {
     Op saveClip(String utt, String repl);
 
     /**
+     * @param tableName Name of the rewrite table
+     * @param command   Rewrite command
+     * @return Op
+     */
+    Op addRule(String tableName, Command command);
+
+    /**
      * Delete the given numbers of character either to the left and to the right of the cursor.
      * In case there is a selection, then the selection is deleted instead.
      *

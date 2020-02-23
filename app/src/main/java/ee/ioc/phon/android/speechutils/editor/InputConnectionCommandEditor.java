@@ -6,7 +6,6 @@ import android.content.res.Resources;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.preference.PreferenceManager;
-import androidx.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Pair;
 import android.view.KeyEvent;
@@ -14,6 +13,8 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
+
+import androidx.annotation.NonNull;
 
 import org.json.JSONException;
 
@@ -854,6 +855,25 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 // Add a line
                 commands.add(0, new Command(utt, repl.replace(F_SELECTION, getSelectedText())));
                 UtteranceRewriter newUr = new UtteranceRewriter(commands);
+                // Save it again
+                PreferenceUtils.putPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, name, newUr.toTsv());
+                return Op.NO_OP;
+            }
+        };
+    }
+
+    @Override
+    public Op addRule(final String name, final Command command) {
+        return new Op("addRule: " + name + ": " + command) {
+            @Override
+            public Op run() {
+                // Load the existing rewrite rule table
+                String rewrites = PreferenceUtils.getPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, name);
+                UtteranceRewriter ur = new UtteranceRewriter(rewrites);
+                List<Command> commands = ur.getCommands();
+                // Add a line
+                commands.add(0, command);
+                UtteranceRewriter newUr = new UtteranceRewriter(commands, UtteranceRewriter.DEFAULT_HEADER);
                 // Save it again
                 PreferenceUtils.putPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, name, newUr.toTsv());
                 return Op.NO_OP;

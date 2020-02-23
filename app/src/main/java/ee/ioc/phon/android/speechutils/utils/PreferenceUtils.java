@@ -2,6 +2,7 @@ package ee.ioc.phon.android.speechutils.utils;
 
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+
 import androidx.annotation.NonNull;
 
 import java.util.Arrays;
@@ -43,7 +44,13 @@ public class PreferenceUtils {
     }
 
     public static boolean getPrefBoolean(SharedPreferences prefs, Resources res, int key, int defaultValue) {
-        return prefs.getBoolean(res.getString(key), res.getBoolean(defaultValue));
+        try {
+            return prefs.getBoolean(res.getString(key), res.getBoolean(defaultValue));
+        } catch (ClassCastException e) {
+            // This can happen if the key is reused for a different purpose and the value has now a different type
+            // than stored (by an earlier version of the app).
+            return false;
+        }
     }
 
     public static int getPrefInt(SharedPreferences prefs, Resources res, int key, int defaultValue) {

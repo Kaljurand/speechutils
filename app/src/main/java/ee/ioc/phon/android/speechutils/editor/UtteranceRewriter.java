@@ -2,9 +2,10 @@ package ee.ioc.phon.android.speechutils.editor;
 
 import android.content.ContentResolver;
 import android.net.Uri;
-import androidx.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Pair;
+
+import androidx.annotation.NonNull;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -56,6 +57,23 @@ public class UtteranceRewriter {
         aSet.add(HEADER_ARG1);
         aSet.add(HEADER_ARG2);
         COLUMNS = Collections.unmodifiableSet(aSet);
+    }
+
+    public static final SortedMap<Integer, String> DEFAULT_HEADER;
+
+    static {
+        SortedMap<Integer, String> aMap0 = new TreeMap<>();
+        aMap0.put(0, HEADER_COMMENT);
+        aMap0.put(1, HEADER_LOCALE);
+        aMap0.put(2, HEADER_SERVICE);
+        aMap0.put(3, HEADER_APP);
+        aMap0.put(4, HEADER_UTTERANCE);
+        aMap0.put(5, HEADER_REPLACEMENT);
+        aMap0.put(6, HEADER_COMMAND);
+        aMap0.put(7, HEADER_ARG1);
+        aMap0.put(8, HEADER_ARG2);
+
+        DEFAULT_HEADER = Collections.unmodifiableSortedMap(aMap0);
     }
 
     private static final SortedMap<Integer, String> DEFAULT_HEADER_1;
