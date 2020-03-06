@@ -59,6 +59,7 @@ public class UtteranceRewriter {
         COLUMNS = Collections.unmodifiableSet(aSet);
     }
 
+    // All fields
     public static final SortedMap<Integer, String> DEFAULT_HEADER;
 
     static {
@@ -76,6 +77,7 @@ public class UtteranceRewriter {
         DEFAULT_HEADER = Collections.unmodifiableSortedMap(aMap0);
     }
 
+    // Only utterance
     private static final SortedMap<Integer, String> DEFAULT_HEADER_1;
 
     static {
@@ -84,6 +86,7 @@ public class UtteranceRewriter {
         DEFAULT_HEADER_1 = Collections.unmodifiableSortedMap(aMap1);
     }
 
+    // Utterance and replacement
     private static final SortedMap<Integer, String> DEFAULT_HEADER_2;
 
     static {
@@ -101,19 +104,25 @@ public class UtteranceRewriter {
         public final String mId;
         public final String mStr;
         public final String[] mArgs;
+        public final Command mCommand;
 
         public Rewrite(String str) {
-            this(null, str, null);
+            this(null, str, null, null);
         }
 
-        public Rewrite(String id, String str, String[] args) {
+        public Rewrite(String id, String str, String[] args, Command command) {
             mId = id;
             mStr = str;
             mArgs = args;
+            mCommand = command;
         }
 
         public boolean isCommand() {
             return mId != null;
+        }
+
+        public Command getCommand() {
+            return mCommand;
         }
 
         /**
@@ -273,6 +282,12 @@ public class UtteranceRewriter {
         this(str, header, null);
     }
 
+    /**
+     * Loads the rewrites table from the given string. The header is detected automatically.
+     * Command maching is not performed.
+     *
+     * @param str
+     */
     public UtteranceRewriter(String str) {
         this(str, (CommandMatcher) null);
     }
@@ -295,7 +310,7 @@ public class UtteranceRewriter {
                 // If there is a full match (pair.second != null) and there is a command (commandId != null)
                 // then stop the search and return the command.
                 str = pair.first;
-                return new Rewrite(commandId, str, pair.second);
+                return new Rewrite(commandId, str, pair.second, command);
             }
         }
         return new Rewrite(str);

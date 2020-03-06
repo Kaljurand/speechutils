@@ -4,7 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.os.AsyncTask;
-import android.os.Build;
+import android.os.Build.VERSION;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.Pair;
@@ -34,6 +34,8 @@ import ee.ioc.phon.android.speechutils.utils.HttpUtils;
 import ee.ioc.phon.android.speechutils.utils.IntentUtils;
 import ee.ioc.phon.android.speechutils.utils.JsonUtils;
 import ee.ioc.phon.android.speechutils.utils.PreferenceUtils;
+
+import static android.os.Build.VERSION_CODES;
 
 /**
  * TODO: this is work in progress
@@ -862,25 +864,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
         };
     }
 
-    @Override
-    public Op addRule(final String name, final Command command) {
-        return new Op("addRule: " + name + ": " + command) {
-            @Override
-            public Op run() {
-                // Load the existing rewrite rule table
-                String rewrites = PreferenceUtils.getPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, name);
-                UtteranceRewriter ur = new UtteranceRewriter(rewrites);
-                List<Command> commands = ur.getCommands();
-                // Add a line
-                commands.add(0, command);
-                UtteranceRewriter newUr = new UtteranceRewriter(commands, UtteranceRewriter.DEFAULT_HEADER);
-                // Save it again
-                PreferenceUtils.putPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, name, newUr.toTsv());
-                return Op.NO_OP;
-            }
-        };
-    }
-
     // TODO: share code with deleteLeftWord
     @Override
     public Op deleteChars(final int numOfChars) {
@@ -1384,7 +1367,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     private boolean deleteSurrounding(int beforeLength, int afterLength) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        if (VERSION.SDK_INT >= VERSION_CODES.N) {
             return mInputConnection.deleteSurroundingTextInCodePoints(beforeLength, afterLength);
         }
         return mInputConnection.deleteSurroundingText(beforeLength, afterLength);

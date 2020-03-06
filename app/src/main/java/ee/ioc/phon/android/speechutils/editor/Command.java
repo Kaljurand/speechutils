@@ -1,9 +1,12 @@
 package ee.ioc.phon.android.speechutils.editor;
 
-import androidx.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Pair;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,8 +72,20 @@ public class Command {
         this(null, null, null, null, Pattern.compile(utt, Constants.REWRITE_PATTERN_FLAGS), replacement, null, null);
     }
 
+    public String getComment() {
+        return mComment;
+    }
+
+    public String getReplacement() {
+        return mReplacement;
+    }
+
     public String getId() {
         return mCommand;
+    }
+
+    public String[] getArgs() {
+        return mArgs;
     }
 
     /**
@@ -242,6 +257,22 @@ public class Command {
 
     public String toString() {
         return mUtt + "/" + mReplacement + "/" + mCommand + "(" + mArgsAsStr + ")";
+    }
+
+    /**
+     * True if the given command is equal to this command. Here the equality
+     * only considers the replacement, and (if defined) the command ID and its arguments.
+     * This means that the activation pattern (utterance), context restrictions (command matcher),
+     * and labels and comments are ignored when testing the equality.
+     */
+    public boolean equalsCommand(@Nullable Object obj) {
+        Command that = (Command) obj;
+        if (getId() == null) {
+            return getReplacement().equals(that.getReplacement());
+        }
+        return getReplacement().equals(that.getReplacement()) &&
+                getId().equals(that.getId()) &&
+                Arrays.equals(getArgs(), that.getArgs());
     }
 
     /**

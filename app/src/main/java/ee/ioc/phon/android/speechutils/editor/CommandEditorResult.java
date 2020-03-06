@@ -14,6 +14,10 @@ public class CommandEditorResult {
         return mRewrite.isCommand();
     }
 
+    public Command getCommand() {
+        return mRewrite.getCommand();
+    }
+
     public boolean isSuccess() {
         return mSuccess;
     }
