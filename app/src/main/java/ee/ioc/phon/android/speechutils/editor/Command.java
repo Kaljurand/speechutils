@@ -18,6 +18,7 @@ public class Command {
     private static final String[] EMPTY_ARRAY = new String[0];
 
     private final static String SEPARATOR = "<___>";
+    private final String mLabel;
     private final String mComment;
     private final Pattern mLocale;
     private final Pattern mService;
@@ -29,6 +30,7 @@ public class Command {
     private final String mArgsAsStr;
 
     /**
+     * @param label       short label for GUI
      * @param comment     free-form comment
      * @param locale      locale of the utterance
      * @param service     regular expression to match the recognizer service class name
@@ -38,7 +40,8 @@ public class Command {
      * @param id          name of the command to execute, null if missing
      * @param args        arguments of the command
      */
-    public Command(String comment, Pattern locale, Pattern service, Pattern app, Pattern utt, String replacement, String id, String[] args) {
+    public Command(String label, String comment, Pattern locale, Pattern service, Pattern app, Pattern utt, String replacement, String id, String[] args) {
+        mLabel = label;
         mComment = comment;
         mLocale = locale;
         mService = service;
@@ -54,21 +57,25 @@ public class Command {
         mArgsAsStr = TextUtils.join(SEPARATOR, mArgs);
     }
 
-    public Command(String comment, Pattern locale, Pattern service, Pattern app, Pattern utt, String replacement, String id) {
-        this(comment, locale, service, app, utt, replacement, id, null);
+    public Command(String label, String comment, Pattern locale, Pattern service, Pattern app, Pattern utt, String replacement, String id) {
+        this(label, comment, locale, service, app, utt, replacement, id, null);
     }
 
 
     public Command(String utt, String replacement, String id, String[] args) {
-        this(null, null, null, null, Pattern.compile(utt, Constants.REWRITE_PATTERN_FLAGS), replacement, id, args);
+        this(null, null, null, null, null, Pattern.compile(utt, Constants.REWRITE_PATTERN_FLAGS), replacement, id, args);
     }
 
     public Command(String utt, String replacement, String id) {
-        this(null, null, null, null, Pattern.compile(utt, Constants.REWRITE_PATTERN_FLAGS), replacement, id, null);
+        this(null, null, null, null, null, Pattern.compile(utt, Constants.REWRITE_PATTERN_FLAGS), replacement, id, null);
     }
 
     public Command(String utt, String replacement) {
-        this(null, null, null, null, Pattern.compile(utt, Constants.REWRITE_PATTERN_FLAGS), replacement, null, null);
+        this(null, null, null, null, null, Pattern.compile(utt, Constants.REWRITE_PATTERN_FLAGS), replacement, null, null);
+    }
+
+    public String getLabel() {
+        return mLabel;
     }
 
     public String getComment() {
@@ -96,6 +103,8 @@ public class Command {
      */
     public String get(@NonNull String colId) {
         switch (colId) {
+            case UtteranceRewriter.HEADER_LABEL:
+                return mLabel;
             case UtteranceRewriter.HEADER_COMMENT:
                 return mComment;
             case UtteranceRewriter.HEADER_LOCALE:
@@ -172,6 +181,9 @@ public class Command {
         Map<String, String> map = new HashMap<>();
         for (String colName : header) {
             switch (colName) {
+                case UtteranceRewriter.HEADER_LABEL:
+                    map.put(UtteranceRewriter.HEADER_LABEL, mLabel);
+                    break;
                 case UtteranceRewriter.HEADER_COMMENT:
                     map.put(UtteranceRewriter.HEADER_COMMENT, mComment);
                     break;
@@ -221,6 +233,9 @@ public class Command {
                 sb.append('\t');
             }
             switch (entry.getValue()) {
+                case UtteranceRewriter.HEADER_LABEL:
+                    sb.append(escape(mLabel));
+                    break;
                 case UtteranceRewriter.HEADER_COMMENT:
                     sb.append(escape(mComment));
                     break;

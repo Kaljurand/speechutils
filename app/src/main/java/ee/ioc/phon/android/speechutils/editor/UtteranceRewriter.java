@@ -30,6 +30,7 @@ import java.util.regex.PatternSyntaxException;
  */
 public class UtteranceRewriter {
 
+    public static final String HEADER_LABEL = "Label";
     public static final String HEADER_COMMENT = "Comment";
     public static final String HEADER_LOCALE = "Locale";
     public static final String HEADER_SERVICE = "Service";
@@ -47,6 +48,7 @@ public class UtteranceRewriter {
 
     static {
         Set<String> aSet = new HashSet<>();
+        aSet.add(HEADER_LABEL);
         aSet.add(HEADER_COMMENT);
         aSet.add(HEADER_LOCALE);
         aSet.add(HEADER_SERVICE);
@@ -64,15 +66,16 @@ public class UtteranceRewriter {
 
     static {
         SortedMap<Integer, String> aMap0 = new TreeMap<>();
-        aMap0.put(0, HEADER_COMMENT);
-        aMap0.put(1, HEADER_LOCALE);
-        aMap0.put(2, HEADER_SERVICE);
-        aMap0.put(3, HEADER_APP);
-        aMap0.put(4, HEADER_UTTERANCE);
-        aMap0.put(5, HEADER_REPLACEMENT);
-        aMap0.put(6, HEADER_COMMAND);
-        aMap0.put(7, HEADER_ARG1);
-        aMap0.put(8, HEADER_ARG2);
+        aMap0.put(0, HEADER_LABEL);
+        aMap0.put(1, HEADER_COMMENT);
+        aMap0.put(2, HEADER_LOCALE);
+        aMap0.put(3, HEADER_SERVICE);
+        aMap0.put(4, HEADER_APP);
+        aMap0.put(5, HEADER_UTTERANCE);
+        aMap0.put(6, HEADER_REPLACEMENT);
+        aMap0.put(7, HEADER_COMMAND);
+        aMap0.put(8, HEADER_ARG1);
+        aMap0.put(9, HEADER_ARG2);
 
         DEFAULT_HEADER = Collections.unmodifiableSortedMap(aMap0);
     }
@@ -438,6 +441,7 @@ public class UtteranceRewriter {
      * @return command or null if commandMatcher rejects the command
      */
     private static Command getCommand(SortedMap<Integer, String> header, String line, CommandMatcher commandMatcher) {
+        String label = null;
         String comment = null;
         Pattern locale = null;
         Pattern service = null;
@@ -458,6 +462,9 @@ public class UtteranceRewriter {
                 continue;
             }
             switch (colName) {
+                case HEADER_LABEL:
+                    label = split.trim();
+                    break;
                 case HEADER_COMMENT:
                     comment = split.trim();
                     break;
@@ -500,13 +507,13 @@ public class UtteranceRewriter {
         }
 
         if (arg1 == null) {
-            return new Command(comment, locale, service, app, utterance, replacement, command);
+            return new Command(label, comment, locale, service, app, utterance, replacement, command);
         }
 
         if (arg2 == null) {
-            return new Command(comment, locale, service, app, utterance, replacement, command, new String[]{arg1});
+            return new Command(label, comment, locale, service, app, utterance, replacement, command, new String[]{arg1});
         }
 
-        return new Command(comment, locale, service, app, utterance, replacement, command, new String[]{arg1, arg2});
+        return new Command(label, comment, locale, service, app, utterance, replacement, command, new String[]{arg1, arg2});
     }
 }
