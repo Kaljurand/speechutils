@@ -14,6 +14,14 @@ public class CommandEditorResult {
         return mRewrite.isCommand();
     }
 
+    public UtteranceRewriter.Rewrite getRewrite() {
+        return mRewrite;
+    }
+
+    public String getStr() {
+        return mRewrite.getStr();
+    }
+
     public Command getCommand() {
         return mRewrite.getCommand();
     }

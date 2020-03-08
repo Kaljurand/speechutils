@@ -29,11 +29,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import ee.ioc.phon.android.speechutils.Log;
-import ee.ioc.phon.android.speechutils.R;
 import ee.ioc.phon.android.speechutils.utils.HttpUtils;
 import ee.ioc.phon.android.speechutils.utils.IntentUtils;
 import ee.ioc.phon.android.speechutils.utils.JsonUtils;
-import ee.ioc.phon.android.speechutils.utils.PreferenceUtils;
 
 import static android.os.Build.VERSION_CODES;
 
@@ -840,26 +838,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 }
                 mInputConnection.endBatchEdit();
                 return undo;
-            }
-        };
-    }
-
-    @Override
-    public Op saveClip(final String utt, final String repl) {
-        return new Op("saveClip " + repl) {
-            @Override
-            public Op run() {
-                String name = mRes.getString(R.string.keyClipboardName);
-                // Load the existing rewrite rule table
-                String rewrites = PreferenceUtils.getPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, name);
-                UtteranceRewriter ur = new UtteranceRewriter(rewrites);
-                List<Command> commands = ur.getCommands();
-                // Add a line
-                commands.add(0, new Command(utt, repl.replace(F_SELECTION, getSelectedText())));
-                UtteranceRewriter newUr = new UtteranceRewriter(commands);
-                // Save it again
-                PreferenceUtils.putPrefMapEntry(mPreferences, mRes, R.string.keyClipboardMap, name, newUr.toTsv());
-                return Op.NO_OP;
             }
         };
     }

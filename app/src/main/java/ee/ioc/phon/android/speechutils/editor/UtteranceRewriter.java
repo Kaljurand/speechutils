@@ -121,6 +121,10 @@ public class UtteranceRewriter {
             return mId != null;
         }
 
+        public String getStr() {
+            return mStr;
+        }
+
         public Command getCommand() {
             return mCommand;
         }

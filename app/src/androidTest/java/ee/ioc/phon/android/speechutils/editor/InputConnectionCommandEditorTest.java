@@ -2,9 +2,10 @@ package ee.ioc.phon.android.speechutils.editor;
 
 import android.content.Context;
 import android.os.Build;
-import androidx.test.ext.junit.runners.AndroidJUnit4;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
+
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -980,21 +981,6 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("0 [] word2 [] word4 [] word6");
     }
 
-    /**
-     * Select "word2", save it to clipboard, replace the selection,
-     * select "word1", replace it with the previously saved clip.
-     */
-    @Test
-    public void test81() {
-        add("0 word1 word2 word3", "select word2");
-        runOp(mEditor.saveClip("key", "_@sel()_@sel()_"));
-        runOp(mEditor.replaceSel("REPL"));
-        assertThatTextIs("0 word1 REPL word3");
-        add("select word1");
-        //TODO: replace with rewrites lookup: runOp(mEditor.loadClip("key"));
-        assertThatTextIs("0 _word2_word2_ REPL word3");
-    }
-
     @Test
     public void test82() {
         add("Test 1.");
@@ -1110,21 +1096,6 @@ public class InputConnectionCommandEditorTest {
     public void test93() {
         add("insert 1");
         assertThatTextIs("1");
-    }
-
-    @Test
-    public void test94() {
-        // TODO: replace with rewrites lookup
-        //runOp(mEditor.clearClipboard());
-        add("123 456 789", "select 456");
-        runOp(mEditor.saveClip("number456", "@sel()"));
-        add("select 123");
-        runOp(mEditor.saveClip("number123", "@sel()"));
-        runOp(mEditor.saveClip("a", ""));
-        runOp(mEditor.saveClip("z", ""));
-        runOp(mEditor.selectAll());
-        //runOp(mEditor.showClipboard());
-        assertThatTextIs("<a|>\n<number123|123>\n<number456|456>\n<z|>\n");
     }
 
     @Test

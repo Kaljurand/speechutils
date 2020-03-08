@@ -114,17 +114,6 @@ public interface CommandEditor {
     Op copyAll();
 
     /**
-     * Saves the given utterance and replacement as the 1st line of the clipboard-rewrites table.
-     * TODO: rename
-     * TODO: add arg for the name of the used table
-     *
-     * @param utt  Utterance (regular expression)
-     * @param repl Replacement (supports function @sel() to refer to the content of the current selection)
-     * @return Op
-     */
-    Op saveClip(String utt, String repl);
-
-    /**
      * Delete the given numbers of character either to the left and to the right of the cursor.
      * In case there is a selection, then the selection is deleted instead.
      *

@@ -29,7 +29,6 @@ public class CommandEditorManager {
     public static final String UC_SEL = "ucSel";
     public static final String LC_SEL = "lcSel";
     public static final String INC_SEL = "incSel";
-    public static final String SAVE_CLIP = "saveClip";
     public static final String KEY_UP = "keyUp";
     public static final String KEY_DOWN = "keyDown";
     public static final String KEY_LEFT = "keyLeft";
@@ -126,13 +125,6 @@ public class CommandEditorManager {
         });
 
         aMap.put(REPLACE_SEL, (ce, args) -> ce.replaceSel(getArgString(args, 0, null)));
-
-        aMap.put(SAVE_CLIP, (ce, args) -> {
-            if (args == null || args.length < 2) {
-                return null;
-            }
-            return ce.saveClip(args[0], args[1]);
-        });
 
         aMap.put(UC_SEL, (ce, args) -> ce.ucSel());
 

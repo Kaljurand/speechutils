@@ -4,7 +4,6 @@ import android.text.TextUtils;
 import android.util.Pair;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -76,6 +75,7 @@ public class Command {
         return mComment;
     }
 
+    @NonNull
     public String getReplacement() {
         return mReplacement;
     }
@@ -151,8 +151,12 @@ public class Command {
             if (mArgsAsStr.isEmpty()) {
                 argsEvaluated = EMPTY_ARRAY;
             } else {
-                // TODO: can throw: java.lang.ArrayIndexOutOfBoundsException in Matcher.group
-                argsEvaluated = TextUtils.split(m.replaceAll(mArgsAsStr), SEPARATOR);
+                try {
+                    argsEvaluated = TextUtils.split(m.replaceAll(mArgsAsStr), SEPARATOR);
+                } catch (IndexOutOfBoundsException e) {
+                    // TODO: rethink this hack; occurs in Matcher.group, e.g. when "No group 1"
+                    argsEvaluated = new String[]{e.getLocalizedMessage()};
+                }
             }
         }
         try {
@@ -255,7 +259,13 @@ public class Command {
         return sb.toString();
     }
 
+    /**
+     * TODO: where and why should one use this?
+     */
     public String toString() {
+        if (mCommand == null) {
+            return mUtt + "/" + mReplacement;
+        }
         return mUtt + "/" + mReplacement + "/" + mCommand + "(" + mArgsAsStr + ")";
     }
 
@@ -265,8 +275,7 @@ public class Command {
      * This means that the activation pattern (utterance), context restrictions (command matcher),
      * and labels and comments are ignored when testing the equality.
      */
-    public boolean equalsCommand(@Nullable Object obj) {
-        Command that = (Command) obj;
+    public boolean equalsCommand(@NonNull Command that) {
         if (getId() == null) {
             return getReplacement().equals(that.getReplacement());
         }
