@@ -82,6 +82,10 @@ public class Command {
         return mComment;
     }
 
+    public Pattern getUtterance() {
+        return mUtt;
+    }
+
     @NonNull
     public String getReplacement() {
         return mReplacement;
@@ -297,6 +301,30 @@ public class Command {
         return getReplacement().equals(that.getReplacement()) &&
                 getId().equals(that.getId()) &&
                 Arrays.equals(getArgs(), that.getArgs());
+    }
+
+    /**
+     * Work in progress.
+     * Map the Utterance-field (regex) to a string that is matched by this regex.
+     * TODO: return an iterator over all possible matches
+     */
+    public String makeUtt() {
+        String val = unre(mUtt.pattern());
+        if (Pattern.matches(val, val)) {
+            return val;
+        }
+        return null;
+    }
+
+    public String getLabelOrCommentOrString() {
+        String label = getLabel();
+        if (label == null) {
+            label = getComment();
+        }
+        if (label == null) {
+            label = toString();
+        }
+        return label;
     }
 
     /**
