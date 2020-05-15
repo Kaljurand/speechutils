@@ -23,8 +23,8 @@ Testing
 
     adb shell am instrument -w -r \
     -e package ee.ioc.phon.android.speechutils -e debug false \
-    ee.ioc.phon.android.speechutils.test/android.support.test.runner.AndroidJUnitRunner
+    ee.ioc.phon.android.speechutils.test/androidx.test.runner.AndroidJUnitRunner
 
 Some tests currently fail:
 
-    Tests run: 120,  Failures: 8
+    Tests run: 118,  Failures: 8
