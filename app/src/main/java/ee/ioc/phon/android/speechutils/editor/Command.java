@@ -318,10 +318,10 @@ public class Command {
 
     public String getLabelOrCommentOrString() {
         String label = getLabel();
-        if (label == null) {
+        if (label == null || label.isEmpty()) {
             label = getComment();
         }
-        if (label == null) {
+        if (label == null || label.isEmpty()) {
             label = toString();
         }
         return label;
