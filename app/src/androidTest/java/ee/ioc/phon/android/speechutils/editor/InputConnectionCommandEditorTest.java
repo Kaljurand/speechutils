@@ -216,7 +216,7 @@ public class InputConnectionCommandEditorTest {
         assertThatUndoStackIs("[delete 4, delete 14, delete 16]");
         CommandEditorResult cer = mEditor.commitFinalResult("word2");
         assertTrue(cer.isSuccess());
-        assertThat(cer.ppCommand(), is("replace (word1 word2) (word1-word2)"));
+        assertThat(cer.getRewrite().ppCommand(), is("replace (word1 word2) (word1-word2)"));
         assertThatUndoStackIs("[undo replace2, delete 16]");
         assertThatTextIs("Test word1-word2");
     }
@@ -426,7 +426,7 @@ public class InputConnectionCommandEditorTest {
         add("and");
         CommandEditorResult cer = mEditor.commitFinalResult("word2");
         assertTrue(cer.isSuccess());
-        assertThat(cer.ppCommand(), is("replace (word1 word2) (word1-word2)"));
+        assertThat(cer.getRewrite().ppCommand(), is("replace (word1 word2) (word1-word2)"));
         assertThatUndoStackIs("[undo replace2, delete 16]");
         assertThatTextIs("Test word1-word2");
         undo();
@@ -443,7 +443,7 @@ public class InputConnectionCommandEditorTest {
         add("and");
         CommandEditorResult cer = mEditor.commitFinalResult("nonexisting_word");
         assertFalse(cer.isSuccess());
-        assertThat(cer.ppCommand(), is("replace (word1 nonexisting_word) (word1-nonexisting_word)"));
+        assertThat(cer.getRewrite().ppCommand(), is("replace (word1 nonexisting_word) (word1-nonexisting_word)"));
         assertThatUndoStackIs("[delete 16]");
         assertThatTextIs("Test word1 word2");
         undo();

@@ -98,6 +98,18 @@ public class PreferenceUtils {
         editor.apply();
     }
 
+    public static boolean togglePrefStringSetEntry(SharedPreferences prefs, Resources res, int key, String value) {
+        Set<String> set = getPrefStringSet(prefs, res, key);
+        boolean b = set.contains(value);
+        if (b) {
+            set.remove(value);
+        } else {
+            set.add(value);
+        }
+        putPrefStringSet(prefs, res, key, set);
+        return !b;
+    }
+
     /**
      * Stores the given key-value pair into a map with the given name.
      * If value is null, then delete the entry from the preferences.

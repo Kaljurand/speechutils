@@ -52,7 +52,13 @@ public class Command {
         if (args == null) {
             mArgs = EMPTY_ARRAY;
         } else {
-            mArgs = args;
+            int i = 0;
+            for (; i < args.length; i++) {
+                if (args[i] == null || args[i].isEmpty()) {
+                    break;
+                }
+            }
+            mArgs = Arrays.copyOf(args, i);
         }
         mArgsAsStr = TextUtils.join(SEPARATOR, mArgs);
     }

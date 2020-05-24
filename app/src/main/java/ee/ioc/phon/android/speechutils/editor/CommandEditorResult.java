@@ -22,15 +22,7 @@ public class CommandEditorResult {
         return mRewrite.getStr();
     }
 
-    public Command getCommand() {
-        return mRewrite.getCommand();
-    }
-
     public boolean isSuccess() {
         return mSuccess;
-    }
-
-    public String ppCommand() {
-        return mRewrite.ppCommand();
     }
 }
