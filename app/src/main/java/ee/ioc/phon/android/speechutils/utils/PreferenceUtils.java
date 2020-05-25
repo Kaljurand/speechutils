@@ -99,7 +99,12 @@ public class PreferenceUtils {
     }
 
     public static boolean togglePrefStringSetEntry(SharedPreferences prefs, Resources res, int key, String value) {
-        Set<String> set = getPrefStringSet(prefs, res, key);
+        Set<String> set;
+        try {
+            set = prefs.getStringSet(res.getString(key), new HashSet<>());
+        } catch (ClassCastException e) {
+            set = new HashSet<>();
+        }
         boolean b = set.contains(value);
         if (b) {
             set.remove(value);
