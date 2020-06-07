@@ -28,6 +28,7 @@ public class Command {
     private final String mCommand;
     private final String[] mArgs;
     private final String mArgsAsStr;
+    private final boolean mIsRepeatable;
 
     /**
      * @param label       short label for GUI
@@ -61,6 +62,15 @@ public class Command {
             mArgs = Arrays.copyOf(args, i);
         }
         mArgsAsStr = TextUtils.join(SEPARATOR, mArgs);
+
+        mIsRepeatable = mCommand != null && (
+                mCommand.equals("moveRel")
+                        || mCommand.equals("moveRelSel")
+                        || mCommand.equals("selectReBefore")
+                        || mCommand.equals("selectReAfter")
+                        || mCommand.equals("select")
+                        || mCommand.equals("deleteChars")
+        );
     }
 
     public Command(String label, String comment, Pattern locale, Pattern service, Pattern app, Pattern utt, String replacement, String id) {
@@ -287,6 +297,7 @@ public class Command {
     /**
      * TODO: where and why should one use this?
      */
+    @NonNull
     public String toString() {
         if (mCommand == null) {
             return mUtt + "/" + mReplacement;
@@ -322,15 +333,28 @@ public class Command {
         return null;
     }
 
-    public String getLabelOrCommentOrString() {
+    public String getLabelOrString() {
         String label = getLabel();
-        if (label == null || label.isEmpty()) {
-            label = getComment();
-        }
         if (label == null || label.isEmpty()) {
             label = toString();
         }
         return label;
+    }
+
+    /**
+     * Some commands can be executed repeatedly, e.g. moving the cursor left or searching the
+     * remaining document for a given string. For other commands (copy, send) this does not make sense.
+     * The UI can implement such repeatability with a press-and-hold button, but then might be
+     * unable to support long press, scroll, swipe.
+     * Many commands are in principle repeatable (undo, paste, typing letter "a", ...) but soft
+     * keyboards do not commonly implement them with press-and-hold. We currently declare a small number
+     * of cursor, selection and deletion commands as repeatable, but in the future this should be
+     * overridable by the user in the rewrites table.
+     *
+     * @return True iff command is repeatable
+     */
+    public boolean isRepeatable() {
+        return mIsRepeatable;
     }
 
     /**

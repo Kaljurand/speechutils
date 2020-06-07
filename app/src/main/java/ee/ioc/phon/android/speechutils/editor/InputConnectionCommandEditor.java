@@ -670,6 +670,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 final ExtractedText et = getExtractedText();
                 if (et != null) {
                     CharSequence input = et.text.subSequence(et.selectionEnd, et.text.length());
+                    // TODO: sometimes crashes with:
+                    // StringIndexOutOfBoundsException: String index out of range: -4
                     CharSequence selectedText = et.text.subSequence(et.selectionStart, et.selectionEnd);
                     Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex.replace(F_SELECTION, selectedText)), input, n);
                     if (pos != null) {

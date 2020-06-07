@@ -11,6 +11,7 @@ public class CommandEditorManager {
 
     public static final String MOVE_ABS = "moveAbs";
     public static final String MOVE_REL = "moveRel";
+    public static final String MOVE_REL_SEL = "moveRelSel";
     public static final String SELECT = "select";
     public static final String SELECT_RE_BEFORE = "selectReBefore";
     public static final String SELECT_RE_AFTER = "selectReAfter";
@@ -70,6 +71,8 @@ public class CommandEditorManager {
         aMap.put(MOVE_ABS, (ce, args) -> ce.moveAbs(getArgInt(args, 0, 1)));
 
         aMap.put(MOVE_REL, (ce, args) -> ce.moveRel(getArgInt(args, 0, 1)));
+
+        aMap.put(MOVE_REL_SEL, (ce, args) -> ce.moveRelSel(getArgInt(args, 0, 1), getArgInt(args, 1, 1)));
 
         aMap.put(KEY_CODE, (ce, args) -> {
             if (args != null && args.length > 0) {
