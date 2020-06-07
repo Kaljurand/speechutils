@@ -935,7 +935,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
      */
     @Override
     public Op imeAction(int editorAction) {
-        return getEditorActionOp(editorAction);
+        // TODO: map the given Id to a label that uses the symbolic name like NEXT
+        return getEditorActionOp(editorAction, "IME_ACTION_" + editorAction);
     }
 
     /**
@@ -943,7 +944,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
      */
     @Override
     public Op imeActionPrevious() {
-        return getEditorActionOp(EditorInfo.IME_ACTION_PREVIOUS);
+        return getEditorActionOp(EditorInfo.IME_ACTION_PREVIOUS, "IME_ACTION_PREVIOUS");
     }
 
     /**
@@ -951,29 +952,29 @@ public class InputConnectionCommandEditor implements CommandEditor {
      */
     @Override
     public Op imeActionNext() {
-        return getEditorActionOp(EditorInfo.IME_ACTION_NEXT);
+        return getEditorActionOp(EditorInfo.IME_ACTION_NEXT, "IME_ACTION_NEXT");
     }
 
     @Override
     public Op imeActionDone() {
         // Does not work on Google Searchbar
-        return getEditorActionOp(EditorInfo.IME_ACTION_DONE);
+        return getEditorActionOp(EditorInfo.IME_ACTION_DONE, "IME_ACTION_DONE");
     }
 
     @Override
     public Op imeActionGo() {
         // Works in Google Searchbar, GF Translator, but NOT in the Firefox search widget
-        return getEditorActionOp(EditorInfo.IME_ACTION_GO);
+        return getEditorActionOp(EditorInfo.IME_ACTION_GO, "IME_ACTION_GO");
     }
 
     @Override
     public Op imeActionSearch() {
-        return getEditorActionOp(EditorInfo.IME_ACTION_SEARCH);
+        return getEditorActionOp(EditorInfo.IME_ACTION_SEARCH, "IME_ACTION_SEARCH");
     }
 
     @Override
     public Op imeActionSend() {
-        return getEditorActionOp(EditorInfo.IME_ACTION_SEND);
+        return getEditorActionOp(EditorInfo.IME_ACTION_SEND, "IME_ACTION_SEND");
     }
 
     @Override
@@ -1001,8 +1002,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
         Log.i("undo: push undo: " + mUndoStack.toString());
     }
 
-    private Op getEditorActionOp(final int editorAction) {
-        return new Op("editorAction " + editorAction) {
+    private Op getEditorActionOp(final int editorAction, String label) {
+        return new Op(label) {
             @Override
             public Op run() {
                 if (mInputConnection.performEditorAction(editorAction)) {
