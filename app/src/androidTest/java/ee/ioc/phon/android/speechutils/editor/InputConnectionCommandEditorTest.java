@@ -39,6 +39,10 @@ public class InputConnectionCommandEditorTest {
         list1.add(new Command("hyphen", "-"));
         list1.add(new Command("space", " "));
         list1.add(new Command("newbullet", "\n- "));
+        // TODO: are the following 2 supposed to be equivalent (did this change in Android 11?)
+        list1.add(new Command("prefix1(optional)?", "$1"));
+        list1.add(new Command("prefix2(optional|)", "$1"));
+        list1.add(new Command("replace with selection", "A @sel() B"));
 
         // Editor commands
         List<Command> list2 = new ArrayList<>();
@@ -1246,6 +1250,48 @@ public class InputConnectionCommandEditorTest {
         undo(3);
         add("*");
         assertThatTextIs("1 2 3 1 * 3 * * 3");
+    }
+
+    @Test
+    public void test107() {
+        add("test prefix1optional");
+        assertThatTextIs("Test optional");
+    }
+
+    // "(opt)?" is not equal to "(opt|)", the first returns null if opt is missing.
+    // TODO: is this intentional in Java? Did this change in Android 11?
+    @Test
+    public void test108() {
+        add("test prefix1suffix");
+        assertThatTextIs("Test suffix");
+    }
+
+    @Test
+    public void test109() {
+        add("test prefix2prefix2suffix");
+        assertThatTextIs("Test suffix");
+    }
+
+    /**
+     * Replace with selection if nothing has been selected.
+     * TODO: do we want this, i.e. may it would make sense if replacement resolved @sel()
+     */
+    @Test
+    public void test110() {
+        add("replace with selection");
+        assertThatTextIs("A @sel() B");
+    }
+
+    /**
+     * Replace with selection if something has been selected.
+     * TODO: do we want this, i.e. may it would make sense if replacement resolved @sel()
+     */
+    @Test
+    public void test111() {
+        add("123456");
+        runOp(mEditor.select("123"));
+        add("replace with selection");
+        assertThatTextIs("A @sel() B456");
     }
 
     // Can't create handler inside thread that has not called Looper.prepare()
