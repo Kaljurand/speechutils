@@ -1258,12 +1258,13 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("Test optional");
     }
 
-    // "(opt)?" is not equal to "(opt|)", the first returns null if opt is missing.
-    // TODO: is this intentional in Java? Did this change in Android 11?
+    // "(opt)?" is equal to "(opt|)"
+    // In Android 10, the first returns null if opt is missing.
     @Test
     public void test108() {
         add("test prefix1suffix");
-        assertThatTextIs("Test suffix");
+        // assertThatTextIs("Test nullsuffix"); // Android 10
+        assertThatTextIs("Test suffix"); // Android 11
     }
 
     @Test
