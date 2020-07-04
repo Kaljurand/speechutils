@@ -98,6 +98,18 @@ public class Command {
         return mComment;
     }
 
+    public Pattern getLocale() {
+        return mLocale;
+    }
+
+    public Pattern getService() {
+        return mService;
+    }
+
+    public Pattern getApp() {
+        return mApp;
+    }
+
     public Pattern getUtterance() {
         return mUtt;
     }

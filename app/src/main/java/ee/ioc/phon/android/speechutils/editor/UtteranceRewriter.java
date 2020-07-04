@@ -291,7 +291,7 @@ public class UtteranceRewriter {
 
     /**
      * Loads the rewrites table from the given string. The header is detected automatically.
-     * Command maching is not performed.
+     * Command matching is not performed.
      *
      * @param str
      */
