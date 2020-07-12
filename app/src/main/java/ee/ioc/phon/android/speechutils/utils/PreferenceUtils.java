@@ -16,6 +16,8 @@ import java.util.UUID;
 
 public class PreferenceUtils {
 
+    private static final String SEP = "/";
+
     private PreferenceUtils() {
     }
 
@@ -123,7 +125,7 @@ public class PreferenceUtils {
         String name = res.getString(nameId);
         Set<String> keys = prefs.getStringSet(name, new HashSet<>());
         SharedPreferences.Editor editor = prefs.edit();
-        String nameKey = name + '/' + key;
+        String nameKey = name + SEP + key;
         if (value == null) {
             editor.remove(nameKey);
             if (keys.contains(key)) {
@@ -141,7 +143,7 @@ public class PreferenceUtils {
     }
 
     public static String getPrefMapEntry(SharedPreferences prefs, Resources res, int nameId, String key) {
-        return prefs.getString(res.getString(nameId) + '/' + key, null);
+        return prefs.getString(res.getString(nameId) + SEP + key, null);
     }
 
     public static Set<String> getPrefMapKeys(SharedPreferences prefs, Resources res, int nameId) {
@@ -154,7 +156,7 @@ public class PreferenceUtils {
         Set<String> keys = prefs.getStringSet(name, Collections.<String>emptySet());
         Map<String, String> map = new HashMap<>();
         for (String key : keys) {
-            map.put(key, prefs.getString(name + '/' + key, null));
+            map.put(key, prefs.getString(name + SEP + key, null));
         }
         return map;
     }
@@ -165,7 +167,7 @@ public class PreferenceUtils {
         if (keys != null) {
             SharedPreferences.Editor editor = prefs.edit();
             for (String key : keys) {
-                editor.remove(name + '/' + key);
+                editor.remove(name + SEP + key);
             }
             editor.remove(name);
             editor.apply();
@@ -178,7 +180,7 @@ public class PreferenceUtils {
         if (keys != null) {
             SharedPreferences.Editor editor = prefs.edit();
             for (String key : deleteKeys) {
-                editor.remove(name + '/' + key);
+                editor.remove(name + SEP + key);
             }
             Set<String> newKeys = new HashSet<>(keys);
             newKeys.removeAll(deleteKeys);

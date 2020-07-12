@@ -29,17 +29,17 @@ public class RuleManager {
         if (locale == null) {
             mLocalePattern = null;
         } else {
-            mLocalePattern = Pattern.compile(Pattern.quote(locale), Constants.REWRITE_PATTERN_FLAGS);
+            mLocalePattern = Pattern.compile(Pattern.quote(locale));
         }
         if (service == null) {
             mServicePattern = null;
         } else {
-            mServicePattern = Pattern.compile(Pattern.quote(service.getPackageName()), Constants.REWRITE_PATTERN_FLAGS);
+            mServicePattern = Pattern.compile(Pattern.quote(service.getClassName()));
         }
         if (app == null) {
             mAppPattern = null;
         } else {
-            mAppPattern = Pattern.compile(Pattern.quote(app.getPackageName()), Constants.REWRITE_PATTERN_FLAGS);
+            mAppPattern = Pattern.compile(Pattern.quote(app.getClassName()));
         }
 
         mCommandMatcher = CommandMatcherFactory.createCommandFilter(locale, service, app);
@@ -133,7 +133,6 @@ public class RuleManager {
             // TODO: update the timestamp (comment field)
             newList.add(0, oldCommand);
         }
-
         return newList;
     }
 
