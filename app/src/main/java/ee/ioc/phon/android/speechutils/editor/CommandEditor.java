@@ -64,8 +64,6 @@ public interface CommandEditor {
     /**
      * Move cursor left to the matching regex.
      * Supports function @sel() to refer to the content of the current selection.
-     * The content of the selection is interpreted as a (part of a) regular expression, i.e. "."
-     * refers to any character, not a ".".
      *
      * @param regex regular expression to be searched
      * @return Op
@@ -75,8 +73,6 @@ public interface CommandEditor {
     /**
      * Move cursor right to the Nth matching regex.
      * Supports function @sel() to refer to the content of the current selection.
-     * The content of the selection is interpreted as a (part of a) regular expression, i.e. "."
-     * refers to any character, not a ".".
      *
      * @param regex regular expression to be searched
      * @param n     number of matches before stopping the search

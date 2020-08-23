@@ -637,6 +637,16 @@ public class InputConnectionCommandEditor implements CommandEditor {
         };
     }
 
+    /**
+     * Returns the current selection wrapped in regex quotation.
+     */
+    private CharSequence getSelectionAsRe(ExtractedText et) {
+        if (et.selectionStart == et.selectionEnd) {
+            return "";
+        }
+        return "\\Q" + et.text.subSequence(et.selectionStart, et.selectionEnd) + "\\E";
+    }
+
     @Override
     public Op selectReBefore(final String regex) {
         return new Op("selectReBefore") {
@@ -647,9 +657,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 final ExtractedText et = getExtractedText();
                 if (et != null) {
                     CharSequence input = et.text.subSequence(0, et.selectionStart);
-                    CharSequence selectedText = et.text.subSequence(et.selectionStart, et.selectionEnd);
                     // 0 == last match
-                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex.replace(F_SELECTION, selectedText)), input, 0);
+                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex.replace(F_SELECTION, getSelectionAsRe(et))), input, 0);
                     if (pos != null) {
                         undo = getOpSetSelection(pos.first, pos.second, et.selectionStart, et.selectionEnd).run();
                     }
@@ -672,8 +681,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     CharSequence input = et.text.subSequence(et.selectionEnd, et.text.length());
                     // TODO: sometimes crashes with:
                     // StringIndexOutOfBoundsException: String index out of range: -4
-                    CharSequence selectedText = et.text.subSequence(et.selectionStart, et.selectionEnd);
-                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex.replace(F_SELECTION, selectedText)), input, n);
+                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex.replace(F_SELECTION, getSelectionAsRe(et))), input, n);
                     if (pos != null) {
                         undo = getOpSetSelection(et.selectionEnd + pos.first, et.selectionEnd + pos.second, et.selectionStart, et.selectionEnd).run();
                     }

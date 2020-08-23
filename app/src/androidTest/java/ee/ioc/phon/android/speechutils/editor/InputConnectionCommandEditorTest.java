@@ -1406,6 +1406,31 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("-1 456");
     }
 
+    /**
+     * selectReBefore interprets the selection as a plain string (not as a regex
+     */
+    @Test
+    public void test212() {
+        add(". 2 .");
+        runOp(mEditor.selectReBefore("\\."));
+        runOp(mEditor.selectReBefore("@sel()"));
+        add("1");
+        assertThatTextIs("1 2 .");
+    }
+
+    /**
+     * selectReAfter interprets the selection as a plain string (not as a regex
+     */
+    @Test
+    public void test213() {
+        add(". 2 .");
+        runOp(mEditor.selectReBefore("\\."));
+        runOp(mEditor.selectReBefore("\\."));
+        runOp(mEditor.selectReAfter("@sel()", 1));
+        add("3");
+        assertThatTextIs(". 2 3");
+    }
+
     private String getTextBeforeCursor(int n) {
         return mEditor.getInputConnection().getTextBeforeCursor(n, 0).toString();
     }
