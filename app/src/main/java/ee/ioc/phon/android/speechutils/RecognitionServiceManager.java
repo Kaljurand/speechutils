@@ -64,28 +64,16 @@ public class RecognitionServiceManager {
      * @param localeAsStr Formal name of the locale, e.g. "et-ee"
      * @return The name of the locale in the language of the current locale
      */
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public static String makeLangLabel(String localeAsStr) {
         // Just to make sure we do not get a NPE from Locale.forLanguageTag
         if (localeAsStr == null || localeAsStr.isEmpty()) {
             return "?";
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            return Locale.forLanguageTag(localeAsStr).getDisplayName();
-        }
-        return localeAsStr;
+        return getDisplayLanguage(localeAsStr);
     }
 
-    /**
-     * On LOLLIPOP we use a builtin to parse the locale string, and return
-     * the name of the language in the language of the current locale. In pre-LOLLIPOP we just return
-     * the formal name (e.g. "et-ee"), because the Locale-constructor is not able to parse it.
-     *
-     * @param localeAsStr Formal name of the locale, e.g. "et-ee"
-     * @return The name of the language in the language of the current locale
-     */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public static String getDisplayLanguage(String localeAsStr) {
+    private static String getDisplayLanguage(String localeAsStr) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             return Locale.forLanguageTag(localeAsStr).getDisplayLanguage();
         }
