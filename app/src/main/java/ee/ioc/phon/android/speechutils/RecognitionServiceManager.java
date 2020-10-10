@@ -64,18 +64,14 @@ public class RecognitionServiceManager {
      * @param localeAsStr Formal name of the locale, e.g. "et-ee"
      * @return The name of the locale in the language of the current locale
      */
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public static String makeLangLabel(String localeAsStr) {
         // Just to make sure we do not get a NPE from Locale.forLanguageTag
         if (localeAsStr == null || localeAsStr.isEmpty()) {
             return "?";
         }
-        return getDisplayLanguage(localeAsStr);
-    }
-
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private static String getDisplayLanguage(String localeAsStr) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            return Locale.forLanguageTag(localeAsStr).getDisplayLanguage();
+            return Locale.forLanguageTag(localeAsStr).getDisplayName();
         }
         return localeAsStr;
     }
@@ -219,7 +215,7 @@ public class RecognitionServiceManager {
     }
 
     public void populateCombos(Context activity, List<String> services, final Listener listener) {
-        populateCombos(activity, services, 0, listener, new ArrayList<String>(), new HashSet<String>());
+        populateCombos(activity, services, 0, listener, new ArrayList<>(), new HashSet<>());
     }
 
     public void populateCombos(Context activity, String service, final Listener listener) {
