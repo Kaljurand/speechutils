@@ -176,7 +176,12 @@ public class RecognitionServiceManager {
     }
 
     public void setInitiallySelectedCombos(Set<String> set) {
-        mInitiallySelectedCombos = set;
+        if (set == null) {
+            mInitiallySelectedCombos = new HashSet<>();
+
+        } else {
+            mInitiallySelectedCombos = set;
+        }
     }
 
     /**
@@ -273,17 +278,15 @@ public class RecognitionServiceManager {
                     }
                 }
 
-                // Make sure that the list of languages contains at least one member.
-                // If the service declares no languages then this member could be interpreted
+                // Make sure that the list of languages contains at least one member,
+                // "und", to be interpreted
                 // as "some unspecified languages" or "all languages" (but not "no languages").
                 // We use the code "und" here, see also:
                 // - https://en.wikipedia.org/wiki/ISO_639-3
                 // - https://android.googlesource.com/platform/libcore/+/refs/heads/master/ojluni/src/main/java/java/util/Locale.java
                 //   Android-added: (internal only): ISO 639-3 generic code for undetermined languages.
                 //   private static final String UNDETERMINED_LANGUAGE = "und";
-                if (langs.isEmpty()) {
-                    langs.add("und");
-                }
+                langs.add("und");
 
                 for (CharSequence lang : langs) {
                     String combo = service + SEPARATOR + lang;
