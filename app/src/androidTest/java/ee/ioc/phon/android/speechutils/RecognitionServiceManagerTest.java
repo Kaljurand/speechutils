@@ -26,4 +26,9 @@ public class RecognitionServiceManagerTest {
     public void makeLangLabel04() {
         assertEquals("Võro (Estonia)", makeLangLabel("vro-ee"));
     }
+
+    @Test
+    public void makeLangLabel05() {
+        assertEquals("", makeLangLabel("und"));
+    }
 }
