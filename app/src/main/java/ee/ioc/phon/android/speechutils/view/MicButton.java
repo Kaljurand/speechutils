@@ -2,6 +2,7 @@ package ee.ioc.phon.android.speechutils.view;
 
 import android.content.Context;
 import android.content.res.Resources;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.HapticFeedbackConstants;
@@ -31,6 +32,9 @@ public class MicButton extends androidx.appcompat.widget.AppCompatImageButton {
         // An error has occurred
         ERROR
     }
+
+    public static final int COLOR_LISTENING = Color.argb(255, 204, 0, 0);
+    public static final int COLOR_TRANSCRIBING = Color.argb(255, 153, 51, 204);
 
     // TODO: take these from some device specific configuration
     private static final float DB_MIN = 15.0f;
