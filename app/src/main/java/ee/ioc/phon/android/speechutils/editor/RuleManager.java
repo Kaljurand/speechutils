@@ -58,7 +58,7 @@ public class RuleManager {
         String comment = DATE_FORMAT.format(cal.getTime());
         Command newCommand = makeCommand(rewrite, makeUtt(cal), comment);
         List<Command> commands = addToTop(newCommand, rewrites);
-        return new UtteranceRewriter(commands, UtteranceRewriter.DEFAULT_HEADER);
+        return new UtteranceRewriter(commands, UtteranceRewriter.DEFAULT_HEADER_COMMAND);
     }
 
     /**
@@ -73,7 +73,7 @@ public class RuleManager {
         String comment = DATE_FORMAT.format(cal.getTime());
         Command newCommand = new Command(text, comment, mLocalePattern, mServicePattern, mAppPattern, makeUtt(cal), "", CommandEditorManager.REPLACE_SEL, new String[]{text});
         List<Command> commands = addToTop(newCommand, rewrites);
-        return new UtteranceRewriter(commands, UtteranceRewriter.DEFAULT_HEADER);
+        return new UtteranceRewriter(commands, UtteranceRewriter.DEFAULT_HEADER_REPLACE_SEL);
     }
 
     /**
@@ -83,7 +83,7 @@ public class RuleManager {
     public UtteranceRewriter addFrequent(CommandEditorResult editorResult, String rewritesAsStr) {
         UtteranceRewriter.Rewrite rewrite = editorResult.getRewrite();
         List<Command> commands = addRuleFreq(rewrite, rewritesAsStr);
-        return new UtteranceRewriter(commands, UtteranceRewriter.DEFAULT_HEADER);
+        return new UtteranceRewriter(commands, UtteranceRewriter.DEFAULT_HEADER_COMMAND);
     }
 
     /**

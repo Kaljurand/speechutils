@@ -80,6 +80,46 @@ public class UtteranceRewriter {
         DEFAULT_HEADER = Collections.unmodifiableSortedMap(aMap0);
     }
 
+    // All fields, but every row starts with Command.
+    // This makes sure that rows do not start with "#" (which might be e.g. the 1st char of a Label,
+    // but cannot be part of a Command). As a result the parser will not
+    // drop any rows by treating them as comments.
+    public static final SortedMap<Integer, String> DEFAULT_HEADER_COMMAND;
+
+    static {
+        SortedMap<Integer, String> aMapHeaderCommand = new TreeMap<>();
+        aMapHeaderCommand.put(0, HEADER_COMMAND);
+        aMapHeaderCommand.put(1, HEADER_COMMENT);
+        aMapHeaderCommand.put(2, HEADER_LOCALE);
+        aMapHeaderCommand.put(3, HEADER_SERVICE);
+        aMapHeaderCommand.put(4, HEADER_APP);
+        aMapHeaderCommand.put(5, HEADER_UTTERANCE);
+        aMapHeaderCommand.put(6, HEADER_REPLACEMENT);
+        aMapHeaderCommand.put(7, HEADER_LABEL);
+        aMapHeaderCommand.put(8, HEADER_ARG1);
+        aMapHeaderCommand.put(9, HEADER_ARG2);
+
+        DEFAULT_HEADER_COMMAND = Collections.unmodifiableSortedMap(aMapHeaderCommand);
+    }
+
+    // Same as DEFAULT_HEADER_COMMAND but without REPLACEMENT and ARG2.
+    // This is optimized for replaceSel commands used to store clipboard items.
+    public static final SortedMap<Integer, String> DEFAULT_HEADER_REPLACE_SEL;
+
+    static {
+        SortedMap<Integer, String> aMapHeaderReplaceSel = new TreeMap<>();
+        aMapHeaderReplaceSel.put(0, HEADER_COMMAND);
+        aMapHeaderReplaceSel.put(1, HEADER_COMMENT);
+        aMapHeaderReplaceSel.put(2, HEADER_LOCALE);
+        aMapHeaderReplaceSel.put(3, HEADER_SERVICE);
+        aMapHeaderReplaceSel.put(4, HEADER_APP);
+        aMapHeaderReplaceSel.put(5, HEADER_UTTERANCE);
+        aMapHeaderReplaceSel.put(6, HEADER_LABEL);
+        aMapHeaderReplaceSel.put(7, HEADER_ARG1);
+
+        DEFAULT_HEADER_REPLACE_SEL = Collections.unmodifiableSortedMap(aMapHeaderReplaceSel);
+    }
+
     // Only utterance
     private static final SortedMap<Integer, String> DEFAULT_HEADER_1;
 

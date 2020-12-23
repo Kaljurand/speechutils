@@ -255,6 +255,7 @@ public class Command {
     }
 
     // TODO: simplify to accept List<String> as input (because keys are not used)
+    // TODO: escape "#" if line starts with "#" (e.g. the Label starts with "#").
     public String toTsv(SortedMap<Integer, String> header) {
         StringBuilder sb = new StringBuilder();
         boolean isFirst = true;
