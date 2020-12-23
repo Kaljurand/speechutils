@@ -7,6 +7,7 @@ import org.junit.runner.RunWith;
 
 import java.util.regex.Pattern;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -69,7 +70,46 @@ public class CommandTest {
         assertTrue(empty1.equalsCommand(empty2) && empty2.equalsCommand(empty3) && empty3.equalsCommand(empty4) && empty4.equalsCommand(empty1));
     }
 
+    @Test
+    public void testMakeUtt01() {
+        assertEquals(makeCommand("matcher").makeUtt(), "matcher");
+    }
+
+    @Test
+    public void testMakeUtt02() {
+        assertEquals(makeCommand("mat*cher*").makeUtt(), "mache");
+    }
+
+    @Test
+    public void testMakeUtt03() {
+        assertEquals(makeCommand("([123]00)").makeUtt(), "100");
+    }
+
+    @Test
+    public void testMakeUtt04() {
+        assertEquals(makeCommand("((?:3|2|1)00)").makeUtt(), "300");
+    }
+
+    @Test
+    public void testMakeUtt05() {
+        assertEquals(makeCommand("a b? c").makeUtt(), "a  c");
+    }
+
+    @Test
+    public void testMakeUtt06() {
+        assertEquals(makeCommand("ab?c|d").makeUtt(), "ac");
+    }
+
+    @Test
+    public void testMakeUtt07() {
+        assertEquals(makeCommand("a b? c|d").makeUtt(), "a  c");
+    }
+
     private Command makeCommand(String label, String id, String[] args) {
         return new Command(label, "", null, null, null, Pattern.compile("^" + label + "$"), "", id, args);
+    }
+
+    private Command makeCommand(String utt) {
+        return new Command("^" + utt + "$", "");
     }
 }

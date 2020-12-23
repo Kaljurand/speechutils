@@ -5,6 +5,9 @@ import android.util.Pair;
 
 import androidx.annotation.NonNull;
 
+import com.github.curiousoddman.rgxgen.RgxGen;
+import com.github.curiousoddman.rgxgen.iterators.StringIterator;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -339,9 +342,10 @@ public class Command {
      * TODO: return an iterator over all possible matches
      */
     public String makeUtt() {
-        String val = unre(mUtt.pattern());
-        if (Pattern.matches(val, val)) {
-            return val;
+        RgxGen rgxGen = new RgxGen(mUtt.pattern());
+        StringIterator uniqueStrings = rgxGen.iterateUnique();
+        if (uniqueStrings.hasNext()) {
+            return uniqueStrings.next();
         }
         return null;
     }

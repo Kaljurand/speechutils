@@ -27,4 +27,4 @@ Testing
 
 Some tests currently fail:
 
-    Tests run: 118,  Failures: 8
+    Tests run: 142,  Failures: 10
