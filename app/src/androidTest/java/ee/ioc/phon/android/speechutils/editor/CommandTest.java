@@ -16,19 +16,19 @@ public class CommandTest {
 
     // Argument arrays are trimmed, i.e. nulls and empties are removed from the end.
     // However, whitespace is not removed from the values.
-    Command c = makeCommand("c", "replaceSel", new String[]{"c"});
-    Command c1 = makeCommand("c1", "replaceSel", new String[]{"c"});
-    Command c2 = makeCommand("c2", "replaceSel", new String[]{"c2"});
-    Command c3 = makeCommand("c3", "replaceSel", new String[]{"c", "", null});
-    Command c4 = makeCommand("c4", "replaceSel", new String[]{"c", "d"});
-    Command c5 = makeCommand("c5", "replaceSel", new String[]{});
-    Command c6 = makeCommand("c6", "replaceSel", new String[]{"c", null, null});
-    Command c7 = makeCommand("c7", "replaceSel", new String[]{"c", " "});
+    private final Command c = makeCommand("c", "replaceSel", new String[]{"c"});
+    private final Command c1 = makeCommand("c1", "replaceSel", new String[]{"c"});
+    private final Command c2 = makeCommand("c2", "replaceSel", new String[]{"c2"});
+    private final Command c3 = makeCommand("c3", "replaceSel", new String[]{"c", "", null});
+    private final Command c4 = makeCommand("c4", "replaceSel", new String[]{"c", "d"});
+    private final Command c5 = makeCommand("c5", "replaceSel", new String[]{});
+    private final Command c6 = makeCommand("c6", "replaceSel", new String[]{"c", null, null});
+    private final Command c7 = makeCommand("c7", "replaceSel", new String[]{"c", " "});
 
-    Command empty1 = makeCommand("empty1", "id", new String[]{});
-    Command empty2 = makeCommand("empty2", "id", new String[]{""});
-    Command empty3 = makeCommand("empty3", "id", new String[]{null});
-    Command empty4 = makeCommand("empty4", "id", null);
+    private final Command empty1 = makeCommand("empty1", "id", new String[]{});
+    private final Command empty2 = makeCommand("empty2", "id", new String[]{""});
+    private final Command empty3 = makeCommand("empty3", "id", new String[]{null});
+    private final Command empty4 = makeCommand("empty4", "id", null);
 
     @Test
     public void test01() {

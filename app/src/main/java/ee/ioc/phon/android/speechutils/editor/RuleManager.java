@@ -10,6 +10,7 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class RuleManager {
@@ -67,11 +68,18 @@ public class RuleManager {
      * TODO: another option is to add it as a simple text replacement, which means that spacing and capitalization rules
      * would apply to it, and follow-up rules can rewrite it:
      * new Command(text, comment, mLocalePattern, mServicePattern, mAppPattern, makeUtt(cal), text, null);
+     * TODO: we could also have a dedicated command (instead of replaceSel) that is optimized for inserting strings
+     * without any support for @sel or regex replacements (and thus needs no escaping).
      */
     public UtteranceRewriter addRecent(String text, String rewrites) {
         Calendar cal = Calendar.getInstance();
         String comment = DATE_FORMAT.format(cal.getTime());
-        Command newCommand = new Command(text, comment, mLocalePattern, mServicePattern, mAppPattern, makeUtt(cal), "", CommandEditorManager.REPLACE_SEL, new String[]{text});
+        return addRecent(text, makeUtt(cal), comment, rewrites);
+    }
+
+    public UtteranceRewriter addRecent(String text, Pattern utt, String comment, String rewrites) {
+        String textEscaped = Matcher.quoteReplacement(text);
+        Command newCommand = new Command(text, comment, mLocalePattern, mServicePattern, mAppPattern, utt, "", CommandEditorManager.REPLACE_SEL, new String[]{textEscaped});
         List<Command> commands = addToTop(newCommand, rewrites);
         return new UtteranceRewriter(commands, UtteranceRewriter.DEFAULT_HEADER_REPLACE_SEL);
     }
@@ -146,19 +154,25 @@ public class RuleManager {
     /**
      * Converts a rewrite (i.e. a result of an application of a command) into a command. The new command
      * uses the given utterance pattern and comment. The other parts are reused from the rewrite.
+     * The replacement is escaped: slashes ('\') and dollar signs ('$') will be given no special meaning.
      */
-    private Command makeCommand(UtteranceRewriter.Rewrite rewrite, Pattern utt, String comment) {
+    Command makeCommand(UtteranceRewriter.Rewrite rewrite, Pattern utt, String comment) {
+        String repl = Matcher.quoteReplacement(rewrite.mStr);
         if (rewrite.isCommand()) {
             // We store the matched command, but change the utterance, comment, and the command matcher.
-            // TODO: review this
+            // TODO: review this: use the (resolved) utterance as the label instead?
             String label = rewrite.getCommand().getLabel();
             if (label == null) {
                 label = rewrite.ppCommand();
             }
-            // Rewrite args is the output of command.parse, i.e. the evaluated args
-            return new Command(label, comment, mLocalePattern, mServicePattern, mAppPattern, utt, rewrite.mStr, rewrite.mId, rewrite.mArgs);
+            // Rewrite args is the output of command.parse, i.e. the evaluated args, but with escaping of "\" and "$".
+            String[] args = new String[rewrite.mArgs.length];
+            for (int i = 0; i < args.length; i++) {
+                args[i] = Matcher.quoteReplacement(rewrite.mArgs[i]);
+            }
+            return new Command(label, comment, mLocalePattern, mServicePattern, mAppPattern, utt, repl, rewrite.mId, args);
         } else {
-            return new Command(rewrite.mStr, comment, mLocalePattern, mServicePattern, mAppPattern, utt, rewrite.mStr, null);
+            return new Command(rewrite.mStr, comment, mLocalePattern, mServicePattern, mAppPattern, utt, repl, null);
         }
     }
 
