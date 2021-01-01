@@ -373,6 +373,18 @@ public class InputConnectionCommandEditorTest {
     }
 
     @Test
+    public void test30a() {
+        runOp(mEditor.replaceSel(null));
+        assertThatTextIs("");
+        undo();
+        assertThatTextIs("");
+        runOp(mEditor.replaceSel(""));
+        assertThatTextIs("");
+        undo();
+        assertThatTextIs("");
+    }
+
+    @Test
     public void test31() {
         add("there are word1 and word2...", "select word1 and word2", "selection_replace REPL");
         assertThatTextIs("There are REPL...");

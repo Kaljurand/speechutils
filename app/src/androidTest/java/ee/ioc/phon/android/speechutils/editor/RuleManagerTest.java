@@ -36,6 +36,11 @@ public class RuleManagerTest {
     }
 
     @Test
+    public void test05() {
+        assertEquals("Command\tComment\tLocale\tService\tApp\tUtterance\tLabel\tArg1\nreplaceSel\t\t\t\t\t\t \t ", getTsv(" "));
+    }
+
+    @Test
     public void testMakeCommand01() {
         assertEquals("\t\t\t\t\t\t\t\t\t", getCommandTsv(""));
     }

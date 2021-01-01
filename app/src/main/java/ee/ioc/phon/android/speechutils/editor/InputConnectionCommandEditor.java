@@ -783,7 +783,13 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 mInputConnection.beginBatchEdit();
                 // Change the current selection with the input argument, possibly embedding the selection.
                 String selectedText = getSelectedText();
-                Op undo = getCommitTextOp(selectedText, str.replace(F_SELECTION, selectedText)).run();
+                String newText;
+                if (str == null || str.isEmpty()) {
+                    newText = "";
+                } else {
+                    newText = str.replace(F_SELECTION, selectedText);
+                }
+                Op undo = getCommitTextOp(selectedText, newText).run();
                 mInputConnection.endBatchEdit();
                 return undo;
             }

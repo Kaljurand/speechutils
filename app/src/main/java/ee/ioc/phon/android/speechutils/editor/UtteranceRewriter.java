@@ -474,6 +474,7 @@ public class UtteranceRewriter {
 
     /**
      * Creates a command based on the given fields.
+     * For some fields the whitespace is trimmed from the beginning and end.
      *
      * @param header         parsed header
      * @param line           single row
@@ -503,7 +504,7 @@ public class UtteranceRewriter {
             }
             switch (colName) {
                 case HEADER_LABEL:
-                    label = split.trim();
+                    label = split;
                     break;
                 case HEADER_COMMENT:
                     comment = split.trim();
