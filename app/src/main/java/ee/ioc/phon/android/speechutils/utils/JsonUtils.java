@@ -26,7 +26,7 @@ public final class JsonUtils {
      * @return JSONObject
      * @throws JSONException if parsing fails
      */
-    public static JSONObject parseJson(CharSequence chars) throws JSONException {
+    private static JSONObject parseJson(CharSequence chars) throws JSONException {
         if (chars == null) {
             throw new JSONException("input is NULL");
         }
@@ -36,31 +36,30 @@ public final class JsonUtils {
     /**
      * TODO: support: broadcast intent, voice interaction launch mode, etc.
      *
-     * @param query Intent serialized as JSON
-     * @return Deserialized intent
+     * @param json Intent as a JSON object
+     * @return Intent
      * @throws JSONException if parsing fails
      */
-    public static Intent createIntent(CharSequence query) throws JSONException {
-        JSONObject json = parseJson(query.toString());
+    public static Intent createIntent(JSONObject json) throws JSONException {
         Intent intent = new Intent();
-        String action = json.optString("action", null);
-        if (action != null) {
+        String action = json.optString("action");
+        if (!action.isEmpty()) {
             intent.setAction(action);
         }
-        String component = json.optString("component", null);
-        if (component != null) {
+        String component = json.optString("component");
+        if (!component.isEmpty()) {
             intent.setComponent(ComponentName.unflattenFromString(component));
         }
-        String packageName = json.optString("package", null);
-        if (component != null) {
+        String packageName = json.optString("package");
+        if (!packageName.isEmpty()) {
             intent.setPackage(packageName);
         }
-        String data = json.optString("data", null);
-        if (data != null) {
+        String data = json.optString("data");
+        if (!data.isEmpty()) {
             intent.setData(Uri.parse(data));
         }
-        String type = json.optString("type", null);
-        if (type != null) {
+        String type = json.optString("type");
+        if (!type.isEmpty()) {
             intent.setType(type);
         }
         JSONObject extras = json.optJSONObject("extras");
@@ -89,18 +88,22 @@ public final class JsonUtils {
                     }
                     intent.putExtra(key, vals.toArray(new String[0]));
                 } else if (val instanceof JSONObject) {
-                    // TODO: improve this, currently assumes that object is a <String, String> mapping
                     JSONObject innerObject = (JSONObject) val;
-                    Bundle bundle = new Bundle();
-                    Iterator<String> innerIter = innerObject.keys();
-                    while (innerIter.hasNext()) {
-                        String innerKey = innerIter.next();
-                        Object innerVal = innerObject.get(innerKey);
-                        if (innerVal instanceof String) {
-                            bundle.putString(innerKey, (String) innerVal);
+                    if (Intent.EXTRA_INTENT.equals(key)) {
+                        intent.putExtra(key, createIntent(innerObject));
+                    } else {
+                        // TODO: improve this, currently assumes that object is a <String, String> mapping
+                        Bundle bundle = new Bundle();
+                        Iterator<String> innerIter = innerObject.keys();
+                        while (innerIter.hasNext()) {
+                            String innerKey = innerIter.next();
+                            Object innerVal = innerObject.get(innerKey);
+                            if (innerVal instanceof String) {
+                                bundle.putString(innerKey, (String) innerVal);
+                            }
                         }
+                        intent.putExtra(key, bundle);
                     }
-                    intent.putExtra(key, bundle);
                 }
             }
         }
@@ -119,5 +122,9 @@ public final class JsonUtils {
             }
         }
         return intent;
+    }
+
+    public static Intent createIntent(CharSequence query) throws JSONException {
+        return createIntent(parseJson(query));
     }
 }
