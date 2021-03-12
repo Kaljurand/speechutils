@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 
 public class RuleManager {
 
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+    public static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
 
     private Pattern mLocalePattern;
     private Pattern mServicePattern;
@@ -24,6 +24,18 @@ public class RuleManager {
     private CommandMatcher mCommandMatcher;
 
     public RuleManager() {
+    }
+
+    public Pattern getLocalePattern() {
+        return mLocalePattern;
+    }
+
+    public Pattern getServicePattern() {
+        return mServicePattern;
+    }
+
+    public Pattern getAppPattern() {
+        return mAppPattern;
     }
 
     public void setMatchers(String locale, ComponentName service, ComponentName app) {
@@ -156,7 +168,7 @@ public class RuleManager {
      * uses the given utterance pattern and comment. The other parts are reused from the rewrite.
      * The replacement is escaped: slashes ('\') and dollar signs ('$') will be given no special meaning.
      */
-    Command makeCommand(UtteranceRewriter.Rewrite rewrite, Pattern utt, String comment) {
+    public Command makeCommand(UtteranceRewriter.Rewrite rewrite, Pattern utt, String comment) {
         String repl = Matcher.quoteReplacement(rewrite.mStr);
         if (rewrite.isCommand()) {
             // We store the matched command, but change the utterance, comment, and the command matcher.
@@ -201,7 +213,7 @@ public class RuleManager {
      * @param cal timestamp
      * @return Pattern that corresponds to the timestamp
      */
-    private static Pattern makeUtt(Calendar cal) {
+    public static Pattern makeUtt(Calendar cal) {
         long uttId = cal.getTimeInMillis();
         String uttAsStr = "^<" + uttId + ">$";
         return Pattern.compile(uttAsStr, Constants.REWRITE_PATTERN_FLAGS);

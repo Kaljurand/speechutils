@@ -16,4 +16,5 @@
     <color name="buttonTranscribingNormal1">#c58be2</color>
     <color name="buttonTranscribingNormal2">#9933cc</color>
     <color name="buttonWaiting">#424242</color>
+    <color name="strokeVolumeLevel">#7f0000</color>
 </resources>
