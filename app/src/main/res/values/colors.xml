@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="white">#ffffffff</color>
-    <color name="buttonStroke">#808080</color>
     <!-- 1 = top,lighter; 2 = bottom,darker -->
     <!-- <color name="transparent">#00000000</color> -->
     <color name="very_transparent">#11404040</color>
@@ -11,8 +10,8 @@
     <color name="buttonPressed2">#ffcc00</color>
     <color name="buttonFocused1">#ffcc00</color>
     <color name="buttonFocused2">#ffcc00</color>
-    <color name="buttonRecordingNormal1">#ff4444</color>
-    <color name="buttonRecordingNormal2">#cc0000</color>
+    <color name="buttonRecordingNormal1">#f05545</color>
+    <color name="buttonRecordingNormal2">#b71c1c</color>
     <color name="buttonTranscribingNormal1">#c58be2</color>
     <color name="buttonTranscribingNormal2">#9933cc</color>
     <color name="buttonWaiting">#424242</color>
