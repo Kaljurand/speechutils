@@ -10,10 +10,15 @@
     <color name="buttonPressed2">#ffcc00</color>
     <color name="buttonFocused1">#ffcc00</color>
     <color name="buttonFocused2">#ffcc00</color>
-    <color name="buttonRecordingNormal1">#f05545</color>
-    <color name="buttonRecordingNormal2">#b71c1c</color>
+    <!-- Red 800 (Primary = (198,40,40), Light, Dark) -->
+    <color name="buttonRecordingNormal2">#c62828</color>
+    <color name="buttonRecordingNormal1">#ff5f52</color>
+    <color name="strokeVolumeLevel">#8e0000</color>
+    <!-- Red 300 (Primary) -->
+    <color name="buttonListening">#e57373</color>
+
     <color name="buttonTranscribingNormal1">#c58be2</color>
+    <!-- rgb 153, 51, 204 (COLOR_TRANSCRIBING) -->
     <color name="buttonTranscribingNormal2">#9933cc</color>
     <color name="buttonWaiting">#424242</color>
-    <color name="strokeVolumeLevel">#7f0000</color>
 </resources>

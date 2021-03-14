@@ -10,6 +10,8 @@ import android.view.MotionEvent;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 
+import androidx.core.content.res.ResourcesCompat;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,23 +35,26 @@ public class MicButton extends androidx.appcompat.widget.AppCompatImageButton {
         ERROR
     }
 
-    public static final int COLOR_LISTENING = Color.argb(255, 204, 0, 0);
+    // TODO: rename to COLOR_RECORDING
+    public static final int COLOR_LISTENING = Color.argb(255, 198, 40, 40);
     public static final int COLOR_TRANSCRIBING = Color.argb(255, 153, 51, 204);
 
-    // TODO: take these from some device specific configuration
-    private static final float DB_MIN = 15.0f;
-    private static final float DB_MAX = 30.0f;
+    // Must equal to the last index of mVolumeLevels
+    private static final int MAX_LEVEL = 3;
+
+    private float mMinRmsDb;
+    private float mMaxRmsDb;
 
     private Drawable mDrawableMic;
-    private Drawable mDrawableMicTranscribing;
     private Drawable mDrawableMicWaiting;
+    private Drawable mDrawableMicListening;
+    private Drawable mDrawableMicTranscribing;
 
     private List<Drawable> mVolumeLevels;
 
     private Animation mAnimFadeInOutInf;
 
     private int mVolumeLevel = 0;
-    private int mMaxLevel;
 
     public MicButton(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
@@ -76,6 +81,7 @@ public class MicButton extends androidx.appcompat.widget.AppCompatImageButton {
         switch (state) {
             case INIT:
             case ERROR:
+                mMinRmsDb = mMaxRmsDb = 0f;
                 setEnabled(true);
                 clearAnimation();
                 setBackgroundDrawable(mDrawableMic);
@@ -86,10 +92,11 @@ public class MicButton extends androidx.appcompat.widget.AppCompatImageButton {
                 break;
             case RECORDING:
                 setEnabled(true);
+                setBackgroundDrawable(mVolumeLevels.get(0));
                 break;
             case LISTENING:
                 setEnabled(true);
-                setBackgroundDrawable(mVolumeLevels.get(0));
+                setBackgroundDrawable(mDrawableMicListening);
                 break;
             case TRANSCRIBING:
                 setEnabled(true);
@@ -103,8 +110,16 @@ public class MicButton extends androidx.appcompat.widget.AppCompatImageButton {
 
 
     public void setVolumeLevel(float rmsdB) {
-        int index = (int) ((rmsdB - DB_MIN) / (DB_MAX - DB_MIN) * mMaxLevel);
-        int level = Math.min(Math.max(0, index), mMaxLevel);
+        if (mMinRmsDb == mMaxRmsDb) {
+            mMinRmsDb = rmsdB;
+            mMaxRmsDb = mMinRmsDb + 1;
+        } else if (rmsdB < mMinRmsDb) {
+            mMinRmsDb = rmsdB;
+        } else if (rmsdB > mMaxRmsDb) {
+            mMaxRmsDb = rmsdB;
+        }
+        int index = (int) (MAX_LEVEL * ((rmsdB - mMinRmsDb) / (mMaxRmsDb - mMinRmsDb)));
+        int level = Math.min(Math.max(0, index), MAX_LEVEL);
         if (level != mVolumeLevel) {
             mVolumeLevel = level;
             setBackgroundDrawable(mVolumeLevels.get(level));
@@ -113,16 +128,16 @@ public class MicButton extends androidx.appcompat.widget.AppCompatImageButton {
 
     private void initAnimations(Context context) {
         Resources res = getResources();
-        mDrawableMic = res.getDrawable(R.drawable.button_mic);
-        mDrawableMicTranscribing = res.getDrawable(R.drawable.button_mic_transcribing);
-        mDrawableMicWaiting = res.getDrawable(R.drawable.button_mic_waiting);
+        mDrawableMic = ResourcesCompat.getDrawable(res, R.drawable.button_mic, null);
+        mDrawableMicWaiting = ResourcesCompat.getDrawable(res, R.drawable.button_mic_waiting, null);
+        mDrawableMicListening = ResourcesCompat.getDrawable(res, R.drawable.button_mic_listening, null);
+        mDrawableMicTranscribing = ResourcesCompat.getDrawable(res, R.drawable.button_mic_transcribing, null);
 
         mVolumeLevels = new ArrayList<>();
-        mVolumeLevels.add(res.getDrawable(R.drawable.button_mic_recording_0));
-        mVolumeLevels.add(res.getDrawable(R.drawable.button_mic_recording_1));
-        mVolumeLevels.add(res.getDrawable(R.drawable.button_mic_recording_2));
-        mVolumeLevels.add(res.getDrawable(R.drawable.button_mic_recording_3));
-        mMaxLevel = mVolumeLevels.size() - 1;
+        mVolumeLevels.add(ResourcesCompat.getDrawable(res, R.drawable.button_mic_recording_0, null));
+        mVolumeLevels.add(ResourcesCompat.getDrawable(res, R.drawable.button_mic_recording_1, null));
+        mVolumeLevels.add(ResourcesCompat.getDrawable(res, R.drawable.button_mic_recording_2, null));
+        mVolumeLevels.add(ResourcesCompat.getDrawable(res, R.drawable.button_mic_recording_3, null));
 
         mAnimFadeInOutInf = AnimationUtils.loadAnimation(context, R.anim.fade_inout_inf);
     }
