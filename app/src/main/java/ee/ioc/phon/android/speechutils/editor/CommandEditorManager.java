@@ -127,7 +127,10 @@ public class CommandEditorManager {
             return ce.replace(text1, text2);
         });
 
-        aMap.put(REPLACE_SEL, (ce, args) -> ce.replaceSel(getArgString(args, 0, null)));
+        aMap.put(REPLACE_SEL, (ce, args) -> ce.replaceSel(
+                getArgString(args, 0, null),
+                getArgString(args, 1, null)
+        ));
 
         aMap.put(UC_SEL, (ce, args) -> ce.ucSel());
 

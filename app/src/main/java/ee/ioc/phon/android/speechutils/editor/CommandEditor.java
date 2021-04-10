@@ -130,6 +130,11 @@ public interface CommandEditor {
     // Supports function @sel() to refer to the content of the current selection.
     Op replaceSel(String text);
 
+    // Replace cursor with the given text.
+    // Supports function @sel() to refer to the content of the current selection.
+    // Sets a new selection within the replacement using the first group of the matching regex.
+    Op replaceSel(String text, String regex);
+
     // Uppercase the text under the cursor
     Op ucSel();
 

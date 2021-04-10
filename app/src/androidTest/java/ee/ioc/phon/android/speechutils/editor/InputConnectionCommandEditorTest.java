@@ -1443,6 +1443,68 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs(". 2 3");
     }
 
+    /**
+     * replaceSel + setting the cursor position (denoted by [] below).
+     * test[]
+     * test<[abc]>
+     * BEFORE: t<
+     * test<123[]>
+     */
+    @Test
+    public void test214() {
+        add("test");
+        runOp(mEditor.replaceSel("<abc>", "^.(...)"));
+        assertThat(getTextBeforeCursor(2), is("t<"));
+        add("123");
+        assertThat(getTextBeforeCursor(2), is("23"));
+    }
+
+    @Test
+    public void test215() {
+        add("test");
+        runOp(mEditor.replaceSel("<>", "^.()"));
+        assertThat(getTextBeforeCursor(2), is("t<"));
+        add("123");
+        assertThat(getTextBeforeCursor(2), is("23"));
+    }
+
+    @Test
+    public void test216() {
+        runOp(mEditor.replaceSel("Hi <NAME>,", "<NAME>"));
+        assertThat(getTextBeforeCursor(3), is("Hi "));
+        add("World");
+        assertThatTextIs("Hi World,");
+    }
+
+    @Test
+    public void test217() {
+        runOp(mEditor.replaceSel("Hi <NAME>,", "<NOMATCH>"));
+        assertThat(getTextBeforeCursor(3), is("E>,"));
+        add("World");
+        assertThatTextIs("Hi <NAME>, World");
+    }
+
+    /**
+     * TODO: fix undo of replaceSel/2
+     */
+    @Test
+    public void test218() {
+        runOp(mEditor.replaceSel("Hi <NAME>,", "<NAME>"));
+        undo();
+        add("World");
+        assertThatTextIs("World");
+    }
+
+    @Test
+    public void test219() {
+        add("0123");
+        runOp(mEditor.select("123"));
+        runOp(mEditor.replaceSel("<@sel()>", ".(.*)."));
+        assertThatTextIs("0<123>");
+        add("456");
+        assertThatTextIs("0<456>");
+    }
+
     private String getTextBeforeCursor(int n) {
         return mEditor.getInputConnection().getTextBeforeCursor(n, 0).toString();
     }

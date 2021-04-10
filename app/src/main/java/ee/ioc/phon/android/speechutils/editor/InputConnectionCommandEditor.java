@@ -774,8 +774,16 @@ public class InputConnectionCommandEditor implements CommandEditor {
         };
     }
 
-    @Override
     public Op replaceSel(final String str) {
+        return replaceSel(str, null);
+    }
+
+    /**
+     * Commits texts and creates a new selection (within the commited text).
+     * TODO: fix undo
+     */
+    @Override
+    public Op replaceSel(final String str, final String regex) {
         return new Op("replaceSel") {
             @Override
             public Op run() {
@@ -789,7 +797,25 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 } else {
                     newText = str.replace(F_SELECTION, selectedText);
                 }
-                Op undo = getCommitTextOp(selectedText, newText).run();
+                Op op = null;
+                if (regex != null) {
+                    Pair<Integer, Integer> pair = matchNth(Pattern.compile(regex), newText, 1);
+                    if (pair != null) {
+                        final ExtractedText et = getExtractedText();
+                        // TODO: shift by the offset whenever we use getExtractedText
+                        int oldStart = et.startOffset + et.selectionStart;
+                        int oldEnd = et.startOffset + et.selectionEnd;
+                        Collection<Op> collection = new ArrayList<>();
+                        collection.add(getCommitTextOp(selectedText, newText));
+                        collection.add(getOpSetSelection(oldStart + pair.first, oldStart + pair.second, oldStart, oldEnd));
+                        op = combineOps(collection);
+                    }
+                }
+                // If no regex was provided or no match was found then just commit the replacement.
+                if (op == null) {
+                    op = getCommitTextOp(selectedText, newText);
+                }
+                Op undo = op.run();
                 mInputConnection.endBatchEdit();
                 return undo;
             }
@@ -1186,7 +1212,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
             }
         };
     }
-
 
     /**
      * Tries to match a substring before the cursor, using case-insensitive matching.
