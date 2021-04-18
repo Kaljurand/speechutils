@@ -66,6 +66,9 @@ public class InputConnectionCommandEditorTest {
         list2.add(new Command("replaceSelRe ([^ ]+) .+ ([^ ]+)", "", "replaceSelRe", new String[]{"$1 ([^ ]+) $2", "$1 \\$1 $2"}));
         list2.add(new Command("selection_quote", "", "replaceSel", new String[]{"\"@sel()\""}));
         list2.add(new Command("selection_double", "", "replaceSel", new String[]{"@sel()@sel()"}));
+        // Hyphenates the current selection to the uttered number, adds brackets around the whole thing,
+        // and selects the uttered number. Notice the need to escape the closing bracket and the end marking dollar sign.
+        list2.add(new Command("selection_bracket ([0-9]+)", "", "replaceSel", new String[]{"(@sel()-$1)", "-([0-9]+)\\\\)\\$"}));
         list2.add(new Command("selection_inc", "", "incSel"));
         list2.add(new Command("selection_uc", "", "ucSel"));
         list2.add(new Command("step back", "", "moveRel", new String[]{"-1"}));
@@ -1505,8 +1508,20 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("0<456>");
     }
 
+    @Test
+    public void test220() {
+        add("1", "select 1", "selection_bracket 234");
+        assertThatTextIs("(1-234)");
+        assertThat(getTextBeforeCursor(1), is("-"));
+        assertThat(getTextAfterCursor(1), is(")"));
+    }
+
     private String getTextBeforeCursor(int n) {
         return mEditor.getInputConnection().getTextBeforeCursor(n, 0).toString();
+    }
+
+    private String getTextAfterCursor(int n) {
+        return mEditor.getInputConnection().getTextAfterCursor(n, 0).toString();
     }
 
     private void addPartial(String... texts) {

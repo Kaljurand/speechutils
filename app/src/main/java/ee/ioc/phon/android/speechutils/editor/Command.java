@@ -200,6 +200,11 @@ public class Command {
                 } catch (IndexOutOfBoundsException e) {
                     // TODO: rethink this hack; occurs in Matcher.group, e.g. when "No group 1"
                     argsEvaluated = new String[]{e.getLocalizedMessage()};
+                } catch (IllegalArgumentException e2) {
+                    // java.lang.IllegalArgumentException: Illegal group reference: group index is missing
+                    // This probably occurs when the dollar sign is used as the end-of-line symbol,
+                    // but interpreted here as a group reference (e.g. "$1").
+                    argsEvaluated = new String[]{e2.getLocalizedMessage()};
                 }
             }
         }
