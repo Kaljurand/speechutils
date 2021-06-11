@@ -142,8 +142,37 @@ public class PreferenceUtils {
         editor.apply();
     }
 
+    /**
+     * Stores the given key-value pair into a map with the given name.
+     * If value is null, then delete the entry from the preferences.
+     */
+    public static void putPrefMapEntry(SharedPreferences prefs, Resources res, int nameId, String key, Integer value) {
+        String name = res.getString(nameId);
+        Set<String> keys = prefs.getStringSet(name, new HashSet<>());
+        SharedPreferences.Editor editor = prefs.edit();
+        String nameKey = name + SEP + key;
+        if (value == null) {
+            editor.remove(nameKey);
+            if (keys.contains(key)) {
+                keys.remove(key);
+                editor.putStringSet(name, keys);
+            }
+        } else {
+            editor.putInt(nameKey, value);
+            if (!keys.contains(key)) {
+                keys.add(key);
+                editor.putStringSet(name, keys);
+            }
+        }
+        editor.apply();
+    }
+
     public static String getPrefMapEntry(SharedPreferences prefs, Resources res, int nameId, String key) {
         return prefs.getString(res.getString(nameId) + SEP + key, null);
+    }
+
+    public static int getPrefMapEntryInt(SharedPreferences prefs, Resources res, int nameId, String key, int defValue) {
+        return prefs.getInt(res.getString(nameId) + SEP + key, defValue);
     }
 
     public static Set<String> getPrefMapKeys(SharedPreferences prefs, Resources res, int nameId) {
