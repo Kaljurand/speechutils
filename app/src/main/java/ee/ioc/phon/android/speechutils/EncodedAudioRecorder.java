@@ -17,14 +17,19 @@
 package ee.ioc.phon.android.speechutils;
 
 import android.annotation.TargetApi;
+import android.media.AudioRecord;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.os.Build;
+
+import androidx.annotation.RequiresPermission;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 
 import ee.ioc.phon.android.speechutils.utils.AudioUtils;
+
+import static android.Manifest.permission.RECORD_AUDIO;
 
 /**
  * Based on https://android.googlesource.com/platform/cts/+/jb-mr2-release/tests/tests/media/src/android/media/cts/EncoderTest.java
@@ -54,6 +59,7 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
     private int mNumBytesSubmitted = 0;
     private int mNumBytesDequeued = 0;
 
+    @RequiresPermission(RECORD_AUDIO)
     public EncodedAudioRecorder(int audioSource, int sampleRate) {
         super(audioSource, sampleRate);
         try {
@@ -73,10 +79,12 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
         mRecordingEnc = new byte[RESOLUTION_IN_BYTES * CHANNELS * sampleRate * 35]; // 35 sec raw
     }
 
+    @RequiresPermission(RECORD_AUDIO)
     public EncodedAudioRecorder(int sampleRate) {
         this(DEFAULT_AUDIO_SOURCE, sampleRate);
     }
 
+    @RequiresPermission(RECORD_AUDIO)
     public EncodedAudioRecorder() {
         this(DEFAULT_AUDIO_SOURCE, DEFAULT_SAMPLE_RATE);
     }
@@ -109,8 +117,9 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
     }
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    @RequiresPermission(RECORD_AUDIO)
     @Override
-    protected void recorderLoop(SpeechRecord speechRecord) {
+    protected void recorderLoop(AudioRecord speechRecord) {
         mNumBytesSubmitted = 0;
         mNumBytesDequeued = 0;
         MediaFormat format = MediaFormatFactory.createMediaFormat(MIME, getSampleRate());
@@ -184,7 +193,8 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
      * Copy audio from the recorder into the encoder.
      */
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-    private int queueInputBuffer(MediaCodec codec, ByteBuffer[] inputBuffers, int index, SpeechRecord speechRecord) {
+    @RequiresPermission(RECORD_AUDIO)
+    private int queueInputBuffer(MediaCodec codec, ByteBuffer[] inputBuffers, int index, AudioRecord speechRecord) {
         if (speechRecord == null || speechRecord.getRecordingState() != SpeechRecord.RECORDSTATE_RECORDING) {
             return -1;
         }
@@ -244,7 +254,8 @@ public class EncodedAudioRecorder extends AbstractAudioRecorder {
      * Buffers containing codec-specific-data have no meaningful timestamps.
      */
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-    private int recorderEncoderLoop(MediaCodec codec, SpeechRecord speechRecord) {
+    @RequiresPermission(RECORD_AUDIO)
+    private int recorderEncoderLoop(MediaCodec codec, AudioRecord speechRecord) {
         int status = -1;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             codec.start();

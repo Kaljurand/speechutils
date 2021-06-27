@@ -16,6 +16,10 @@
 
 package ee.ioc.phon.android.speechutils;
 
+import androidx.annotation.RequiresPermission;
+
+import static android.Manifest.permission.RECORD_AUDIO;
+
 /**
  * <p>Records raw audio using SpeechRecord and stores it into a byte array as</p>
  * <ul>
@@ -49,6 +53,7 @@ public class RawAudioRecorder extends AbstractAudioRecorder {
      * @param audioSource Identifier of the audio source (e.g. microphone)
      * @param sampleRate  Sample rate (e.g. 16000)
      */
+    @RequiresPermission(RECORD_AUDIO)
     public RawAudioRecorder(int audioSource, int sampleRate) {
         super(audioSource, sampleRate);
         try {
@@ -66,12 +71,12 @@ public class RawAudioRecorder extends AbstractAudioRecorder {
         }
     }
 
-
+    @RequiresPermission(RECORD_AUDIO)
     public RawAudioRecorder(int sampleRate) {
         this(DEFAULT_AUDIO_SOURCE, sampleRate);
     }
 
-
+    @RequiresPermission(RECORD_AUDIO)
     public RawAudioRecorder() {
         this(DEFAULT_AUDIO_SOURCE, DEFAULT_SAMPLE_RATE);
     }

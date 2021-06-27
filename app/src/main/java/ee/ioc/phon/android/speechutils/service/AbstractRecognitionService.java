@@ -11,6 +11,8 @@ import android.preference.PreferenceManager;
 import android.speech.RecognitionService;
 import android.speech.SpeechRecognizer;
 
+import androidx.annotation.RequiresPermission;
+
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -22,6 +24,8 @@ import ee.ioc.phon.android.speechutils.Extras;
 import ee.ioc.phon.android.speechutils.Log;
 import ee.ioc.phon.android.speechutils.RawAudioRecorder;
 import ee.ioc.phon.android.speechutils.utils.PreferenceUtils;
+
+import static android.Manifest.permission.RECORD_AUDIO;
 
 /**
  * Performs audio recording and is meant for cloud services.
@@ -44,10 +48,10 @@ public abstract class AbstractRecognitionService extends RecognitionService {
 
     private AudioRecorder mRecorder;
 
-    private Handler mVolumeHandler = new Handler();
+    private final Handler mVolumeHandler = new Handler();
     private Runnable mShowVolumeTask;
 
-    private Handler mStopHandler = new Handler();
+    private final Handler mStopHandler = new Handler();
     private Runnable mStopTask;
 
     private Bundle mExtras;
@@ -98,6 +102,7 @@ public abstract class AbstractRecognitionService extends RecognitionService {
     /**
      * @return Audio recorder
      */
+    @RequiresPermission(RECORD_AUDIO)
     protected AudioRecorder getAudioRecorder() throws IOException {
         if (mRecorder == null) {
             mRecorder = createAudioRecorder(getEncoderType(), getSampleRate());
@@ -160,6 +165,7 @@ public abstract class AbstractRecognitionService extends RecognitionService {
     /**
      * Starts recording and opens the connection to the server to start sending the recorded packages.
      */
+    @RequiresPermission(RECORD_AUDIO)
     @Override
     protected void onStartListening(final Intent recognizerIntent, RecognitionService.Callback listener) {
         mListener = listener;
@@ -352,6 +358,7 @@ public abstract class AbstractRecognitionService extends RecognitionService {
      * Constructs a recorder based on the encoder type and sample rate. By default returns the raw
      * audio recorder. If an unsupported encoder is specified then throws an exception.
      */
+    @RequiresPermission(RECORD_AUDIO)
     protected static AudioRecorder createAudioRecorder(String encoderType, int sampleRate) throws IOException {
         // TODO: take from an enum
         if ("audio/x-flac".equals(encoderType)) {
@@ -369,6 +376,7 @@ public abstract class AbstractRecognitionService extends RecognitionService {
      *
      * @throws IOException if there was an error, e.g. another app is currently recording
      */
+    @RequiresPermission(RECORD_AUDIO)
     private void startRecord() throws IOException {
         mRecorder = getAudioRecorder();
         if (mRecorder.getState() == AudioRecorder.State.ERROR) {
@@ -420,8 +428,8 @@ public abstract class AbstractRecognitionService extends RecognitionService {
 
     private void stopRecording0() {
         releaseRecorder();
-        if (mVolumeHandler != null) mVolumeHandler.removeCallbacks(mShowVolumeTask);
-        if (mStopHandler != null) mStopHandler.removeCallbacks(mStopTask);
+        mVolumeHandler.removeCallbacks(mShowVolumeTask);
+        mStopHandler.removeCallbacks(mStopTask);
         if (mAudioPauser != null) mAudioPauser.resume();
     }
 

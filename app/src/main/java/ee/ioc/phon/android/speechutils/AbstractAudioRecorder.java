@@ -17,10 +17,16 @@
 package ee.ioc.phon.android.speechutils;
 
 import android.media.AudioFormat;
+import android.media.AudioRecord;
+import android.os.Build;
+
+import androidx.annotation.RequiresPermission;
 
 import java.util.concurrent.atomic.AtomicLong;
 
 import ee.ioc.phon.android.speechutils.utils.AudioUtils;
+
+import static android.Manifest.permission.RECORD_AUDIO;
 
 public abstract class AbstractAudioRecorder implements AudioRecorder {
 
@@ -28,7 +34,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
     private static final int BUFFER_SIZE_MULTIPLIER = 4; // was: 2
     private static final int DEFAULT_BUFFER_LENGTH_IN_MILLIS = 35000;
 
-    private SpeechRecord mRecorder = null;
+    private AudioRecord mRecorder = null;
 
     private double mAvgEnergy = 0;
 
@@ -74,11 +80,16 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         this(audioSource, sampleRate, DEFAULT_BUFFER_LENGTH_IN_MILLIS, false);
     }
 
-    protected SpeechRecord createRecorder(int audioSource, int sampleRate, int bufferSize) {
+    @RequiresPermission(RECORD_AUDIO)
+    protected AudioRecord createRecorder(int audioSource, int sampleRate, int bufferSize) {
         if (mRecorder != null)
             release();
 
-        mRecorder = new SpeechRecord(audioSource, sampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, bufferSize, false, false, false);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            mRecorder = SpeechAudioRecord.create(audioSource, sampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, bufferSize, false, false, false);
+        } else {
+            mRecorder = new SpeechRecord(audioSource, sampleRate, AudioFormat.CHANNEL_IN_MONO, RESOLUTION, bufferSize, false, false, false);
+        }
         if (getSpeechRecordState() != SpeechRecord.STATE_INITIALIZED) {
             throw new IllegalStateException("SpeechRecord initialization failed");
         }
@@ -186,7 +197,8 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
      * Copy data from the given recorder into the given buffer, and append to the complete recording.
      * public int read (byte[] audioData, int offsetInBytes, int sizeInBytes)
      */
-    protected int read(SpeechRecord recorder, byte[] buffer) {
+    @RequiresPermission(RECORD_AUDIO)
+    protected int read(AudioRecord recorder, byte[] buffer) {
         int len = buffer.length;
         int numOfBytes = recorder.read(buffer, 0, len);
         // handling mediaserver crashes here
@@ -375,6 +387,7 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
             if (mRecorder.getRecordingState() == SpeechRecord.RECORDSTATE_RECORDING) {
                 setState(State.RECORDING);
                 new Thread() {
+                    @RequiresPermission(RECORD_AUDIO)
                     public void run() {
                         recorderLoop(mRecorder);
                     }
@@ -408,7 +421,8 @@ public abstract class AbstractAudioRecorder implements AudioRecorder {
         }
     }
 
-    protected void recorderLoop(SpeechRecord recorder) {
+    @RequiresPermission(RECORD_AUDIO)
+    protected void recorderLoop(AudioRecord recorder) {
         while (recorder.getRecordingState() == SpeechRecord.RECORDSTATE_RECORDING) {
             int status = read(recorder, mBuffer);
             if (status < 0) {

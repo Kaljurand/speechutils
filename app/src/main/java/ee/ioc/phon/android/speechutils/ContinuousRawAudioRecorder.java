@@ -1,8 +1,12 @@
 package ee.ioc.phon.android.speechutils;
 
+import androidx.annotation.RequiresPermission;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import ee.ioc.phon.android.speechutils.utils.AudioUtils;
+
+import static android.Manifest.permission.RECORD_AUDIO;
 
 /**
  * This class should be used for continuous recording of audio.
@@ -110,6 +114,7 @@ public class ContinuousRawAudioRecorder extends AbstractAudioRecorder {
         }
     }
 
+    @RequiresPermission(RECORD_AUDIO)
     public ContinuousRawAudioRecorder(int audioSource, int sampleRate, int recordingBufferLengthMillis) {
         super(audioSource, sampleRate, recordingBufferLengthMillis, true);
 
@@ -131,14 +136,17 @@ public class ContinuousRawAudioRecorder extends AbstractAudioRecorder {
         }
     }
 
+    @RequiresPermission(RECORD_AUDIO)
     public ContinuousRawAudioRecorder(int sampleRate, int recordingBufferLengthMillis) {
         this(DEFAULT_AUDIO_SOURCE, sampleRate, recordingBufferLengthMillis);
     }
 
+    @RequiresPermission(RECORD_AUDIO)
     public ContinuousRawAudioRecorder(int sampleRate) {
         this(DEFAULT_AUDIO_SOURCE, sampleRate, DEFAULT_BUFFER_LENGTH_IN_MILLIS);
     }
 
+    @RequiresPermission(RECORD_AUDIO)
     public ContinuousRawAudioRecorder() {
         this(DEFAULT_AUDIO_SOURCE, DEFAULT_SAMPLE_RATE, DEFAULT_BUFFER_LENGTH_IN_MILLIS);
     }

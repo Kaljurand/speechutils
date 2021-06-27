@@ -21,8 +21,8 @@ android {
     defaultConfig {
         minSdkVersion 14
         targetSdkVersion 30
-        versionCode 500
-        versionName '0.5.00'
+        versionCode 600
+        versionName '0.6.00'
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -34,7 +34,5 @@ android {
     lintOptions {
         // TODO: in the future check for Kotlin-Java interop
         //check 'Interoperability'
-        // TODO: MissingPermission is temporary, fix calls to AudioRecord instead
-        disable 'MissingPermission'
     }
 }

@@ -8,13 +8,19 @@ import android.media.audiofx.AutomaticGainControl;
 import android.media.audiofx.NoiseSuppressor;
 import android.os.Build;
 
+import androidx.annotation.RequiresPermission;
+
+import static android.Manifest.permission.RECORD_AUDIO;
+
 /**
  * The following takes effect only on Jelly Bean and higher.
  *
  * @author Kaarel Kaljurand
+ * @deprecated Use SpeechAudioRecord
  */
 public class SpeechRecord extends AudioRecord {
 
+    @RequiresPermission(RECORD_AUDIO)
     public SpeechRecord(int sampleRateInHz, int bufferSizeInBytes)
             throws IllegalArgumentException {
 
@@ -30,7 +36,7 @@ public class SpeechRecord extends AudioRecord {
         );
     }
 
-
+    @RequiresPermission(RECORD_AUDIO)
     public SpeechRecord(int sampleRateInHz, int bufferSizeInBytes, boolean noise, boolean gain, boolean echo)
             throws IllegalArgumentException {
 
@@ -48,13 +54,15 @@ public class SpeechRecord extends AudioRecord {
 
 
     // This is a copy of the AudioRecord constructor
+
+    @RequiresPermission(RECORD_AUDIO)
     public SpeechRecord(int audioSource, int sampleRateInHz, int channelConfig, int audioFormat, int bufferSizeInBytes)
             throws IllegalArgumentException {
 
         this(audioSource, sampleRateInHz, channelConfig, audioFormat, bufferSizeInBytes, false, false, false);
     }
 
-
+    @RequiresPermission(RECORD_AUDIO)
     public SpeechRecord(int audioSource, int sampleRateInHz, int channelConfig, int audioFormat, int bufferSizeInBytes,
                         boolean noise, boolean gain, boolean echo)
             throws IllegalArgumentException {
