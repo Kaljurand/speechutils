@@ -1,11 +1,10 @@
 package ee.ioc.phon.android.speechutils.editor;
 
+import static android.os.Build.VERSION_CODES;
+
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.content.res.Resources;
 import android.os.AsyncTask;
 import android.os.Build.VERSION;
-import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.Pair;
 import android.view.KeyEvent;
@@ -19,11 +18,16 @@ import androidx.annotation.NonNull;
 import org.json.JSONException;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Deque;
 import java.util.List;
+import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,8 +36,6 @@ import ee.ioc.phon.android.speechutils.Log;
 import ee.ioc.phon.android.speechutils.utils.HttpUtils;
 import ee.ioc.phon.android.speechutils.utils.IntentUtils;
 import ee.ioc.phon.android.speechutils.utils.JsonUtils;
-
-import static android.os.Build.VERSION_CODES;
 
 /**
  * TODO: this is work in progress
@@ -50,10 +52,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
     // Token optionally preceded by whitespace
     private static final Pattern WHITESPACE_AND_TOKEN = Pattern.compile("\\s*\\w+");
     private static final String F_SELECTION = "@sel()";
+    private static final Pattern F_TIMESTAMP = Pattern.compile("@timestamp\\(([^,]+), *([^,]+)\\)");
 
     private Context mContext;
-    private SharedPreferences mPreferences;
-    private Resources mRes;
 
     private CharSequence mTextBeforeCursor;
     // TODO: Restrict the size of these stacks
@@ -71,8 +72,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
 
     public InputConnectionCommandEditor(@NonNull Context context) {
         mContext = context;
-        mPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-        mRes = context.getResources();
     }
 
     public void setInputConnection(@NonNull InputConnection inputConnection) {
@@ -779,6 +778,29 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     /**
+     * TODO: generalize to any functions
+     */
+    private String expandFuns(String line) {
+        Matcher m = F_TIMESTAMP.matcher(line);
+        String newLine = "";
+        int pos = 0;
+        Date currentTime = null;
+        while (m.find()) {
+            if (currentTime == null) {
+                currentTime = Calendar.getInstance().getTime();
+            }
+            newLine += line.substring(pos, m.start());
+            DateFormat df = new SimpleDateFormat(m.group(1), new Locale(m.group(2)));
+            newLine += df.format(currentTime);
+            pos = m.end();
+        }
+        if (pos == 0) {
+            return line;
+        }
+        return newLine + line.substring(pos);
+    }
+
+    /**
      * Commits texts and creates a new selection (within the commited text).
      * TODO: fix undo
      */
@@ -795,7 +817,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 if (str == null || str.isEmpty()) {
                     newText = "";
                 } else {
-                    newText = str.replace(F_SELECTION, selectedText);
+                    newText = expandFuns(str.replace(F_SELECTION, selectedText));
                 }
                 Op op = null;
                 if (regex != null) {

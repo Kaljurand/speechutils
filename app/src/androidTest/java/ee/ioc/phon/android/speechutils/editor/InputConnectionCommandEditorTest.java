@@ -1,5 +1,12 @@
 package ee.ioc.phon.android.speechutils.editor;
 
+import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentation;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+
 import android.content.Context;
 import android.os.Build;
 import android.view.inputmethod.EditorInfo;
@@ -15,13 +22,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-
-import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentation;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 
 // TODO: add tests for multiline input strings
 
@@ -84,6 +84,7 @@ public class InputConnectionCommandEditorTest {
         list2.add(new Command("undo (\\d+)", "", "undo", new String[]{"$1"}));
         list2.add(new Command("combine (\\d+)", "", "combine", new String[]{"$1"}));
         list2.add(new Command("apply (\\d+)", "", "apply", new String[]{"$1"}));
+        list2.add(new Command("timestamp", "", "replaceSel", new String[]{"@timestamp(G 'text', de)"}));
 
         // More simple replacements
         List<Command> list3 = new ArrayList<>();
@@ -1514,6 +1515,15 @@ public class InputConnectionCommandEditorTest {
         assertThatTextIs("(1-234)");
         assertThat(getTextBeforeCursor(1), is("-"));
         assertThat(getTextAfterCursor(1), is(")"));
+    }
+
+    /**
+     * TODO: improve this test, so that it's stable across time and space
+     */
+    @Test
+    public void test221() {
+        add("timestamp");
+        assertThatTextIs("n. Chr. text");
     }
 
     private String getTextBeforeCursor(int n) {
