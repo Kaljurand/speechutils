@@ -148,9 +148,9 @@ public class RecognitionServiceManager {
             }
 
             String nodeName = parser.getName();
-            if (!"recognition-service".equals(nodeName)) {
+            if (!"recognition-service".equals(nodeName) && !"on-device-recognition-service".equals(nodeName)) {
                 throw new XmlPullParserException(
-                        "Meta-data does not start with recognition-service tag");
+                        "Meta-data does not start with 'recognition-service' nor 'on-device-recognition-service': " + nodeName);
             }
 
             return parser.getAttributeValue("http://schemas.android.com/apk/res/android",
