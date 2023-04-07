@@ -1,6 +1,5 @@
 package ee.ioc.phon.android.speechutils;
 
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -11,7 +10,6 @@ import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
 import android.content.res.XmlResourceParser;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.speech.RecognitionService;
 import android.speech.RecognizerIntent;
@@ -29,7 +27,7 @@ import java.util.Locale;
 import java.util.Set;
 
 public class RecognitionServiceManager {
-    private static String SEPARATOR = ";";
+    private static final String SEPARATOR = ";";
     private Set<String> mInitiallySelectedCombos = new HashSet<>();
     private Set<String> mCombosExcluded = new HashSet<>();
 
@@ -64,16 +62,12 @@ public class RecognitionServiceManager {
      * @param localeAsStr Formal name of the locale, e.g. "et-ee"
      * @return The name of the locale in the language of the current locale
      */
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public static String makeLangLabel(String localeAsStr) {
         // Just to make sure we do not get a NPE from Locale.forLanguageTag
         if (localeAsStr == null || localeAsStr.isEmpty()) {
             return "?";
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            return Locale.forLanguageTag(localeAsStr).getDisplayName();
-        }
-        return localeAsStr;
+        return Locale.forLanguageTag(localeAsStr).getDisplayName();
     }
 
     public static String[] getServiceAndLang(String str) {
