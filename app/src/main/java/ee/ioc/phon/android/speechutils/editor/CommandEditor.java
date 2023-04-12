@@ -184,6 +184,29 @@ public interface CommandEditor {
     // E.g. url == "http://api.mathjs.org/v4/?expr="; arg == "@sel()+1"
     Op getUrl(String url, String arg);
 
+    /**
+     * Replace cursor with the result of the given HTTP-query.
+     * The query is specified as a string that contains a JSON object.
+     * The result is also expected to be a JSON object, on which a JSON Path
+     * query will be applied to extract a string that replaces the current selection.
+     * {
+     *     "url": "https://api.example.org/v1/edits",
+     *     "method": "POST",
+     *     "body": {
+     *         "model": "text-davinci-edit-001",
+     *         "input": "@sel()",
+     *         "instruction": "Fix the spelling mistakes"
+     *     },
+     *     "header": {
+     *         "Authorization": "Bearer API_KEY",
+     *         "Content-Type": "application/json",
+     *         "User-Agent": "K6nele/httpJson/Edits"
+     *     },
+     *     "jsonpath": "$.choices[0].text"
+     * }
+     */
+    Op httpJson(String json);
+
     // Commands that are not exposed to the end-user in CommandEditorManager
 
     CommandEditorResult commitFinalResult(String text);

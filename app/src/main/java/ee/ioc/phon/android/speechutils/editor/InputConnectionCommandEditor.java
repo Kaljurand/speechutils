@@ -2,6 +2,7 @@ package ee.ioc.phon.android.speechutils.editor;
 
 import static android.os.Build.VERSION_CODES;
 
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Build.VERSION;
@@ -18,16 +19,11 @@ import androidx.annotation.NonNull;
 import org.json.JSONException;
 
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collection;
-import java.util.Date;
 import java.util.Deque;
 import java.util.List;
-import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -52,7 +48,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
     // Token optionally preceded by whitespace
     private static final Pattern WHITESPACE_AND_TOKEN = Pattern.compile("\\s*\\w+");
     private static final String F_SELECTION = "@sel()";
-    private static final Pattern F_TIMESTAMP = Pattern.compile("@timestamp\\(([^,]+), *([^,]+)\\)");
 
     private Context mContext;
 
@@ -253,6 +248,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     Log.i("startActivity: JSON: " + e.getMessage());
                 } catch (SecurityException e) {
                     Log.i("startActivity: Security: " + e.getMessage());
+                } catch (ActivityNotFoundException e) {
+                    Log.i("startActivity: NotFound: " + e.getMessage());
                 }
                 return undo;
             }
@@ -287,6 +284,32 @@ public class InputConnectionCommandEditor implements CommandEditor {
                         runOp(replaceSel(result));
                     }
                 }.execute(url1);
+                return Op.NO_OP;
+            }
+        };
+    }
+
+    @Override
+    public Op httpJson(final String json) {
+        return new Op("httpJson") {
+            @Override
+            public Op run() {
+                new AsyncTask<String, Void, String>() {
+
+                    @Override
+                    protected String doInBackground(String... str) {
+                        try {
+                            return HttpUtils.fetchUrl(str[0]);
+                        } catch (IOException | JSONException e) {
+                            return "[ERROR: Unable to query " + str[0] + ": " + e.getLocalizedMessage() + "]";
+                        }
+                    }
+
+                    @Override
+                    protected void onPostExecute(String result) {
+                        runOp(replaceSel(result));
+                    }
+                }.execute(expandFunsAll(json));
                 return Op.NO_OP;
             }
         };
@@ -778,27 +801,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return replaceSel(str, null);
     }
 
-    /**
-     * TODO: generalize to any functions
-     */
-    private String expandFuns(String line) {
-        Matcher m = F_TIMESTAMP.matcher(line);
-        String newLine = "";
-        int pos = 0;
-        Date currentTime = null;
-        while (m.find()) {
-            if (currentTime == null) {
-                currentTime = Calendar.getInstance().getTime();
-            }
-            newLine += line.substring(pos, m.start());
-            DateFormat df = new SimpleDateFormat(m.group(1), new Locale(m.group(2)));
-            newLine += df.format(currentTime);
-            pos = m.end();
-        }
-        if (pos == 0) {
-            return line;
-        }
-        return newLine + line.substring(pos);
+    private String expandFunsAll(String line) {
+        return FunctionExpanderKt.expandFuns(line,
+                new Sel(getInputConnection()),
+                new Timestamp()
+        );
     }
 
     /**
@@ -818,7 +825,10 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 if (str == null || str.isEmpty()) {
                     newText = "";
                 } else {
-                    newText = expandFuns(str.replace(F_SELECTION, selectedText));
+                    newText = FunctionExpanderKt.expandFuns(str,
+                            new SelEvaluated(selectedText),
+                            new Timestamp()
+                    );
                 }
                 Op op = null;
                 if (regex != null) {

@@ -48,6 +48,8 @@ public class CommandEditorManager {
     public static final String ACTIVITY = "activity";
     public static final String GET_URL = "getUrl";
 
+    public static final String HTTP_JSON = "httpJson";
+
     public static final Map<String, EditorCommand> EDITOR_COMMANDS;
 
     static {
@@ -174,6 +176,8 @@ public class CommandEditorManager {
             String urlArg = args.length > 1 ? args[1] : null;
             return ce.getUrl(urlPrefix, urlArg);
         });
+
+        aMap.put(HTTP_JSON, (ce, args) -> ce.httpJson(getArgString(args, 0, null)));
 
         EDITOR_COMMANDS = Collections.unmodifiableMap(aMap);
     }

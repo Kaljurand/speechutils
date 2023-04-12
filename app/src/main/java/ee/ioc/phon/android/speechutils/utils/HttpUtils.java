@@ -1,5 +1,10 @@
 package ee.ioc.phon.android.speechutils.utils;
 
+import com.jayway.jsonpath.JsonPath;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -10,6 +15,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import ee.ioc.phon.android.speechutils.Log;
@@ -30,6 +37,28 @@ public class HttpUtils {
 
     public static String fetchUrl(String myurl, String method, String body) throws IOException {
         return fetchUrl(myurl, method, body, null);
+    }
+
+    public static String fetchUrl(String jsonAsStr) throws IOException, JSONException {
+        JSONObject json = JsonUtils.parseJson(jsonAsStr);
+        String url = json.optString("url");
+        String jsonpath = json.optString("jsonpath");
+        String method = json.optString("method", "GET");
+        JSONObject header = json.optJSONObject("header");
+        Map<String, String> properties = new HashMap<>();
+        if (header != null) {
+            Iterator<String> iter = header.keys();
+            while (iter.hasNext()) {
+                String key = iter.next();
+                properties.put(key, header.optString(key, ""));
+            }
+        }
+        JSONObject body = json.optJSONObject("body");
+        String result = fetchUrl(url, method, body == null ? null : body.toString(), properties);
+        if (jsonpath.isEmpty()) {
+            return result;
+        }
+        return JsonPath.read(result, jsonpath);
     }
 
     public static String fetchUrl(String myurl, String method, String body, Map<String, String> properties)
