@@ -33,6 +33,7 @@ import ee.ioc.phon.android.speechutils.utils.HttpUtils;
 import ee.ioc.phon.android.speechutils.utils.IntentUtils;
 import ee.ioc.phon.android.speechutils.utils.JsonUtils;
 
+
 /**
  * TODO: this is work in progress
  * TODO: keep track of added spaces
@@ -309,7 +310,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     protected void onPostExecute(String result) {
                         runOp(replaceSel(result));
                     }
-                }.execute(expandFunsAll(json));
+                }.execute(FunctionExpanderKt.expandFunsAll(json, mInputConnection));
                 return Op.NO_OP;
             }
         };
@@ -801,13 +802,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
         return replaceSel(str, null);
     }
 
-    private String expandFunsAll(String line) {
-        return FunctionExpanderKt.expandFuns(line,
-                new Sel(getInputConnection()),
-                new Timestamp()
-        );
-    }
-
     /**
      * Commits texts and creates a new selection (within the commited text).
      * TODO: fix undo
@@ -825,10 +819,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 if (str == null || str.isEmpty()) {
                     newText = "";
                 } else {
-                    newText = FunctionExpanderKt.expandFuns(str,
-                            new SelEvaluated(selectedText),
-                            new Timestamp()
-                    );
+                    newText = FunctionExpanderKt.expandFuns2(str, selectedText, mInputConnection);
                 }
                 Op op = null;
                 if (regex != null) {
