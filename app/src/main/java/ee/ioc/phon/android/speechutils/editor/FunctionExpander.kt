@@ -1,6 +1,5 @@
 package ee.ioc.phon.android.speechutils.editor
 
-import android.os.Build
 import android.view.inputmethod.ExtractedText
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
@@ -13,19 +12,18 @@ import java.util.regex.Pattern
 private val F_SELECTION = Pattern.compile("""@sel\(\)""")
 
 fun expandFuns(input: String, vararg editFuns: EditFunction): String {
-    val resultString = StringBuffer(input)
+    var inputNew = input
     editFuns.forEach {
-        val regexMatcher = it.pattern.matcher(resultString)
+        val resultString = StringBuffer()
+        val regexMatcher = it.pattern.matcher(inputNew)
         while (regexMatcher.find()) {
-            // TODO: lift required API to N everywhere
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                regexMatcher.appendReplacement(resultString, it.apply(regexMatcher))
-            }
+            regexMatcher.appendReplacement(resultString, it.apply(regexMatcher))
         }
         regexMatcher.appendTail(resultString)
+        inputNew = resultString.toString()
     }
 
-    return resultString.toString()
+    return inputNew
 }
 
 fun expandFunsAll(line: String, ic: InputConnection): String {
@@ -48,6 +46,15 @@ fun expandFuns2(line: String, selectedText: String, ic: InputConnection): String
     )
 }
 
+/**
+ * Returns the current selection wrapped in regex quotes.
+ */
+public fun getSelectionAsRe(et: ExtractedText): CharSequence {
+    return if (et.selectionStart == et.selectionEnd) {
+        ""
+    } else "\\Q" + et.text.subSequence(et.selectionStart, et.selectionEnd) + "\\E"
+}
+
 abstract class EditFunction {
     abstract val pattern: Pattern
     abstract fun apply(m: Matcher): String
@@ -67,7 +74,7 @@ class Expr : EditFunction() {
     }
 
     override fun apply(m: Matcher): String {
-        return applyToInt(m.group(1), m.group(1).toInt(), m.group(3).toInt()).toString()
+        return applyToInt(m.group(2), m.group(1).toInt(), m.group(3).toInt()).toString()
     }
 }
 
@@ -84,12 +91,26 @@ class Timestamp : EditFunction() {
     }
 }
 
-public class Sel(ic: InputConnection) : EditFunction() {
+class Sel(ic: InputConnection) : EditFunction() {
     override val pattern: Pattern = F_SELECTION
 
     private val selectedText: String by lazy {
-        val cs: CharSequence = ic.getSelectedText(0)
-        cs.toString()
+        val cs: CharSequence? = ic.getSelectedText(0)
+        cs?.toString().orEmpty()
+    }
+
+    override fun apply(m: Matcher): String {
+        return selectedText
+    }
+}
+
+class SelFromExtractedText(private val et: ExtractedText) : EditFunction() {
+    override val pattern: Pattern = F_SELECTION
+
+    private val selectedText: String by lazy {
+        if (et.selectionStart == et.selectionEnd) {
+            ""
+        } else """\Q""" + et.text.subSequence(et.selectionStart, et.selectionEnd) + """\E"""
     }
 
     override fun apply(m: Matcher): String {

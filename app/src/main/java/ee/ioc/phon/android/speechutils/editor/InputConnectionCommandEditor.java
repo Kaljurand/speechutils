@@ -1,6 +1,8 @@
 package ee.ioc.phon.android.speechutils.editor;
 
 import static android.os.Build.VERSION_CODES;
+import static ee.ioc.phon.android.speechutils.editor.FunctionExpanderKt.expandFuns;
+import static ee.ioc.phon.android.speechutils.editor.FunctionExpanderKt.getSelectionAsRe;
 
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -243,7 +245,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
             public Op run() {
                 Op undo = null;
                 try {
-                    IntentUtils.startActivity(mContext, JsonUtils.createIntent(json.replace(F_SELECTION, getSelectedText())));
+                    String jsonExpanded = expandFuns(json, new Sel(mInputConnection));
+                    IntentUtils.startActivity(mContext, JsonUtils.createIntent(jsonExpanded));
                     undo = NO_OP;
                 } catch (JSONException e) {
                     Log.i("startActivity: JSON: " + e.getMessage());
@@ -263,11 +266,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
             @Override
             public Op run() {
                 String selectedText = getSelectedText();
+                SelEvaluated sel = new SelEvaluated(selectedText);
                 final String url1;
                 if (arg != null && !arg.isEmpty()) {
-                    url1 = url.replace(F_SELECTION, selectedText) + HttpUtils.encode(arg.replace(F_SELECTION, selectedText));
+                    url1 = expandFuns(url, sel) + HttpUtils.encode(expandFuns(arg, sel));
                 } else {
-                    url1 = url.replace(F_SELECTION, selectedText);
+                    url1 = expandFuns(url, sel);
                 }
                 new AsyncTask<String, Void, String>() {
 
@@ -650,7 +654,8 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 mInputConnection.beginBatchEdit();
                 ExtractedText et = getExtractedText();
                 if (et != null) {
-                    Pair<Integer, CharSequence> queryResult = lastIndexOf(query.replace(F_SELECTION, getSelectedText()), et);
+                    String queryExpanded = expandFuns(query, new Sel(mInputConnection));
+                    Pair<Integer, CharSequence> queryResult = lastIndexOf(queryExpanded, et);
                     if (queryResult.first >= 0) {
                         undo = getOpSetSelection(queryResult.first, queryResult.first + queryResult.second.length(), et.selectionStart, et.selectionEnd).run();
                     }
@@ -659,16 +664,6 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 return undo;
             }
         };
-    }
-
-    /**
-     * Returns the current selection wrapped in regex quotation.
-     */
-    private CharSequence getSelectionAsRe(ExtractedText et) {
-        if (et.selectionStart == et.selectionEnd) {
-            return "";
-        }
-        return "\\Q" + et.text.subSequence(et.selectionStart, et.selectionEnd) + "\\E";
     }
 
     @Override
@@ -682,7 +677,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 if (et != null) {
                     CharSequence input = et.text.subSequence(0, et.selectionStart);
                     // 0 == last match
-                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex.replace(F_SELECTION, getSelectionAsRe(et))), input, 0);
+                    //String regexExpanded = expandFuns(regex, new SelFromExtractedText(et));
+                    //String regexExpanded = expandFuns(regex, new SelEvaluated(getSelectionAsRe(et).toString()));
+                    //SelFromExtractedText sel = new SelFromExtractedText(et);
+                    String regexExpanded = regex.replace(F_SELECTION, getSelectionAsRe(et));
+                    //String regexExpanded = regex.replace(F_SELECTION, sel.apply(null));
+                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regexExpanded), input, 0);
                     if (pos != null) {
                         undo = getOpSetSelection(pos.first, pos.second, et.selectionStart, et.selectionEnd).run();
                     }
