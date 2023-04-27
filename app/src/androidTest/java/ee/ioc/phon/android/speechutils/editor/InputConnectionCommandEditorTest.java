@@ -1246,15 +1246,22 @@ public class InputConnectionCommandEditorTest {
     }
 
     @Test
-    public void test106() {
+    public void test106a() {
         add("1 2 3 1 2 3 1 2 3");
+        // 1 2 3 1 2 3 1 [2] 3
         runOp(mEditor.selectReBefore("2"));
+        // 1 [2] 3 1 2 3 1 2 3
         add("apply 2");
+        // 1 2 3 1 [2] 3 1 2 3
         add("next_sel");
+        // 1 2 3 1 *[] 3 1 2 3
         add("*");
         assertThatTextIs("1 2 3 1 * 3 1 2 3");
+        // 1 2 3 1 * 3 1 [2] 3
         runOp(mEditor.selectReAfter("2", 1));
+        // 1 [2] 3 1 * 3 1 2 3
         add("prev_sel");
+        // 1 * 3 1 * 3 1 2 3
         add("*");
         assertThatTextIs("1 * 3 1 * 3 1 2 3");
         undo(2);
@@ -1425,19 +1432,21 @@ public class InputConnectionCommandEditorTest {
     }
 
     /**
-     * selectReBefore interprets the selection as a plain string (not as a regex
+     * selectReBefore interprets the selection as a plain string (not as a regex)
      */
     @Test
     public void test212() {
         add(". 2 .");
+        // Select last dot
         runOp(mEditor.selectReBefore("\\."));
+        // Select first dot, because "\Q.\E" is matched
         runOp(mEditor.selectReBefore("@sel()"));
         add("1");
         assertThatTextIs("1 2 .");
     }
 
     /**
-     * selectReAfter interprets the selection as a plain string (not as a regex
+     * selectReAfter interprets the selection as a plain string (not as a regex)
      */
     @Test
     public void test213() {

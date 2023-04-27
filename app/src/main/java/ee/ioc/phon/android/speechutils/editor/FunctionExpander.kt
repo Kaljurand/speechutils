@@ -3,6 +3,10 @@ package ee.ioc.phon.android.speechutils.editor
 import android.view.inputmethod.ExtractedText
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
+import ee.ioc.phon.android.speechutils.utils.HttpUtils
+import kotlinx.coroutines.*
+import org.json.JSONException
+import java.io.IOException
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -31,16 +35,10 @@ fun expandFunsAll(line: String, ic: InputConnection): String {
         line,
         Sel(ic),
         Text(ic),
-        Expr(),
-        Timestamp()
-    )
-}
-
-fun expandFuns2(line: String, selectedText: String, ic: InputConnection): String {
-    return expandFuns(
-        line,
-        SelEvaluated(selectedText),
-        Text(ic),
+        Lower(),
+        Upper(),
+        UrlEncode(),
+        GetUrl(),
         Expr(),
         Timestamp()
     )
@@ -91,10 +89,42 @@ class Timestamp : EditFunction() {
     }
 }
 
+class UrlEncode : EditFunction() {
+    override val pattern: Pattern = Pattern.compile("""@urlEncode\((.+?)\)""")
+
+    override fun apply(m: Matcher): String {
+        return HttpUtils.encode(m.group(1))
+    }
+}
+
+class Lower : EditFunction() {
+    override val pattern: Pattern = Pattern.compile("""@lower\((.+?)\)""")
+
+    override fun apply(m: Matcher): String {
+        return m.group(1).lowercase()
+    }
+}
+
+class Upper : EditFunction() {
+    override val pattern: Pattern = Pattern.compile("""@upper\((.+?)\)""")
+
+    override fun apply(m: Matcher): String {
+        return m.group(1).uppercase()
+    }
+}
+
+class GetUrl : EditFunction() {
+    override val pattern: Pattern = Pattern.compile("""@getUrl\((.+?)\)""")
+
+    override fun apply(m: Matcher): String {
+        return getUrlWithCatch(m.group(1))
+    }
+}
+
 class Sel(ic: InputConnection) : EditFunction() {
     override val pattern: Pattern = F_SELECTION
 
-    private val selectedText: String by lazy {
+    val selectedText: String by lazy {
         val cs: CharSequence? = ic.getSelectedText(0)
         cs?.toString().orEmpty()
     }
@@ -107,11 +137,13 @@ class Sel(ic: InputConnection) : EditFunction() {
 class SelFromExtractedText(private val et: ExtractedText) : EditFunction() {
     override val pattern: Pattern = F_SELECTION
 
-    private val selectedText: String by lazy {
+    private val selectedTextLazy: String by lazy {
         if (et.selectionStart == et.selectionEnd) {
             ""
         } else """\Q""" + et.text.subSequence(et.selectionStart, et.selectionEnd) + """\E"""
     }
+
+    private val selectedText = getSelectionAsRe(et).toString()
 
     override fun apply(m: Matcher): String {
         return selectedText
@@ -137,4 +169,69 @@ class Text(private val ic: InputConnection) : EditFunction() {
     override fun apply(m: Matcher): String {
         return text
     }
+}
+
+suspend fun doSomethingUsefulOne(): Int {
+    delay(1000L) // pretend we are doing something useful here
+    return 13
+}
+
+suspend fun doSomethingThree(v: Deferred<Int>): Int {
+    delay(1000L) // pretend we are doing something useful here, too
+    return v.await() + 29
+}
+
+// TODO: Add the functions as arguments
+// Make a fun that calls HTTP and applies JSON query to its result.
+suspend fun noh2() {
+    val one = CoroutineScope(Dispatchers.IO).async {
+        doSomethingUsefulOne()
+    }
+    val two = CoroutineScope(Dispatchers.IO).async {
+        doSomethingThree(one)
+    }
+    println("The answer is ${two.await()}")
+}
+
+fun getUrlWithCatch(url: String): String {
+    return try {
+        HttpUtils.getUrl(url)
+    } catch (e: IOException) {
+        "[ERROR: Unable to retrieve " + url + ": " + e.localizedMessage + "]"
+    }
+}
+
+// https://api.mathjs.org/v4/?expr=2*(7-3)
+suspend fun mathjs(expr: String): String {
+    val url = "https://api.mathjs.org/v4/?expr=" + HttpUtils.encode(expr)
+    val res = CoroutineScope(Dispatchers.IO).async {
+        getUrlWithCatch(url)
+    }
+    return res.await()
+}
+
+suspend fun httpJson(editor: InputConnectionCommandEditor, json: String): Op {
+    return object : Op("httpJson") {
+        override fun run(): Op {
+            val jsonExpanded = expandFunsAll(json, editor.inputConnection)
+            val res = CoroutineScope(Dispatchers.IO).async {
+                try {
+                    HttpUtils.fetchUrl(jsonExpanded)
+                } catch (e: IOException) {
+                    "[ERROR: Unable to query " + jsonExpanded + ": " + e.localizedMessage + "]"
+                } catch (e: JSONException) {
+                    "[ERROR: Unable to query " + jsonExpanded + ": " + e.localizedMessage + "]"
+                }
+            }
+            CoroutineScope(Dispatchers.IO).async {
+                editor.runOp(editor.replaceSel(res.await()))
+            }
+            return NO_OP
+        }
+    }
+}
+
+fun main() = runBlocking { // this: CoroutineScope
+    launch { println(mathjs("1+2")) }
+    println("Hello")
 }

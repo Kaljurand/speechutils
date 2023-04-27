@@ -1,13 +1,11 @@
 package ee.ioc.phon.android.speechutils.editor;
 
-import static android.os.Build.VERSION_CODES;
 import static ee.ioc.phon.android.speechutils.editor.FunctionExpanderKt.expandFuns;
 import static ee.ioc.phon.android.speechutils.editor.FunctionExpanderKt.getSelectionAsRe;
 
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.os.AsyncTask;
-import android.os.Build.VERSION;
 import android.text.TextUtils;
 import android.util.Pair;
 import android.view.KeyEvent;
@@ -52,7 +50,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private static final Pattern WHITESPACE_AND_TOKEN = Pattern.compile("\\s*\\w+");
     private static final String F_SELECTION = "@sel()";
 
-    private Context mContext;
+    private final Context mContext;
 
     private CharSequence mTextBeforeCursor;
     // TODO: Restrict the size of these stacks
@@ -60,9 +58,9 @@ public class InputConnectionCommandEditor implements CommandEditor {
     // The command prefix is a list of consecutive final results whose concatenation can possibly
     // form a command. An item is added to the list for every final result that is not a command.
     // The list if cleared if a command is executed.
-    private List<String> mCommandPrefix = new ArrayList<>();
-    private Deque<Op> mOpStack = new ArrayDeque<>();
-    private Deque<Op> mUndoStack = new ArrayDeque<>();
+    private final List<String> mCommandPrefix = new ArrayList<>();
+    private final Deque<Op> mOpStack = new ArrayDeque<>();
+    private final Deque<Op> mUndoStack = new ArrayDeque<>();
 
     private InputConnection mInputConnection;
 
@@ -678,10 +676,12 @@ public class InputConnectionCommandEditor implements CommandEditor {
                     CharSequence input = et.text.subSequence(0, et.selectionStart);
                     // 0 == last match
                     //String regexExpanded = expandFuns(regex, new SelFromExtractedText(et));
-                    //String regexExpanded = expandFuns(regex, new SelEvaluated(getSelectionAsRe(et).toString()));
-                    //SelFromExtractedText sel = new SelFromExtractedText(et);
+                    // String regexExpanded = expandFuns(regex, new SelEvaluated(getSelectionAsRe(et).toString()));
+                    // SelFromExtractedText sel = new SelFromExtractedText(et);
+
                     String regexExpanded = regex.replace(F_SELECTION, getSelectionAsRe(et));
-                    //String regexExpanded = regex.replace(F_SELECTION, sel.apply(null));
+
+                    // String regexExpanded = regex.replace(F_SELECTION, sel.apply(null));
                     Pair<Integer, Integer> pos = matchNth(Pattern.compile(regexExpanded), input, 0);
                     if (pos != null) {
                         undo = getOpSetSelection(pos.first, pos.second, et.selectionStart, et.selectionEnd).run();
@@ -703,9 +703,11 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 final ExtractedText et = getExtractedText();
                 if (et != null) {
                     CharSequence input = et.text.subSequence(et.selectionEnd, et.text.length());
+                    String regexExpanded = regex.replace(F_SELECTION, getSelectionAsRe(et));
+                    //String regexExpanded2 = expandFuns(regex, new SelEvaluated(getSelectionAsRe(et).toString()));
                     // TODO: sometimes crashes with:
                     // StringIndexOutOfBoundsException: String index out of range: -4
-                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regex.replace(F_SELECTION, getSelectionAsRe(et))), input, n);
+                    Pair<Integer, Integer> pos = matchNth(Pattern.compile(regexExpanded), input, n);
                     if (pos != null) {
                         undo = getOpSetSelection(et.selectionEnd + pos.first, et.selectionEnd + pos.second, et.selectionStart, et.selectionEnd).run();
                     }
@@ -814,12 +816,21 @@ public class InputConnectionCommandEditor implements CommandEditor {
                 // Replace mentions of selection with a back-reference
                 mInputConnection.beginBatchEdit();
                 // Change the current selection with the input argument, possibly embedding the selection.
-                String selectedText = getSelectedText();
+                Sel sel = new Sel(mInputConnection);
+                //String selectedText = getSelectedText();
                 String newText;
                 if (str == null || str.isEmpty()) {
                     newText = "";
                 } else {
-                    newText = FunctionExpanderKt.expandFuns2(str, selectedText, mInputConnection);
+                    newText = expandFuns(str,
+                            sel,
+                            new Text(mInputConnection),
+                            new Lower(),
+                            new Upper(),
+                            new UrlEncode(),
+                            new GetUrl(),
+                            new Expr(),
+                            new Timestamp());
                 }
                 Op op = null;
                 if (regex != null) {
@@ -830,14 +841,14 @@ public class InputConnectionCommandEditor implements CommandEditor {
                         int oldStart = et.startOffset + et.selectionStart;
                         int oldEnd = et.startOffset + et.selectionEnd;
                         Collection<Op> collection = new ArrayList<>();
-                        collection.add(getCommitTextOp(selectedText, newText));
+                        collection.add(getCommitTextOp(sel.getSelectedText(), newText));
                         collection.add(getOpSetSelection(oldStart + pair.first, oldStart + pair.second, oldStart, oldEnd));
                         op = combineOps(collection);
                     }
                 }
                 // If no regex was provided or no match was found then just commit the replacement.
                 if (op == null) {
-                    op = getCommitTextOp(selectedText, newText);
+                    op = getCommitTextOp(sel.getSelectedText(), newText);
                 }
                 Op undo = op.run();
                 mInputConnection.endBatchEdit();
@@ -1370,7 +1381,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     private UtteranceRewriter.Rewrite applyCommand(String text) {
         int len = mCommandPrefix.size();
         for (int i = Math.min(MAX_UTT_IN_COMMAND, len); i > 0; i--) {
-            List sublist = mCommandPrefix.subList(len - i, len);
+            List<String> sublist = mCommandPrefix.subList(len - i, len);
             // TODO: sometimes sublist is empty?
             String possibleCommand = TextUtils.join(" ", sublist);
             if (possibleCommand.isEmpty()) {
@@ -1411,10 +1422,7 @@ public class InputConnectionCommandEditor implements CommandEditor {
     }
 
     private boolean deleteSurrounding(int beforeLength, int afterLength) {
-        if (VERSION.SDK_INT >= VERSION_CODES.N) {
-            return mInputConnection.deleteSurroundingTextInCodePoints(beforeLength, afterLength);
-        }
-        return mInputConnection.deleteSurroundingText(beforeLength, afterLength);
+        return mInputConnection.deleteSurroundingTextInCodePoints(beforeLength, afterLength);
     }
 
     /**
