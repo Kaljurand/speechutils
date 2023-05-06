@@ -66,6 +66,8 @@ public class InputConnectionCommandEditorTest {
         list2.add(new Command("replaceSelRe ([^ ]+) .+ ([^ ]+)", "", "replaceSelRe", new String[]{"$1 ([^ ]+) $2", "$1 \\$1 $2"}));
         list2.add(new Command("selection_quote", "", "replaceSel", new String[]{"\"@sel()\""}));
         list2.add(new Command("selection_double", "", "replaceSel", new String[]{"@sel()@sel()"}));
+        list2.add(new Command("text_double", "", "replaceSel", new String[]{"@text()"}));
+        list2.add(new Command("expr", "", "replaceSel", new String[]{"@expr(1+2)"}));
         // Hyphenates the current selection to the uttered number, adds brackets around the whole thing,
         // and selects the uttered number. Notice the need to escape the closing bracket and the end marking dollar sign.
         list2.add(new Command("selection_bracket ([0-9]+)", "", "replaceSel", new String[]{"(@sel()-$1)", "-([0-9]+)\\\\)\\$"}));
@@ -1244,15 +1246,22 @@ public class InputConnectionCommandEditorTest {
     }
 
     @Test
-    public void test106() {
+    public void test106a() {
         add("1 2 3 1 2 3 1 2 3");
+        // 1 2 3 1 2 3 1 [2] 3
         runOp(mEditor.selectReBefore("2"));
+        // 1 [2] 3 1 2 3 1 2 3
         add("apply 2");
+        // 1 2 3 1 [2] 3 1 2 3
         add("next_sel");
+        // 1 2 3 1 *[] 3 1 2 3
         add("*");
         assertThatTextIs("1 2 3 1 * 3 1 2 3");
+        // 1 2 3 1 * 3 1 [2] 3
         runOp(mEditor.selectReAfter("2", 1));
+        // 1 [2] 3 1 * 3 1 2 3
         add("prev_sel");
+        // 1 * 3 1 * 3 1 2 3
         add("*");
         assertThatTextIs("1 * 3 1 * 3 1 2 3");
         undo(2);
@@ -1423,19 +1432,21 @@ public class InputConnectionCommandEditorTest {
     }
 
     /**
-     * selectReBefore interprets the selection as a plain string (not as a regex
+     * selectReBefore interprets the selection as a plain string (not as a regex)
      */
     @Test
     public void test212() {
         add(". 2 .");
+        // Select last dot
         runOp(mEditor.selectReBefore("\\."));
+        // Select first dot, because "\Q.\E" is matched
         runOp(mEditor.selectReBefore("@sel()"));
         add("1");
         assertThatTextIs("1 2 .");
     }
 
     /**
-     * selectReAfter interprets the selection as a plain string (not as a regex
+     * selectReAfter interprets the selection as a plain string (not as a regex)
      */
     @Test
     public void test213() {
@@ -1524,6 +1535,26 @@ public class InputConnectionCommandEditorTest {
     public void test221() {
         add("timestamp");
         assertThatTextIs("n. Chr. text");
+    }
+
+    @Test
+    public void test222() {
+        add("123456");
+        add("text_double");
+        assertThatTextIs("123456123456");
+    }
+
+    @Test
+    public void test223() {
+        add("expr");
+        assertThatTextIs("3");
+    }
+
+    @Test
+    public void test224() {
+        add("2", "select 2");
+        runOp(mEditor.replaceSel("@expr(@text() - @sel())"));
+        assertThatTextIs("0");
     }
 
     private String getTextBeforeCursor(int n) {

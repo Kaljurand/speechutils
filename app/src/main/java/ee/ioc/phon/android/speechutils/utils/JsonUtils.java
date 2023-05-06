@@ -26,7 +26,7 @@ public final class JsonUtils {
      * @return JSONObject
      * @throws JSONException if parsing fails
      */
-    private static JSONObject parseJson(CharSequence chars) throws JSONException {
+    public static JSONObject parseJson(CharSequence chars) throws JSONException {
         if (chars == null) {
             throw new JSONException("input is NULL");
         }
