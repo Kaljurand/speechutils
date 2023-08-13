@@ -16,7 +16,7 @@ dependencies {
 }
 
 android {
-    compileSdkVersion rootProject.compileSdkVersion
+    compileSdk rootProject.compileSdk
 
     defaultConfig {
         minSdkVersion 23
