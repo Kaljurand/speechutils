@@ -11,7 +11,7 @@ dependencies {
 
     // TODO: Only used in AudioUtils.java for org.apache.commons.io.FileUtils
     implementation 'commons-io:commons-io:2.13.0'
-    implementation 'androidx.annotation:annotation:1.8.2'
+    implementation 'androidx.annotation:annotation:1.9.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'com.github.curious-odd-man:rgxgen:2.0'
 }
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 34
+        targetSdkVersion 35
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
